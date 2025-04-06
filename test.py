@@ -1,21 +1,3 @@
-# seared
-
-`seared` is a lightweight Python wrapper around `marshmallow` that simplifies the process of creating serializable `dataclass` definitions.
-
-## Setup
-
-### Using `pip`
-```sh
-pip install git+https://www.github.com/bwiswell/seared.git
-```
-
-### Using `poetry`
-```sh
-poetry add git+https://www.github.com/bwiswell/seared.git
-```
-
-## Usage
-```python
 from enum import Enum
 from typing import Optional
 
@@ -53,4 +35,3 @@ my_obj = MyClassB.load(data)
 
 # dumping
 out = MyClassB.dump(my_obj)
-```

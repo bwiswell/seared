@@ -1,29 +1,29 @@
 from dataclasses import dataclass
-from enum import Enum as PEnum
-from typing import Optional, TypeVar, Union
+from typing import Any, Optional, TypeVar
 
+from marshmallow import Schema
 from marshmallow.fields import Field, Function
 
 from .field import Field
 
 
-ET = TypeVar('ET', bound=PEnum)
+TT = TypeVar('TT', bound=object)
 
 
 @dataclass(frozen=True)
-class Enum(Field):
-    enum: ET = None
-    missing: Optional[ET] = None
+class T(Field):
+    schema: Schema = None
+    missing: Optional[TT] = None
     keyed: bool = False
     many: bool = False
 
     def to_field (self, name: str) -> Field:
-        def deserialize (value: Union[int, str]) -> ET:
-            return self.enum(int(value))
-        def serialize (cls: object) -> Optional[int]:
+        def deserialize (value: dict[str, Any]) -> TT:
+            return self.schema.load(value)
+        def serialize (cls: object) -> Optional[dict[str, Any]]:
             value = cls.__getattribute__(name)
             if value is None: return None
-            return value.value
+            return self.schema.dump(value)
         return self.wrap(
             lambda **kws: Function(
                 serialize = serialize,
@@ -32,6 +32,6 @@ class Enum(Field):
             ),
             self.keyed,
             self.many,
-            data_key = self.data_key,
-            missing = self.missing
+            data_key=self.data_key,
+            missing=self.missing
         )
