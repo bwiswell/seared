@@ -12,7 +12,7 @@ class BoolMeta(Field):
 
 
 @dataclass(frozen=True)
-class Bool(BoolMeta, FieldMeta):
+class Bool(FieldMeta, BoolMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(

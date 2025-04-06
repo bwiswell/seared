@@ -12,7 +12,7 @@ class StrMeta(Field):
 
 
 @dataclass(frozen=True)
-class Str(StrMeta, FieldMeta):
+class Str(FieldMeta, StrMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(

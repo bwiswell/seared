@@ -14,7 +14,7 @@ class DateMeta(Field):
     
 
 @dataclass(frozen=True)
-class Date(DateMeta, FieldMeta):
+class Date(FieldMeta, DateMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(
