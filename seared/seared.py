@@ -59,8 +59,9 @@ def seared (cls: Type[T]) -> Type[T]:
 
     schema = cast(SchemaType, cls_schema)()
 
+    cls.unknown = EXCLUDE
     cls.dump = classmethod(lambda _, obj: schema.dump(obj))
-    cls.load = classmethod(lambda _, data: schema.load(data, unknown=EXCLUDE))
+    cls.load = classmethod(lambda _, data: schema.load(data))
     cls.SCHEMA = schema
     
     return cls
