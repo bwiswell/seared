@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import time
 from typing import Optional
 
+from marshmallow import missing
 from marshmallow.fields import Field, Time as MTime
 
 from .field import Field, FieldMeta
@@ -21,5 +22,5 @@ class Time(FieldMeta, TimeMeta):
             lambda *kws: MTime(format=self.format, **kws),
             data_key = self.data_key,
             load_only = not self.write,
-            missing = self.missing
+            missing = missing if self.required else self.missing
         )

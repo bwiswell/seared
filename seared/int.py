@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from marshmallow import missing
 from marshmallow.fields import Field, Integer
 
 from .field import Field, FieldMeta
@@ -19,5 +20,5 @@ class Int(FieldMeta, IntMeta):
             Integer,
             data_key = self.data_key,
             load_only = not self.write,
-            missing = self.missing
+            missing = missing if self.required else self.missing
         )
