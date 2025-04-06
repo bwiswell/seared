@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Any, Type, TypeVar, cast
 
-from marshmallow import Schema, post_dump, post_load
+from marshmallow import Schema, post_dump, post_load, EXCLUDE
 from marshmallow.fields import Field as MField
 
 
@@ -57,7 +57,7 @@ def seared (cls: Type[T]) -> Type[T]:
     schema = cast(SchemaType, cls_schema)()
 
     cls.dump = classmethod(lambda _, obj: schema.dump(obj))
-    cls.load = classmethod(lambda _, data: schema.load(data))
+    cls.load = classmethod(lambda _, data: schema.load(data, unknown=EXCLUDE))
     cls.SCHEMA = schema
     
     return cls
