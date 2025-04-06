@@ -1,3 +1,4 @@
+from .bool import Bool
 from .date import Date
 from ._datetime import DateTime
 from ._enum import Enum
