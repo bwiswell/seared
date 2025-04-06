@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, TypeVar
+from typing import Callable, Optional, TypeVar
 
 from marshmallow.fields import Dict, Field, List, String
 
@@ -9,11 +9,7 @@ T = TypeVar('T')
 
 @dataclass(frozen=True)
 class Field:
-    data_key: str
-
-
-@dataclass(frozen=True)
-class FieldMeta:
+    data_key: Optional[str] = None
     keyed: bool = False
     many: bool = False
     required: bool = False
