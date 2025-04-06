@@ -28,19 +28,19 @@ class MyEnum(Enum):
 
 @s.seared
 class MyClassA(s.Seared):
-    a: Optional[int] = s.Int('propertyA')
-    b: Optional[float] = s.Float('propertyB')
-    c: Optional[str] = s.Str('propertyC')
+    a: Optional[int] = s.Int(data_key='propertyA')
+    b: Optional[float] = s.Float(data_key='propertyB')
+    c: Optional[str] = s.Str(data_key='propertyC')
 
 @s.seared
 class MyClassB(s.Seared):
-    a: int = s.Int('a', 5)
-    b: float = s.Float('b', 3.14)
-    c: str = s.Str('c', 'hello')
-    d: MyClassA = s.T('d', MyClassA.SCHEMA, required=True)
-    e: MyEnum = s.Enum('e', MyEnum, MyEnum.B)
-    f: list[int] = s.Int('f', [], many=True)
-    g: dict[str, float] = s.Float('g', {}, keyed=True)
+    a: int = s.Int(5)
+    b: float = s.Float(3.14)
+    c: str = s.Str('hello')
+    d: MyClassA = s.T(MyClassA.SCHEMA, required=True)
+    e: MyEnum = s.Enum(MyEnum, MyEnum.B)
+    f: list[int] = s.Int([], many=True)
+    g: dict[str, float] = s.Float({}, keyed=True)
 
 
 data = {
