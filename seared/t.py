@@ -17,7 +17,7 @@ class TMeta(Field):
 
 
 @dataclass(frozen=True)
-class T(TMeta, FieldMeta):
+class T(FieldMeta, TMeta):
 
     def to_field (self, name: str) -> Field:
         def deserialize (value: dict[str, Any]) -> TT:

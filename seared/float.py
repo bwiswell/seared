@@ -12,7 +12,7 @@ class FloatMeta(Field):
     
 
 @dataclass(frozen=True)
-class Float(FloatMeta, FieldMeta):
+class Float(FieldMeta, FloatMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(

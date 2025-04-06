@@ -14,7 +14,7 @@ class TimeMeta(Field):
     
 
 @dataclass(frozen=True)
-class Time(TimeMeta, FieldMeta):
+class Time(FieldMeta, TimeMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(

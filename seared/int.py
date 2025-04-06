@@ -12,7 +12,7 @@ class IntMeta(Field):
 
 
 @dataclass(frozen=True)
-class Int(IntMeta, FieldMeta):
+class Int(FieldMeta, IntMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(

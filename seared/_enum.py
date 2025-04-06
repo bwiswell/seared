@@ -17,7 +17,7 @@ class EnumMeta(Field):
 
 
 @dataclass(frozen=True)
-class Enum(EnumMeta, FieldMeta):
+class Enum(FieldMeta, EnumMeta):
 
     def to_field (self, name: str) -> Field:
         def deserialize (value: Union[int, str]) -> ET:
