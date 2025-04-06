@@ -39,13 +39,17 @@ class MyClassB(s.Seared):
     c: str = s.Str('c', 'hello')
     d: MyClassA = s.T('d', MyClassA.SCHEMA)
     e: MyEnum = s.Enum('e', MyEnum, MyEnum.B)
+    f: list[int] = s.Int('f', [], many=True)
+    g: dict[str, float] = s.Float('g', {}, keyed=True)
 
 
 data = {
     'a': 3,
     'c': 'world',
     'd': { 'propertyA': 5 },
-    'e': 2
+    'e': 2,
+    'f': [3, 7, 4, 1],
+    'g': { 'a': 3.5, 'b': 1.6, 'c': 7.5 }
 }
 
 # loading
@@ -53,4 +57,6 @@ my_obj = MyClassB.load(data)
 
 # dumping
 out = MyClassB.dump(my_obj)
+
+print(out)
 ```
