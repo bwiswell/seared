@@ -37,7 +37,7 @@ class MyClassB(s.Seared):
     a: int = s.Int('a', 5)
     b: float = s.Float('b', 3.14)
     c: str = s.Str('c', 'hello')
-    d: MyClassA = s.T('d', MyClassA.SCHEMA)
+    d: MyClassA = s.T('d', MyClassA.SCHEMA, required=True)
     e: MyEnum = s.Enum('e', MyEnum, MyEnum.B)
     f: list[int] = s.Int('f', [], many=True)
     g: dict[str, float] = s.Float('g', {}, keyed=True)
