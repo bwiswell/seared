@@ -18,5 +18,6 @@ class Str(StrMeta, FieldMeta):
         return self.wrap(
             String,
             data_key = self.data_key,
+            load_only = not self.write,
             missing = self.missing
         )

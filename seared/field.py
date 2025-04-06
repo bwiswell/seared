@@ -17,6 +17,7 @@ class FieldMeta:
     keyed: bool = False
     many: bool = False
     required: bool = False
+    write: bool = True
 
     def wrap (
                 self, 
