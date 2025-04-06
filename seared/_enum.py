@@ -4,18 +4,20 @@ from typing import Optional, TypeVar, Union
 
 from marshmallow.fields import Field, Function
 
-from .field import Field
+from .field import Field, FieldMeta
 
 
 ET = TypeVar('ET', bound=PEnum)
 
 
 @dataclass(frozen=True)
-class Enum(Field):
-    enum: ET = None
+class EnumMeta(Field):
+    enum: ET
     missing: Optional[ET] = None
-    keyed: bool = False
-    many: bool = False
+
+
+@dataclass(frozen=True)
+class Enum(EnumMeta, FieldMeta):
 
     def to_field (self, name: str) -> Field:
         def deserialize (value: Union[int, str]) -> ET:
@@ -30,8 +32,6 @@ class Enum(Field):
                 deserialize = deserialize,
                 **kws
             ),
-            self.keyed,
-            self.many,
             data_key = self.data_key,
             missing = self.missing
         )

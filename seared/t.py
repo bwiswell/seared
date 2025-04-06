@@ -4,18 +4,20 @@ from typing import Any, Optional, TypeVar
 from marshmallow import Schema
 from marshmallow.fields import Field, Function
 
-from .field import Field
+from .field import Field, FieldMeta
 
 
 TT = TypeVar('TT', bound=object)
 
 
 @dataclass(frozen=True)
-class T(Field):
-    schema: Schema = None
+class TMeta(Field):
+    schema: Schema
     missing: Optional[TT] = None
-    keyed: bool = False
-    many: bool = False
+
+
+@dataclass(frozen=True)
+class T(TMeta, FieldMeta):
 
     def to_field (self, name: str) -> Field:
         def deserialize (value: dict[str, Any]) -> TT:
@@ -30,8 +32,6 @@ class T(Field):
                 deserialize = deserialize,
                 **kws
             ),
-            self.keyed,
-            self.many,
             data_key=self.data_key,
             missing=self.missing
         )

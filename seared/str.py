@@ -3,20 +3,20 @@ from typing import Optional
 
 from marshmallow.fields import Field, String
 
-from .field import Field
+from .field import Field, FieldMeta
 
 
 @dataclass(frozen=True)
-class Str(Field):
+class StrMeta(Field):
     missing: Optional[str] = None
-    keyed: bool = False
-    many: bool = False
+
+
+@dataclass(frozen=True)
+class Str(StrMeta, FieldMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(
             String,
-            self.keyed,
-            self.many,
             data_key = self.data_key,
             missing = self.missing
         )
