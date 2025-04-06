@@ -20,5 +20,6 @@ class DateTime(DateTimeMeta, FieldMeta):
         return self.wrap(
             lambda *kws: MDateTime(format=self.format, **kws),
             data_key = self.data_key,
+            load_only = not self.write,
             missing = self.missing
         )

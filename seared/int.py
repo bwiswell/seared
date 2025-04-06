@@ -18,5 +18,6 @@ class Int(IntMeta, FieldMeta):
         return self.wrap(
             Integer,
             data_key = self.data_key,
+            load_only = not self.write,
             missing = self.missing
         )

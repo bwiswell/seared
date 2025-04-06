@@ -33,5 +33,6 @@ class Enum(EnumMeta, FieldMeta):
                 **kws
             ),
             data_key = self.data_key,
+            load_only = not self.write,
             missing = self.missing
         )

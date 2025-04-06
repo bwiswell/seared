@@ -18,5 +18,6 @@ class Float(FloatMeta, FieldMeta):
         return self.wrap(
             MFloat,
             data_key = self.data_key,
+            load_only = not self.write,
             missing = self.missing
         )
