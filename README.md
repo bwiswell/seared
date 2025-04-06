@@ -17,6 +17,7 @@ poetry add git+https://www.github.com/bwiswell/seared.git
 ## Usage
 ```python
 from enum import Enum
+from typing import Optional
 
 import seared as s
 
@@ -26,9 +27,30 @@ class MyEnum(Enum):
     C = 2
 
 @s.seared
-class MyDataclass(s.Seared):
+class MyClassA(s.Seared):
+    a: Optional[int] = s.Int('propertyA')
+    b: Optional[float] = s.Float('propertyB')
+    c: Optional[str] = s.Str('propertyC')
+
+@s.seared
+class MyClassB(s.Seared):
     a: int = s.Int('a', 5)
     b: float = s.Float('b', 3.14)
     c: str = s.Str('c', 'hello')
-    d: MyEnum = s.Enum('d', MyEnum, MyEnum.B)
+    d: MyClassA = s.Nested('d', MyClassA.SCHEMA)
+    e: MyEnum = s.Enum('e', MyEnum, MyEnum.B)
+
+
+data = {
+    'a': 3,
+    'c': 'world',
+    'd': { 'a': 5 },
+    'e': 1
+}
+
+# loading
+my_obj = MyClassB.SCHEMA.load(data)
+
+# dumping
+MyClassB.SCHEMA.dump(my_obj, 'out.json')
 ```
