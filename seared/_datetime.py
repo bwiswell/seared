@@ -19,7 +19,7 @@ class DateTime(FieldMeta, DateTimeMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(
-            lambda *kws: MDateTime(format=self.format, **kws),
+            lambda **kws: MDateTime(format=self.format, **kws),
             data_key = self.data_key,
             load_only = not self.write,
             missing = missing if self.required else self.missing
