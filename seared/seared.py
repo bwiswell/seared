@@ -6,6 +6,8 @@ from typing import Any, Type, TypeVar, cast
 from marshmallow import Schema, post_dump, post_load, EXCLUDE
 from marshmallow.fields import Field as MField
 
+from .field import Field
+
 
 class Seared:
     SCHEMA: Schema
@@ -26,7 +28,8 @@ def seared (cls: Type[T]) -> Type[T]:
     cls = dataclass(cls)
     props: dict[str, MField] = {}
     for field in fields(cls):
-        props[field.name] = field.default.to_field(field.name)
+        if isinstance(field.default, Field):
+            props[field.name] = field.default.to_field(field.name)
 
     class BaseSchema(Schema):
         @post_dump
@@ -56,8 +59,9 @@ def seared (cls: Type[T]) -> Type[T]:
 
     schema = cast(SchemaType, cls_schema)()
 
+    schema.unknown = EXCLUDE
     cls.dump = classmethod(lambda _, obj: schema.dump(obj))
-    cls.load = classmethod(lambda _, data: schema.load(data, unknown=EXCLUDE))
+    cls.load = classmethod(lambda _, data: schema.load(data))
     cls.SCHEMA = schema
     
     return cls
