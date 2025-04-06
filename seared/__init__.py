@@ -8,3 +8,6 @@ from .seared import Seared, seared
 from .str import Str
 from .t import T
 from .time import Time
+
+
+__version__ = '0.1.6'

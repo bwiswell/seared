@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Optional
 
+from marshmallow import missing
 from marshmallow.fields import Date as MDate, Field
 
 from .field import Field, FieldMeta
@@ -18,8 +19,8 @@ class Date(FieldMeta, DateMeta):
 
     def to_field (self, _: str) -> Field:
         return self.wrap(
-            lambda *kws: MDate(format=self.format, **kws),
+            lambda **kws: MDate(format=self.format, **kws),
             data_key = self.data_key,
             load_only = not self.write,
-            missing = self.missing
+            missing = missing if self.required else self.missing
         )

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum as PEnum
 from typing import Optional, TypeVar, Union
 
+from marshmallow import missing
 from marshmallow.fields import Field, Function
 
 from .field import Field, FieldMeta
@@ -34,5 +35,5 @@ class Enum(FieldMeta, EnumMeta):
             ),
             data_key = self.data_key,
             load_only = not self.write,
-            missing = self.missing
+            missing = missing if self.required else self.missing
         )

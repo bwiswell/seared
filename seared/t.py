@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Optional, TypeVar
 
-from marshmallow import Schema
+from marshmallow import Schema, missing
 from marshmallow.fields import Field, Function
 
 from .field import Field, FieldMeta
@@ -34,5 +34,5 @@ class T(FieldMeta, TMeta):
             ),
             data_key=self.data_key,
             load_only = not self.write,
-            missing=self.missing
+            missing = missing if self.required else self.missing
         )
