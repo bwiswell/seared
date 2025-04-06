@@ -7,10 +7,10 @@ from marshmallow.fields import Field, Function
 from .field import Field
 
 
-ET = TypeVar('ET', PEnum, PEnum)
+ET = TypeVar('ET', bound=PEnum)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Enum(Field):
     enum: ET
     missing: Optional[ET] = None

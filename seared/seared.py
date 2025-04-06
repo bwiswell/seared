@@ -1,5 +1,5 @@
-from dataclasses import fields
-import typing as t
+from dataclasses import dataclass, fields
+from typing import Type, TypeVar, cast
 
 from marshmallow import Schema, post_load
 from marshmallow.fields import Field as MField
@@ -7,12 +7,20 @@ from marshmallow.fields import Field as MField
 from .field import Field
 
 
-T = t.TypeVar('T', bound=(object,))
-SchemaType = t.Type[Schema]
+class Seared:
+    SCHEMA: Schema
 
+    @property
+    def schema (self) -> Schema:
+        raise NotImplementedError
+    
 
-def schema (cls: t.Type[T]) -> t.Type[T]:
-    props: t.Dict[str, MField] = {}
+SchemaType = Type[Schema]
+T = TypeVar('T', bound=Seared)
+
+def seared (cls: Type[T]) -> Type[T]:
+    cls = dataclass(cls)
+    props: dict[str, MField] = {}
     for field in fields(cls):
         if isinstance(field, Field):
             props[field.name] = field.to_field(field.name)
@@ -21,7 +29,7 @@ def schema (cls: t.Type[T]) -> t.Type[T]:
         @post_load
         def make_data_class(
                     self, 
-                    data: t.Mapping[str, object], 
+                    data: dict[str, object], 
                     **_: object
                 ) -> object:
             return cls(**data)
@@ -32,4 +40,8 @@ def schema (cls: t.Type[T]) -> t.Type[T]:
         props
     )
 
-    return t.cast(SchemaType, cls_schema)
+    schema = cast(SchemaType, cls_schema)()
+    cls.SCHEMA = schema
+    cls.schema = lambda _: schema
+    
+    return cls

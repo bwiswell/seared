@@ -7,7 +7,7 @@ from marshmallow.fields import Field
 T = TypeVar('T')
 
 
-@dataclass
+@dataclass(frozen=True)
 class Field:
     data_key: str
 
