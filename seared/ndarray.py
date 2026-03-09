@@ -17,12 +17,19 @@ class NDArrayMeta:
 class NDArray(Field, NDArrayMeta):
 
     def to_field (self, name: str) -> MField:
+        i = 0
         def deserialize (value: list[Any]) -> np.ndarray:
             return np.array(value)
         def serialize (cls: object) -> Optional[list[Any]]:
+            nonlocal i
             value: Optional[np.ndarray] = cls.__getattribute__(name)
             if value is None: return None
-            return value.tolist()
+            if self.many:
+                out = [val.tolist() for val in value[i]]
+                i += 1
+                return out
+            else:
+                return value.tolist()
         return self.wrap(
             lambda **kws: Function(
                 serialize = serialize,
