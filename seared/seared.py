@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+import json
 from typing import Any, Type, TypeVar, cast
 
 from marshmallow import Schema, post_dump, post_load, EXCLUDE
@@ -15,10 +16,18 @@ class Seared:
     @classmethod
     def dump (cls, obj: Seared) -> dict[str, Any]:
         raise NotImplementedError
+    
+    @classmethod
+    def dumps (cls, obj: Seared) -> str:
+        return json.dumps(cls.dump(obj))
 
     @classmethod
     def load (cls, data: dict[str, Any]) -> Seared:
         raise NotImplementedError
+    
+    @classmethod
+    def loads (cls, data: str) -> Seared:
+        return cls.load(json.loads(data))
     
 
 SchemaType = Type[Schema]
@@ -62,6 +71,7 @@ def seared (cls: Type[T]) -> Type[T]:
     schema.unknown = EXCLUDE
     cls.dump = classmethod(lambda _, obj: schema.dump(obj))
     cls.load = classmethod(lambda _, data: schema.load(data))
+
     cls.SCHEMA = schema
     
     return cls
