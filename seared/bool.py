@@ -19,6 +19,6 @@ class Bool(Field, BoolMeta):
         return self.wrap(
             MBool,
             data_key = self.data_key if self.data_key else name,
-            load_only = not self.write,
+            load_only = not self.dump,
             load_default = self._load_default(missing)
         )

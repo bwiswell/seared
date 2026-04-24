@@ -1,6 +1,6 @@
 [project]
 name = "seared"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = [
     { name = "Ben Wiswell", email = "benjwiswell@gmail.com" },
@@ -8,12 +8,15 @@ authors = [
 requires-python = ">=3.11,<4.0"
 dependencies = [
     "marshmallow>=3.26.1,<4.0",
-    "numpy>=2.4.2,<3.0",
 ]
+
+[project.optional-dependencies]
+numpy = ["numpy>=2.4.2,<3.0"]
 
 [dependency-groups]
 dev = [
     "pytest>=8.0,<9.0",
+    "seared[numpy]",
 ]
 
 [build-system]

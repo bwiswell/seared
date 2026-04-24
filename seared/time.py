@@ -21,6 +21,6 @@ class Time(Field, TimeMeta):
         return self.wrap(
             lambda **kws: MTime(format=self.format, **kws),
             data_key = self.data_key if self.data_key else name,
-            load_only = not self.write,
+            load_only = not self.dump,
             load_default = self._load_default(missing)
         )

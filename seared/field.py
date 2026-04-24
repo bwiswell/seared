@@ -13,7 +13,7 @@ class Field:
     keyed: bool = False
     many: bool = False
     required: bool = False
-    write: bool = True
+    dump: bool = True
 
     def wrap (
                 self,

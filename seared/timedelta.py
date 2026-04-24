@@ -1,44 +1,33 @@
 from dataclasses import dataclass
-from typing import Any, Optional
+from datetime import timedelta
+from typing import Optional
 
 from marshmallow import missing
 from marshmallow.fields import Field as MField
 
 from .field import Field
 
-try:
-    import numpy as np
-    _NUMPY_AVAILABLE = True
-except ImportError:
-    _NUMPY_AVAILABLE = False
+
+@dataclass(frozen=True)
+class TimeDeltaMeta:
+    missing: Optional[timedelta] = None
 
 
 @dataclass(frozen=True)
-class NDArrayMeta:
-    missing: Optional[Any] = None
-
-
-@dataclass(frozen=True)
-class NDArray(Field, NDArrayMeta):
+class TimeDelta(Field, TimeDeltaMeta):
 
     def to_field(self, name: str) -> MField:
-        if not _NUMPY_AVAILABLE:
-            raise ImportError(
-                "seared.NDArray requires numpy. "
-                "Install it with: uv add 'seared[numpy]'"
-            )
-
-        class NDArrayField(MField):
+        class TimeDeltaField(MField):
             def _serialize(self, value, attr, obj, **kwargs):
                 if value is None:
                     return None
-                return value.tolist()
+                return value.total_seconds()
 
             def _deserialize(self, value, attr, data, **kwargs):
-                return np.array(value)
+                return timedelta(seconds=float(value))
 
         return self.wrap(
-            NDArrayField,
+            TimeDeltaField,
             data_key=self.data_key if self.data_key else name,
             load_only=not self.dump,
             load_default=self._load_default(missing)

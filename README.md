@@ -9,11 +9,6 @@
 pip install git+https://www.github.com/bwiswell/seared.git
 ```
 
-### Using `poetry`
-```sh
-poetry add git+https://www.github.com/bwiswell/seared.git
-```
-
 ### Using `uv`
 ```sh
 uv add git+https://www.github.com/bwiswell/seared.git
