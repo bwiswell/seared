@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import Any, Callable, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Tuple
 
 from .errors import ValidationError
 
@@ -9,17 +9,66 @@ from .errors import ValidationError
 FieldSpec = Tuple[str, str, Any]  # (attr_name, wire_key, Field instance)
 
 
-def seared(cls=None, *, slots: bool = True, validate: bool = True):
-    """Decorator turning a class into a seared dataclass.
+if TYPE_CHECKING:
+    # PEP 681 view. ``@dataclass_transform`` teaches type checkers (ty, pyright,
+    # mypy) that ``@seared`` synthesises a dataclass, and ``field_specifiers``
+    # lists the Field constructors so ``x: str = s.Str(...)`` is read as a field
+    # (annotation drives the type; the ``.pyi`` stubs return ``Any`` so the
+    # assignment is legal). ``default=`` / ``default_factory=`` are the names the
+    # checker keys required/optional off — hence Option A in the plan.
+    from typing import TypeVar, dataclass_transform, overload
 
-    Usable bare (``@s.seared``) or parameterised
-    (``@s.seared(slots=False, validate=False)``).
-    """
-    def decorate(c):
-        return _build(c, slots=slots, validate=validate)
-    if cls is None:
-        return decorate
-    return decorate(cls)
+    from ..fields.bool_ import Bool
+    from ..fields.bytes_ import Bytes
+    from ..fields.date import Date
+    from ..fields.datetime_ import DateTime
+    from ..fields.decimal_ import Decimal
+    from ..fields.dict_ import Dict
+    from ..fields.enum_ import Enum
+    from ..fields.field import Field as _Field
+    from ..fields.float_ import Float
+    from ..fields.int_ import Int
+    from ..fields.ndarray import NDArray
+    from ..fields.pandas_ import PandasFrame
+    from ..fields.path import Path
+    from ..fields.polars_ import PolarsFrame
+    from ..fields.str_ import Str
+    from ..fields.t import T
+    from ..fields.time_ import Time
+    from ..fields.timedelta import TimeDelta
+    from ..fields.tuple_ import Tuple as _Tuple
+    from ..fields.union import Union
+    from ..fields.uuid_ import UUID
+
+    _T = TypeVar('_T')
+
+    @overload
+    def seared(cls: type[_T], /) -> type[_T]: ...
+    @overload
+    def seared(
+        *, slots: bool = ..., validate: bool = ...,
+    ) -> Callable[[type[_T]], type[_T]]: ...
+    @dataclass_transform(
+        kw_only_default=True,
+        field_specifiers=(
+            _Field, Bool, Bytes, Date, DateTime, Decimal, Dict, Enum, Float,
+            Int, NDArray, PandasFrame, Path, PolarsFrame, Str, T, Time,
+            TimeDelta, _Tuple, Union, UUID,
+        ),
+    )
+    def seared(cls=None, *, slots=True, validate=True): ...
+else:
+    def seared(cls=None, *, slots: bool = True, validate: bool = True):
+        """Decorator turning a class into a seared dataclass.
+
+        Usable bare (``@s.seared``) or parameterised
+        (``@s.seared(slots=False, validate=False)``).
+        """
+        def decorate(c):
+            return _build(c, slots=slots, validate=validate)
+        if cls is None:
+            return decorate
+        return decorate(cls)
 
 
 def _build(cls, *, slots: bool, validate: bool):
@@ -104,9 +153,12 @@ def _wrap_init_replaces_field_defaults(cls, specs: Tuple[FieldSpec, ...]) -> Non
         for attr, _, f in specs:
             v = getattr(self, attr, None)
             if isinstance(v, Field):
-                missing = f.missing
-                if isinstance(missing, _MUTABLE_DEFAULT_TYPES):
-                    missing = _copy.deepcopy(missing)
+                if f.default_factory is not None:
+                    missing = f.default_factory()
+                else:
+                    missing = f.missing
+                    if isinstance(missing, _MUTABLE_DEFAULT_TYPES):
+                        missing = _copy.deepcopy(missing)
                 object.__setattr__(self, attr, missing)
 
     __init__.__qualname__ = f'{cls.__qualname__}.__init__'
@@ -153,6 +205,8 @@ def _make_load(cls, specs: Tuple[FieldSpec, ...], validate: bool) -> Callable:
                 )
             elif f.required:
                 raise ValidationError(f'{cls_name}.{attr} is required')
+            elif f.default_factory is not None:
+                kwargs[attr] = f.default_factory()
             else:
                 kwargs[attr] = f.missing
         return cls(**kwargs)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from .._core.errors import ValidationError
 from .field import Field
@@ -12,6 +12,8 @@ class Tuple(Field):
     def __init__(
         self,
         *fields: Field,
+        default: Optional[tuple] = None,
+        default_factory: Optional[Callable[[], Any]] = None,
         missing: Optional[tuple] = None,
         data_key: Optional[str] = None,
         keyed: bool = False,
@@ -25,6 +27,8 @@ class Tuple(Field):
             many=many,
             required=required,
             dump=dump,
+            default=default,
+            default_factory=default_factory,
             missing=missing,
         )
         object.__setattr__(self, 'tuple_fields', fields)

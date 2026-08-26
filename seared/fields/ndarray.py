@@ -15,6 +15,7 @@ except ImportError:
 @dataclass(frozen=True, kw_only=True, slots=True)
 class NDArray(Field):
     def __post_init__(self):
+        super().__post_init__()
         if not _NUMPY_AVAILABLE:
             raise ImportError(
                 "seared.NDArray requires numpy. "

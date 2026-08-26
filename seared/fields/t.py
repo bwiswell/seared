@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 from .._core.errors import ValidationError
 from .field import Field
@@ -13,6 +13,8 @@ class T(Field):
         self,
         schema: Type[Any],
         *,
+        default: Any = None,
+        default_factory: Optional[Callable[[], Any]] = None,
         missing: Any = None,
         data_key: Optional[str] = None,
         keyed: bool = False,
@@ -26,6 +28,8 @@ class T(Field):
             many=many,
             required=required,
             dump=dump,
+            default=default,
+            default_factory=default_factory,
             missing=missing,
         )
         object.__setattr__(self, 'schema', schema)
