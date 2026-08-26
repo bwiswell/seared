@@ -13,6 +13,7 @@ class Enum(Field):
     enum: Type[PEnum] = None  # type: ignore[assignment]
 
     def __post_init__(self):
+        super().__post_init__()
         if self.enum is None:
             raise TypeError('Enum field requires enum=<EnumClass>')
 

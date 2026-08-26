@@ -29,6 +29,7 @@ class PandasFrame(Field):
     """
 
     def __post_init__(self):
+        super().__post_init__()
         if self.many or self.keyed:
             raise TypeError(
                 'PandasFrame: many=True / keyed=True not supported — '

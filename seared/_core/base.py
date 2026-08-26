@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, ClassVar, Tuple
+from typing import Any, ClassVar, Self, Tuple
 
 
 class Seared:
@@ -16,9 +16,9 @@ class Seared:
         return json.dumps(cls.dump(obj))
 
     @classmethod
-    def load(cls, data: dict[str, Any]) -> 'Seared':
+    def load(cls, data: dict[str, Any]) -> Self:
         raise NotImplementedError
 
     @classmethod
-    def loads(cls, data: str) -> 'Seared':
+    def loads(cls, data: str) -> Self:
         return cls.load(json.loads(data))

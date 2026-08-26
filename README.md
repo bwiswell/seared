@@ -21,7 +21,8 @@ for free.
 - **Schema-evolution fallback.** `s.Union(default=Variant)` coerces unknown tags to a sentinel variant rather than raising — useful for older consumers receiving newer schemas.
 - **File-format codecs out of the box.** `Cls.to_json` / `Cls.from_json` / `Cls.to_toml` / `Cls.from_toml` / `Cls.to_yaml` / `Cls.from_yaml` / `Cls.to_csv` / `Cls.from_csv` are auto-attached at decorator time. JSON / TOML-read / CSV are stdlib; YAML / TOML-write / DataFrame fields are optional extras.
 - **`format=` carrier hint.** `Cls.dump(obj, format='msgpack')` threads the hint into each field; `Bytes` and `NDArray` switch to native binary, dropping the ~33% base64 overhead.
-- **Mutable-default safety.** `missing=[]` / `missing={}` / `missing=set()` deep-copies per-instance — no shared-default footgun at the dataclass layer.
+- **Typed & type-checker-friendly.** `@s.seared` is a PEP 681 `@dataclass_transform`, so `x: str = s.Str(...)` type-checks under `ty` / `pyright` / `mypy` — no `invalid-assignment`, and `.load()` results carry their annotated attribute types. See [Type checking](#type-checking).
+- **Mutable-default safety.** `default_factory=list` / `default_factory=dict` / `default_factory=set` build a fresh value per-instance — no shared-default footgun. (A mutable `default=[...]` is deep-copied per-instance as a fallback.)
 - **Path normalisation.** `s.Path` always serialises as POSIX strings; round-trip is cross-platform deterministic.
 - **Lossless `Decimal`.** String-by-default wire form preserves every digit; opt into JSON-number form per field with `as_number=True`.
 - **Introspection.** `Cls.__seared_fields__` exposes the field layout as a tuple of `(attr, wire_key, Field)` for runtime tooling.
@@ -71,13 +72,13 @@ class Inner(s.Seared):
 
 @s.seared
 class Outer(s.Seared):
-    a: int               = s.Int(missing=5)
-    b: float             = s.Float(missing=3.14)
-    c: str               = s.Str(missing='hello')
+    a: int               = s.Int(default=5)
+    b: float             = s.Float(default=3.14)
+    c: str               = s.Str(default='hello')
     d: Inner             = s.T(Inner, required=True)
-    e: MyEnum            = s.Enum(enum=MyEnum, missing=MyEnum.B)
-    f: list[int]         = s.Int(many=True, missing=[])
-    g: dict[str, float]  = s.Float(keyed=True, missing={})
+    e: MyEnum            = s.Enum(enum=MyEnum, default=MyEnum.B)
+    f: list[int]         = s.Int(many=True, default_factory=list)
+    g: dict[str, float]  = s.Float(keyed=True, default_factory=dict)
 
 
 data = {
@@ -111,6 +112,38 @@ known-good.
 
 See [`docs/_core/decorator.md`](docs/_core/decorator.md) for the full
 internals.
+
+## Type checking
+
+`@s.seared` is marked as a [PEP 681](https://peps.python.org/pep-0681/)
+`@dataclass_transform`, and each field constructor ships a `.pyi` stub, so the
+declaration idiom checks cleanly under `ty`, `pyright`, and `mypy`:
+
+```python
+@s.seared
+class Cfg(s.Seared):
+    name: str = s.Str(default='alpha')   # no `invalid-assignment`
+    port: int = s.Int(required=True)
+
+cfg = Cfg(port=7447)     # `name` optional, `port` required — enforced
+reveal_type(cfg.port)    # int
+reveal_type(Cfg.load({}).name)  # str  (.load() returns the concrete class)
+```
+
+- Use **`default=`** (static) or **`default_factory=`** (per-instance,
+  preferred for mutable values) to mark a field optional. These are the names
+  the type checker reads to tell required from optional, so a field with
+  neither — and without `required=True` — is treated as a required argument.
+- **`missing=` is deprecated** — it still works at runtime (as an alias for
+  `default=`) but emits a `DeprecationWarning` and is invisible to the type
+  checker's required/optional inference.
+- The **annotation drives the attribute's type** (the stubs return `Any`), so
+  `f: list[int] = s.Int(many=True, default_factory=list)` types as `list[int]`.
+  The checker does not cross-check the annotation against the field kind;
+  runtime validation still does.
+
+Because `seared` ships `py.typed`, downstream projects that previously excluded
+their `@seared` modules from `ty` can drop those excludes.
 
 ## Tagged-union fields
 
@@ -238,7 +271,8 @@ caveats in [`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
 - **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` and `NDArray` honour the hint; other fields are unaffected.
 - **No nullable-true fields** — `None` is always stripped from dumps; explicit JSON `null` is not emittable.
 - **No async variants.** seared is pure CPU-bound transformation; no async path is planned.
-- **Mutable `missing` values** (`list` / `dict` / `set` / `frozenset`) are deep-copied per-instance. For per-instance computed defaults, use a factory pattern in user code (a `missing_factory=callable` kwarg is on the backlog).
+- **`missing=` is deprecated** in favour of `default=` / `default_factory=` (see [Type checking](#type-checking)). It remains a runtime alias for `default=` but warns and is invisible to type checkers.
+- **Mutable defaults** are per-instance: `default_factory=callable` builds a fresh value each time (preferred); a mutable `default=[...]` is deep-copied per-instance as a fallback.
 - **CSV is flat-only.** Nested fields and `many=True` / `keyed=True` collections raise `TypeError` at call time. Flatten-and-rehydrate is deferred to a future release.
 - **DataFrame fields are records-form only.** Dtype-preserving transport (Parquet / Arrow IPC) is out of scope.
 

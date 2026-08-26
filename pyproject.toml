@@ -1,6 +1,6 @@
 [project]
 name = "seared"
-version = "0.2.0"
+version = "0.2.1"
 description = "A lightweight Python serialization/deserialization tool"
 authors = [
     { name = "Benj Wiswell", email = "benjwiswell@gmail.com" },
@@ -25,6 +25,7 @@ all    = [
 [dependency-groups]
 dev = [
     "pytest>=8.0,<9.0",
+    "ty",
     "seared[all]",
 ]
 
