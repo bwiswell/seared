@@ -1,12 +1,15 @@
 [project]
 name = "seared"
-version = "0.2.1"
+version = "0.2.2"
 description = "A lightweight Python serialization/deserialization tool"
 authors = [
     { name = "Benj Wiswell", email = "benjwiswell@gmail.com" },
 ]
 requires-python = ">=3.11,<4.0"
 dependencies = []
+
+[project.scripts]
+seared-doc = "seared.doc.generate:main"
 
 [project.optional-dependencies]
 numpy  = ["numpy>=2.4.2,<3.0"]

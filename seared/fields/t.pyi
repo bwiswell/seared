@@ -12,4 +12,5 @@ def T(
     many: bool = ...,
     required: bool = ...,
     dump: bool = ...,
+    doc: str | None = ...,
 ) -> Any: ...

@@ -18,6 +18,7 @@ from .fields.tuple_ import Tuple
 from .fields.union import Union
 from .fields.uuid_ import UUID
 from .seared import Seared, seared
+from .doc import document, introspect
 
 try:
     from .fields.ndarray import NDArray
@@ -50,12 +51,12 @@ except ImportError:
             )
 
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 __all__ = [
     'Bool', 'Bytes', 'Date', 'DateTime', 'Decimal', 'Dict', 'Enum',
     'Field', 'Float', 'Int', 'NDArray', 'PandasFrame', 'PolarsFrame',
     'Path', 'SearedError', 'Seared', 'Str', 'T', 'Time', 'TimeDelta',
-    'Tuple', 'Union', 'UUID', 'ValidationError', 'seared',
-    '__version__',
+    'Tuple', 'Union', 'UUID', 'ValidationError', 'document', 'introspect',
+    'seared', '__version__',
 ]

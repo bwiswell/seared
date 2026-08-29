@@ -11,5 +11,6 @@ def Union(
     default: type | None = ...,
     data_key: str | None = ...,
     dump: bool = ...,
+    doc: str | None = ...,
     required: bool = ...,
 ) -> Any: ...
