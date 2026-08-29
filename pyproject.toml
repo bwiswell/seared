@@ -1,11 +1,11 @@
 [project]
 name = "seared"
-version = "0.2.2"
+version = "0.2.3"
 description = "A lightweight Python serialization/deserialization tool"
 authors = [
     { name = "Benj Wiswell", email = "benjwiswell@gmail.com" },
 ]
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.14,<4.0"
 dependencies = []
 
 [project.scripts]

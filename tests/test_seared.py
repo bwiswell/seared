@@ -9,7 +9,7 @@ import seared as s
 
 
 def test_version():
-    assert s.__version__ == '0.2.2'
+    assert s.__version__ == '0.2.3'
 
 
 class TestPublicSurface:
