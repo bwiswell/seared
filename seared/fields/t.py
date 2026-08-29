@@ -21,6 +21,7 @@ class T(Field):
         many: bool = False,
         required: bool = False,
         dump: bool = True,
+        doc: Optional[str] = None,
     ):
         super().__init__(
             data_key=data_key,
@@ -31,6 +32,7 @@ class T(Field):
             default=default,
             default_factory=default_factory,
             missing=missing,
+            doc=doc,
         )
         object.__setattr__(self, 'schema', schema)
 

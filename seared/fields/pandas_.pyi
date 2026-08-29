@@ -8,6 +8,7 @@ def PandasFrame(
     many: bool = ...,
     required: bool = ...,
     dump: bool = ...,
+    doc: str | None = ...,
     default: Any = ...,
     default_factory: Callable[[], Any] = ...,
     missing: Any = ...,

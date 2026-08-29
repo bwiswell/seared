@@ -21,7 +21,7 @@ class Inner(s.Seared):
 
 @s.seared
 class Outer(s.Seared):
-    a: int = s.Int(default=5)
+    a: int = s.Int(default=5, doc='the a value')
     b: float = s.Float(default=3.14)
     c: str = s.Str(default='hello')
     d: Inner = s.T(Inner, required=True)

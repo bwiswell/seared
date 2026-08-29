@@ -20,6 +20,7 @@ class Tuple(Field):
         many: bool = False,
         required: bool = False,
         dump: bool = True,
+        doc: Optional[str] = None,
     ):
         super().__init__(
             data_key=data_key,
@@ -30,6 +31,7 @@ class Tuple(Field):
             default=default,
             default_factory=default_factory,
             missing=missing,
+            doc=doc,
         )
         object.__setattr__(self, 'tuple_fields', fields)
 
