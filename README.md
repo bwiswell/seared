@@ -37,7 +37,7 @@ pip install git+https://www.github.com/bwiswell/seared.git
 uv add git+https://www.github.com/bwiswell/seared.git
 ```
 
-Requires Python ≥ 3.11.
+Requires Python ≥ 3.14.
 
 **Note:** if the consuming project uses `hatchling` as its build backend,
 adding `seared` as a direct git reference may require enabling
