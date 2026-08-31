@@ -1,6 +1,6 @@
 [project]
 name = "seared"
-version = "0.2.4"
+version = "0.2.5"
 description = "A lightweight Python serialization/deserialization tool"
 authors = [
     { name = "Benj Wiswell", email = "benjwiswell@gmail.com" },
