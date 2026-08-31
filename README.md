@@ -13,7 +13,7 @@ for free.
 ## Why seared
 
 - **Zero runtime dependencies.** Pure stdlib core. Numpy / pandas / polars / PyYAML / tomli-w live behind opt-in extras.
-- **Fast.** ~8× faster `load` and ~2.6–3.1× faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
+- **Fast for pure Python.** ~3.7× faster `load` and ~1.8× faster `dump` than `marshmallow` on a representative nested schema; compiled-core libraries (pydantic v2) are faster still, at the cost of binary dependencies (see [Benchmarks](#benchmarks)).
 - **Compact.** `@s.seared` classes are `__slots__` dataclasses by default — lower memory per instance, faster attribute access.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
 - **Typed-callable fields.** `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, plus optional `NDArray`, `PandasFrame`, `PolarsFrame`.
@@ -255,16 +255,21 @@ See [`docs/_core/errors.md`](docs/_core/errors.md) for the full hierarchy.
 ## Benchmarks
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
-a list of strings), 20k iterations:
+a list of strings), 20k iterations. seared 0.2.4, marshmallow 4.3.1,
+pydantic 2.13.5; ratios are versus marshmallow:
 
-| Op   | `marshmallow` 3.26 | `seared` 0.2.0 (strict) | `seared` 0.2.0 (lax) |
-|------|--------------------|-------------------------|----------------------|
-| load | 4,743 ops/s        | 37,454 ops/s (~7.9×)    | 37,905 ops/s (~8.0×) |
-| dump | 16,042 ops/s       | 42,338 ops/s (~2.6×)    | 48,988 ops/s (~3.1×) |
+| Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` v2 |
+|------|---------------|-------------------|----------------|---------------|
+| load | 7,739 ops/s   | 28,405 ops/s (~3.7×) | 27,758 ops/s (~3.6×) | 148,995 ops/s |
+| dump | 25,388 ops/s  | 44,772 ops/s (~1.8×) | 47,048 ops/s (~1.9×) | 181,317 ops/s |
 
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
-same schema decorated `@s.seared(validate=False)`. Reproduction steps and
-caveats in [`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
+same schema decorated `@s.seared(validate=False)`. pydantic's compiled Rust
+core outruns any pure-Python implementation — seared's trade is zero runtime
+dependencies, not beating native code. The bench lives in
+[`bench/`](bench/) (`uv sync --extra bench && uv run python -m bench`) and
+records each run to [`bench/results.json`](bench/results.json); methodology
+and caveats in [`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
 
 ## Limits (v0.2.0)
 
