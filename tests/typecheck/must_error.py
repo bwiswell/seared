@@ -2,7 +2,7 @@
 
 Proves the checking is real — the transform makes seared classes strict enough
 to catch genuine mistakes, not merely silence `invalid-assignment`. Each marked
-line names the diagnostic ``tests/typing/test_ty.py`` asserts on.
+line names the diagnostic ``tests/typecheck/test_ty.py`` asserts on.
 """
 
 import seared as s

@@ -5,7 +5,11 @@
 - ``build_docs(target)`` → ``{path: markdown}`` for a whole module/package.
 - CLI: ``python -m seared.doc <module-or-package> [-o docs] [--check]``.
 
-See project-plans/03-schema-docgen.md.
+The two stages are deliberately separate: ``introspect`` produces a
+render-agnostic :class:`SchemaDoc` tree, and renderers consume *that* rather
+than the classes themselves. It is what lets a downstream package layer its
+own renderer (zeared's wire-aware one) on the same intermediate, and what
+would let a JSON-Schema or HTML output land without touching introspection.
 """
 
 from .generate import build_docs, collect, main

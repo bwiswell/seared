@@ -16,8 +16,10 @@ if TYPE_CHECKING:
     # mypy) that ``@seared`` synthesises a dataclass, and ``field_specifiers``
     # lists the Field constructors so ``x: str = s.Str(...)`` is read as a field
     # (annotation drives the type; the ``.pyi`` stubs return ``Any`` so the
-    # assignment is legal). ``default=`` / ``default_factory=`` are the names the
-    # checker keys required/optional off — hence Option A in the plan.
+    # assignment is legal). ``default=`` / ``default_factory=`` are the names
+    # PEP 681 keys required-vs-optional off, which is why they are the canonical
+    # spelling and ``missing=`` is deprecated: a field declared with ``missing=``
+    # reads as *required* to a checker regardless of its runtime behaviour.
     from typing import dataclass_transform, overload
 
     from seared.fields.bool_ import Bool

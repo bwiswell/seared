@@ -2,8 +2,11 @@
 
 ``ok_idiom.py`` must type-clean; ``must_error.py`` must be flagged with the
 expected diagnostics. Skipped when ``ty`` isn't on PATH (e.g. a minimal env).
-These are the guardrail for the PEP 681 ``@dataclass_transform`` support — see
-``project-plans/01-ty-compat-dataclass-transform.md``.
+These are the guardrail for the PEP 681 ``@dataclass_transform`` support. The
+transform has to leave seared classes strict enough to catch genuine mistakes —
+a missing required argument, an unknown keyword, an unknown attribute — and not
+merely silence ``invalid-assignment`` on ``x: str = s.Str(...)``. Only a real
+type checker can tell those two outcomes apart, hence a subprocess.
 """
 
 import shutil

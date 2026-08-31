@@ -16,8 +16,9 @@ class Field:
     required: bool = False
     dump: bool = True
     # Human-facing field description — units, semantics, provenance. Never
-    # serialized (wire-invisible metadata, like ``data_key``); surfaced by the
-    # schema-doc generator (``seared.doc``). See project-plans/03-schema-docgen.
+    # serialized (wire-invisible metadata, like ``data_key``); surfaced by
+    # ``seared.doc`` in the generated schema pages, and available to any other
+    # tooling through ``Cls.__seared_fields__``.
     doc: str | None = None
     # Canonical default kwargs. ``default`` is a static value; ``default_factory``
     # is a zero-arg callable invoked per-instance by the decorator (the clean home
