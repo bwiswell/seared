@@ -1,4 +1,5 @@
 """JSON codec — always available (stdlib only)."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -27,9 +28,6 @@ def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:
     # ValueError, not TypeError: the malformed-payload contract is pinned
     # by tests and inherited by SearedError (itself a ValueError).
     if not isinstance(payload, dict):
-        msg = (
-            f'{cls.__name__}.from_json: top-level JSON must be an object, '
-            f'got {type(payload).__name__}'
-        )
+        msg = f'{cls.__name__}.from_json: top-level JSON must be an object, got {type(payload).__name__}'
         raise ValueError(msg)  # noqa: TRY004
     return cls.load(payload)

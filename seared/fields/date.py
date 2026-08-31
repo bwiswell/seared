@@ -35,6 +35,7 @@ class Date(Field):
             if self.format is None:
                 return date.fromisoformat(value)
             from datetime import datetime
+
             return datetime.strptime(value, self.format).date()  # noqa: DTZ007 — the field's `format` owns tz handling
         except ValueError as e:
             msg = f'invalid date {value!r}'

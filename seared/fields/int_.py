@@ -13,8 +13,8 @@ class Int(Field):
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> int:
         """Python ``int`` → JSON integer (rejects ``bool``)."""
         if validate and (isinstance(value, bool) or not isinstance(value, int)):
-                msg = f'expected int, got {type(value).__name__}'
-                raise ValidationError(msg)
+            msg = f'expected int, got {type(value).__name__}'
+            raise ValidationError(msg)
         return int(value)
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> int:

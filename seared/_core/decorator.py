@@ -45,28 +45,54 @@ if TYPE_CHECKING:
     def seared[ClsT](cls: type[ClsT], /) -> type[ClsT]: ...
     @overload
     def seared[ClsT](
-        *, slots: bool = ..., validate: bool = ...,
+        *,
+        slots: bool = ...,
+        validate: bool = ...,
     ) -> Callable[[type[ClsT]], type[ClsT]]: ...
     @dataclass_transform(
         kw_only_default=True,
         field_specifiers=(
-            _Field, Bool, Bytes, Date, DateTime, Decimal, Dict, Enum, Float,
-            Int, NDArray, PandasFrame, Path, PolarsFrame, Str, T, Time,
-            TimeDelta, _Tuple, Union, UUID,
+            _Field,
+            Bool,
+            Bytes,
+            Date,
+            DateTime,
+            Decimal,
+            Dict,
+            Enum,
+            Float,
+            Int,
+            NDArray,
+            PandasFrame,
+            Path,
+            PolarsFrame,
+            Str,
+            T,
+            Time,
+            TimeDelta,
+            _Tuple,
+            Union,
+            UUID,
         ),
     )
     def seared(cls=None, *, slots=True, validate=True): ...
 else:
+
     def seared(
-        cls: type | None = None, *, slots: bool = True, validate: bool = True,
+        cls: type | None = None,
+        *,
+        slots: bool = True,
+        validate: bool = True,
     ) -> Any:
         """Decorator turning a class into a seared dataclass.
 
         Usable bare (``@s.seared``) or parameterised
         (``@s.seared(slots=False, validate=False)``).
         """
+
         def decorate(c: type) -> type:
             return _build(c, slots=slots, validate=validate)
+
         if cls is None:
             return decorate
         return decorate(cls)
@@ -74,6 +100,7 @@ else:
 
 def _build(cls: type, *, slots: bool, validate: bool) -> type:
     from seared.fields.field import Field  # local import avoids core<->field cycle
+
     cls = dataclass(cls, slots=slots)
     specs: list[FieldSpec] = []
     unwrap_specs: list[tuple[str, Any]] = []
@@ -89,7 +116,7 @@ def _build(cls: type, *, slots: bool, validate: bool) -> type:
     # + payload region without collisions. Single-UNWRAP-per-class was the
     # 0.1.8 constraint; 0.1.9 relaxes it to per-key-disjoint.
     if len(unwrap_specs) > 1:
-        seen: dict[str, str] = {}     # wire-key → first-seen-attr
+        seen: dict[str, str] = {}  # wire-key → first-seen-attr
         for attr, f in unwrap_specs:
             for key_attr in ('tag_key', 'payload_key'):
                 key = getattr(f, key_attr, None)
@@ -118,6 +145,7 @@ def _build(cls: type, *, slots: bool, validate: bool) -> type:
     # informative ImportError from inside the call when the extra is
     # missing — no import cost here for users who don't use those.
     from seared.formats import _attach_format_methods
+
     _attach_format_methods(cls)
 
     return cls
@@ -188,6 +216,7 @@ def _make_dump(specs: tuple[FieldSpec, ...], validate: bool) -> Callable:
             else:
                 out[wire] = _apply(f, v, 'serialize', validate, format=format)
         return out
+
     return dump
 
 
@@ -207,7 +236,11 @@ def _make_load(cls: type, specs: tuple[FieldSpec, ...], validate: bool) -> Calla
                 continue
             if wire in data:
                 kwargs[attr] = _apply(
-                    f, data[wire], 'deserialize', validate, format=format,
+                    f,
+                    data[wire],
+                    'deserialize',
+                    validate,
+                    format=format,
                 )
             elif f.required:
                 msg = f'{cls_name}.{attr} is required'
@@ -217,6 +250,7 @@ def _make_load(cls: type, specs: tuple[FieldSpec, ...], validate: bool) -> Calla
             else:
                 kwargs[attr] = f.missing
         return cls(**kwargs)
+
     return load
 
 

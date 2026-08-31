@@ -13,8 +13,8 @@ class Float(Field):
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> float:
         """Python ``float`` / ``int`` → JSON number (rejects ``bool``)."""
         if validate and (isinstance(value, bool) or not isinstance(value, (int, float))):
-                msg = f'expected float, got {type(value).__name__}'
-                raise ValidationError(msg)
+            msg = f'expected float, got {type(value).__name__}'
+            raise ValidationError(msg)
         return float(value)
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> float:

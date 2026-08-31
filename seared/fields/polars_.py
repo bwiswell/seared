@@ -8,6 +8,7 @@ Module name has a trailing underscore (``polars_.py``) to avoid
 shadowing the upstream ``polars`` package on import. The field is
 re-exported from ``seared.__init__`` as ``s.PolarsFrame``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -33,8 +34,7 @@ class PolarsFrame(Field):
         super().__post_init__()
         if self.many or self.keyed:
             msg = (
-                'PolarsFrame: many=True / keyed=True not supported — '
-                'wrap in a T(SomeWrapperClass) for list-of-frames.'
+                'PolarsFrame: many=True / keyed=True not supported — wrap in a T(SomeWrapperClass) for list-of-frames.'
             )
             raise TypeError(msg)
 
@@ -53,10 +53,7 @@ class PolarsFrame(Field):
             return value
         if not isinstance(value, list):
             if validate:
-                msg = (
-                    f'expected list of records for PolarsFrame, '
-                    f'got {type(value).__name__}'
-                )
+                msg = f'expected list of records for PolarsFrame, got {type(value).__name__}'
                 raise ValidationError(msg)
             return value
         # ``polars.DataFrame([{...}, ...])`` accepts a list of dicts

@@ -6,6 +6,7 @@ import Bool``. The optional dataframe / numpy fields gracefully degrade
 to ImportError-on-instantiate stubs when their extras aren't installed,
 mirroring the package-init's behavior.
 """
+
 from typing import Any
 
 from .bool_ import Bool
@@ -30,37 +31,33 @@ from .uuid_ import UUID
 try:
     from .ndarray import NDArray
 except ImportError:
+
     class NDArray:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             """Raise, naming the extra that would make this field real."""
-            msg = (
-                "seared.NDArray requires numpy. "
-                "Install it with: uv add 'seared[numpy]'"
-            )
+            msg = "seared.NDArray requires numpy. Install it with: uv add 'seared[numpy]'"
             raise ImportError(msg)
+
 
 try:
     from .pandas_ import PandasFrame
 except ImportError:
+
     class PandasFrame:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             """Raise, naming the extra that would make this field real."""
-            msg = (
-                "seared.PandasFrame requires pandas. "
-                "Install it with: uv add 'seared[pandas]'"
-            )
+            msg = "seared.PandasFrame requires pandas. Install it with: uv add 'seared[pandas]'"
             raise ImportError(msg)
+
 
 try:
     from .polars_ import PolarsFrame
 except ImportError:
+
     class PolarsFrame:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             """Raise, naming the extra that would make this field real."""
-            msg = (
-                "seared.PolarsFrame requires polars. "
-                "Install it with: uv add 'seared[polars]'"
-            )
+            msg = "seared.PolarsFrame requires polars. Install it with: uv add 'seared[polars]'"
             raise ImportError(msg)
 
 

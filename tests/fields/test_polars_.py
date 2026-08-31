@@ -1,4 +1,5 @@
 """Pin: ``PolarsFrame`` field — round-trip via JSON-records form."""
+
 from __future__ import annotations
 
 import sys
@@ -73,6 +74,7 @@ class TestManyKeyedRejected:
 
 class TestMissingPolars:
     """Pin: graceful ``ImportError`` when polars isn't installed."""
+
     def test_helpful_import_error(self):
         real_polars = sys.modules.get('polars')
         try:
@@ -82,6 +84,7 @@ class TestMissingPolars:
                 import importlib
 
                 import seared as s_mod
+
                 importlib.reload(s_mod)
                 with pytest.raises(ImportError, match='polars'):
                     s_mod.PolarsFrame()
@@ -91,4 +94,5 @@ class TestMissingPolars:
             import importlib
 
             import seared as s_mod
+
             importlib.reload(s_mod)

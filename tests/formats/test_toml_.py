@@ -1,5 +1,6 @@
 """Pin: TOML codec — read via stdlib ``tomllib``, write via optional
 ``seared[toml]`` extra (lazy ``tomli-w`` import)."""
+
 from __future__ import annotations
 
 import sys

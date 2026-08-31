@@ -3,6 +3,7 @@
 Read via stdlib ``tomllib`` (Python ≥ 3.11); write via the optional
 ``tomli-w`` extra.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -26,9 +27,9 @@ def to(cls: type[Seared], obj: Seared) -> str:
         import tomli_w
     except ImportError as e:
         msg = (
-            "to_toml requires tomli-w — install via "
+            'to_toml requires tomli-w — install via '
             "`pip install seared[toml]` (or `uv add 'seared[toml]'`). "
-            "Reading TOML works without the extra (uses stdlib tomllib)."
+            'Reading TOML works without the extra (uses stdlib tomllib).'
         )
         raise ImportError(msg) from e
     return tomli_w.dumps(cls.dump(obj))
@@ -43,9 +44,6 @@ def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:
     # ValueError, not TypeError: the malformed-payload contract is pinned
     # by tests and inherited by SearedError (itself a ValueError).
     if not isinstance(payload, dict):
-        msg = (
-            f'{cls.__name__}.from_toml: top-level TOML must be a table, '
-            f'got {type(payload).__name__}'
-        )
+        msg = f'{cls.__name__}.from_toml: top-level TOML must be a table, got {type(payload).__name__}'
         raise ValueError(msg)  # noqa: TRY004
     return cls.load(payload)

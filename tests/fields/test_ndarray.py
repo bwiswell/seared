@@ -70,6 +70,7 @@ class TestNDArray:
 
     def test_many_dump_called_multiple_times(self):
         """Regression: counter went out-of-bounds on second call."""
+
         @s.seared
         class Obj(s.Seared):
             arrays: list = s.NDArray(many=True, required=True)

@@ -1,4 +1,5 @@
 """Fixture models exercising every field kind the doc generator handles."""
+
 from __future__ import annotations
 
 import enum

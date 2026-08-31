@@ -48,9 +48,7 @@ class Tuple(Field):
         if validate and len(value) != len(self.tuple_fields):
             msg = f'tuple length mismatch: expected {len(self.tuple_fields)}, got {len(value)}'
             raise ValidationError(msg)
-        return tuple(
-            f.serialize(v, validate) for f, v in zip(self.tuple_fields, value, strict=False)
-        )
+        return tuple(f.serialize(v, validate) for f, v in zip(self.tuple_fields, value, strict=False))
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> tuple:
         """List/tuple → tuple, each slot through its own field."""
@@ -60,6 +58,4 @@ class Tuple(Field):
         if validate and len(value) != len(self.tuple_fields):
             msg = f'tuple length mismatch: expected {len(self.tuple_fields)}, got {len(value)}'
             raise ValidationError(msg)
-        return tuple(
-            f.deserialize(v, validate) for f, v in zip(self.tuple_fields, value, strict=False)
-        )
+        return tuple(f.deserialize(v, validate) for f, v in zip(self.tuple_fields, value, strict=False))

@@ -5,6 +5,7 @@ annotations and returns a :class:`SchemaDoc` tree — the stable, render-agnosti
 intermediate that ``seared.doc.render`` (and zeared's wire-aware renderer, and
 any future JSON-Schema / HTML output) consume. Pure stdlib.
 """
+
 from __future__ import annotations
 
 import enum as _enum
@@ -32,7 +33,7 @@ class VariantDoc:
 @dataclass(frozen=True, slots=True)
 class FieldDoc:
     attr: str
-    wire_key: str | None        # None when identical to ``attr``
+    wire_key: str | None  # None when identical to ``attr``
     type_str: str
     required: bool
     default_repr: str
@@ -41,10 +42,10 @@ class FieldDoc:
     dump: bool
     doc: str | None
     enum: EnumDoc | None = None
-    nested: type | None = None                 # T(schema) target
+    nested: type | None = None  # T(schema) target
     variants: tuple[VariantDoc, ...] | None = None
-    envelope: str | None = None                # Union envelope description
-    fallback: type | None = None               # Union default variant
+    envelope: str | None = None  # Union envelope description
+    fallback: type | None = None  # Union default variant
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,10 +121,7 @@ def _field_doc(attr: str, wire: str, f: Any, type_str: str) -> FieldDoc:
         enum = EnumDoc(name=e.__name__, members=tuple((m.name, m.value) for m in e))
     elif hasattr(f, 'variants'):
         variants = tuple(VariantDoc(tag=t, cls=c) for t, c in f.variants.items())
-        envelope = (
-            'flat' if getattr(f, 'payload_key', None) is None
-            else f'nested under `{f.payload_key}`'
-        )
+        envelope = 'flat' if getattr(f, 'payload_key', None) is None else f'nested under `{f.payload_key}`'
         fallback = getattr(f, 'default', None)
     elif hasattr(f, 'schema'):
         nested = f.schema
@@ -200,4 +198,5 @@ def _format_type(tp: Any) -> str:
 def _is_union(tp: Any) -> bool:
     import types as _types
     import typing as _typing
+
     return get_origin(tp) is _typing.Union or isinstance(tp, _types.UnionType)

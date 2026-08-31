@@ -9,6 +9,7 @@ constructor (``PosixPath`` on Linux, ``WindowsPath`` on Windows). For
 paths that should stay POSIX regardless of host (rare — most consumers
 want the native), pass ``concrete=PurePosixPath``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from .field import Field
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Path(Field):
     """``pathlib.Path`` serialised as a POSIX string."""
+
     concrete: type = _Path
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> str:

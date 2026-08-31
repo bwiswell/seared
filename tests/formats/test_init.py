@@ -2,6 +2,7 @@
 ``_attach_format_methods`` wires up the eight per-format classmethods
 on every ``@s.seared`` class.
 """
+
 from __future__ import annotations
 
 import seared as s
@@ -17,6 +18,7 @@ class Sample(s.Seared):
 class TestAttachedMethods:
     """Pin: every ``@s.seared`` class ships eight codec methods —
     ``to_*`` and ``from_*`` for each of json / toml / yaml / csv."""
+
     def test_to_json_attached(self):
         assert callable(Sample.to_json)
 
@@ -45,6 +47,7 @@ class TestAttachedMethods:
 class TestAttachReentrant:
     """Pin: calling ``_attach_format_methods`` twice doesn't break
     anything — each call simply rebinds the classmethods."""
+
     def test_double_attach_safe(self):
         @s.seared
         class Foo(s.Seared):
@@ -60,6 +63,7 @@ class TestSmokeRoundTrip:
     """Light end-to-end check that the wiring leads to working codecs;
     deep per-codec testing lives in the dedicated ``test_<codec>.py``
     files alongside this one."""
+
     def test_json_round_trip(self):
         f = Sample(x=1, name='alice')
         encoded = Sample.to_json(f)

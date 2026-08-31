@@ -56,10 +56,7 @@ class Union(Field):
                 msg = f'Union: tag must be a non-empty string, got {tag!r}'
                 raise TypeError(msg)
             if not isinstance(cls, type):
-                msg = (
-                    f'Union: variant for tag {tag!r} must be a class, '
-                    f'got {cls!r}'
-                )
+                msg = f'Union: variant for tag {tag!r} must be a class, got {cls!r}'
                 raise TypeError(msg)
         if self.default is not None and not isinstance(self.default, type):
             msg = f'Union: default must be a class, got {self.default!r}'
@@ -83,10 +80,7 @@ class Union(Field):
                 return {self.tag_key: tag, self.payload_key: payload}
         if validate:
             names = [v.__name__ for v in self.variants.values()]
-            msg = (
-                f'Union: value of type {type(value).__name__} does not match '
-                f'any declared variant ({names})'
-            )
+            msg = f'Union: value of type {type(value).__name__} does not match any declared variant ({names})'
             raise ValidationError(msg)
         return {}
 
@@ -108,10 +102,7 @@ class Union(Field):
                 # to the configured default variant.
                 variant_cls = self.default
             else:
-                msg = (
-                    f'Union: unknown tag {tag!r}; expected one of '
-                    f'{sorted(self.variants)}'
-                )
+                msg = f'Union: unknown tag {tag!r}; expected one of {sorted(self.variants)}'
                 raise ValidationError(msg)
         if self.payload_key is None:
             payload = {k: v for k, v in value.items() if k != self.tag_key}

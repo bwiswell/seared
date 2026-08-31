@@ -44,8 +44,8 @@ class T(Field):
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:
         """Nested instance → the nested schema's dumped dict."""
         if not isinstance(value, self.schema) and validate:
-                msg = f'expected {self.schema.__name__}, got {type(value).__name__}'
-                raise ValidationError(msg)
+            msg = f'expected {self.schema.__name__}, got {type(value).__name__}'
+            raise ValidationError(msg)
         return self.schema.dump(value)
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:  # noqa: ARG002 — signature fixed by Field

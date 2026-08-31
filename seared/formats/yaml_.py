@@ -3,6 +3,7 @@
 Both directions go through the optional ``seared[yaml]`` extra (lazy
 ``PyYAML`` import).
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -20,10 +21,7 @@ def _import_yaml() -> ModuleType:
     try:
         import yaml
     except ImportError as e:
-        msg = (
-            "to_yaml/from_yaml requires PyYAML — install via "
-            "`pip install seared[yaml]` (or `uv add 'seared[yaml]'`)."
-        )
+        msg = "to_yaml/from_yaml requires PyYAML — install via `pip install seared[yaml]` (or `uv add 'seared[yaml]'`)."
         raise ImportError(msg) from e
     else:
         return yaml
@@ -42,9 +40,6 @@ def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:
     # ValueError, not TypeError: the malformed-payload contract is pinned
     # by tests and inherited by SearedError (itself a ValueError).
     if not isinstance(payload, dict):
-        msg = (
-            f'{cls.__name__}.from_yaml: top-level YAML must be a mapping, '
-            f'got {type(payload).__name__}'
-        )
+        msg = f'{cls.__name__}.from_yaml: top-level YAML must be a mapping, got {type(payload).__name__}'
         raise ValueError(msg)  # noqa: TRY004
     return cls.load(payload)

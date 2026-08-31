@@ -8,6 +8,7 @@ codec is class-level: ``Cls.from_csv(source) -> list[Cls]`` and
 time — CSV cells can't hold structured data, and flatten-and-rehydrate
 is its own design problem deferred to a future release.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -26,10 +27,16 @@ from ._common import read_source
 # Field type names that don't fit in a CSV cell. We check by the type's
 # ``__name__`` rather than ``isinstance`` so that the optional dataframe
 # fields (which may not even be installed) work without an import here.
-_NESTING_FIELD_NAMES = frozenset({
-    'T', 'Union', 'NDArray', 'Tuple',
-    'PandasFrame', 'PolarsFrame',
-})
+_NESTING_FIELD_NAMES = frozenset(
+    {
+        'T',
+        'Union',
+        'NDArray',
+        'Tuple',
+        'PandasFrame',
+        'PolarsFrame',
+    }
+)
 
 
 def _validate_flat(cls: type[Seared]) -> None:
@@ -41,16 +48,10 @@ def _validate_flat(cls: type[Seared]) -> None:
     for attr, _, f in cls.__seared_fields__:
         type_name = type(f).__name__
         if type_name in _NESTING_FIELD_NAMES:
-            msg = (
-                f'{cls.__name__}.{attr} is a {type_name} field — '
-                f'CSV requires flat (non-nested) classes only'
-            )
+            msg = f'{cls.__name__}.{attr} is a {type_name} field — CSV requires flat (non-nested) classes only'
             raise TypeError(msg)
         if f.keyed or f.many:
-            msg = (
-                f'{cls.__name__}.{attr}: CSV cells cannot hold '
-                f'keyed/many collections'
-            )
+            msg = f'{cls.__name__}.{attr}: CSV cells cannot hold keyed/many collections'
             raise TypeError(msg)
 
 

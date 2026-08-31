@@ -1,5 +1,6 @@
 """Pin: ``Path`` field — POSIX-normalised wire format; native ``Path``
 on receive (or ``PurePosixPath`` via ``concrete=`` opt-in)."""
+
 from __future__ import annotations
 
 from pathlib import Path as P

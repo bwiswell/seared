@@ -3,6 +3,7 @@
 behavior tests live in ``tests/_core/test_decorator.py``; this file
 covers the package-level surface.
 """
+
 from __future__ import annotations
 
 import seared as s
@@ -27,10 +28,26 @@ class TestPublicSurface:
     def test_field_types_re_exported(self):
         # Spot-check a representative subset — full per-field tests
         # live under tests/fields/.
-        for name in ('Bool', 'Bytes', 'Date', 'DateTime', 'Decimal',
-                     'Dict', 'Enum', 'Field', 'Float', 'Int', 'Path',
-                     'Str', 'T', 'Time', 'TimeDelta', 'Tuple', 'Union',
-                     'UUID'):
+        for name in (
+            'Bool',
+            'Bytes',
+            'Date',
+            'DateTime',
+            'Decimal',
+            'Dict',
+            'Enum',
+            'Field',
+            'Float',
+            'Int',
+            'Path',
+            'Str',
+            'T',
+            'Time',
+            'TimeDelta',
+            'Tuple',
+            'Union',
+            'UUID',
+        ):
             assert hasattr(s, name), f'seared package missing {name}'
 
     def test_optional_field_types_present(self):

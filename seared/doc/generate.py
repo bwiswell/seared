@@ -7,6 +7,7 @@ Factored apart from any single renderer so zeared reuses the whole pipeline
 (discovery / pathing / links / index / check) with its own Message-aware
 ``render_one``.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -75,7 +76,7 @@ def _rel_path(cls: type, target: str) -> PurePosixPath:
     """
     module = cls.__module__
     if module == target or module.startswith(target + '.'):
-        suffix = module[len(target):].lstrip('.')
+        suffix = module[len(target) :].lstrip('.')
         dirs = suffix.split('.')[:-1] if suffix else []
     else:
         dirs = []
@@ -161,18 +162,15 @@ def check_docs(docs: dict[str, str], outdir: str) -> list[str]:
     return drift
 
 
-def main(argv: list[str] | None = None, *, render_one: RenderOne | None = None,
-         prog: str | None = None) -> int:
+def main(argv: list[str] | None = None, *, render_one: RenderOne | None = None, prog: str | None = None) -> int:
     """CLI entry point for ``seared-doc``. Returns the process exit code."""
     parser = argparse.ArgumentParser(
         prog=prog,
         description='Generate Markdown schema docs from @seared / @zeared classes.',
     )
     parser.add_argument('target', help='module or package to scan (dotted path)')
-    parser.add_argument('-o', '--output', default='docs',
-                        help='output directory (default: ./docs)')
-    parser.add_argument('--check', action='store_true',
-                        help='verify docs are up to date; exit 1 on drift (no writes)')
+    parser.add_argument('-o', '--output', default='docs', help='output directory (default: ./docs)')
+    parser.add_argument('--check', action='store_true', help='verify docs are up to date; exit 1 on drift (no writes)')
     args = parser.parse_args(argv)
 
     docs = build_docs(args.target, render_one=render_one)

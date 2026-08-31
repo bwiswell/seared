@@ -55,6 +55,10 @@ exclude = ["/bench"]
 line-length = 120
 target-version = "py314"
 indent-width = 4
+# Ruff formats Python code blocks inside Markdown. Off here: the docs align
+# field declarations into columns deliberately, and several ```python blocks
+# show *JSON* wire form, which the formatter rewrites to single quotes.
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["ALL"]

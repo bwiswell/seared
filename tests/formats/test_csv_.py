@@ -1,5 +1,6 @@
 """Pin: CSV codec — class-method-only. Flat dataclasses round-trip;
 nested / many / keyed fields raise ``TypeError``."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -21,7 +22,7 @@ class TestFlatRoundTrip:
     def test_to_csv_includes_header_and_rows(self):
         rows = [
             Row(id=1, name='alice', score=9.5),
-            Row(id=2, name='bob',   score=7.2),
+            Row(id=2, name='bob', score=7.2),
         ]
         text = Row.to_csv(rows)
         lines = text.strip().splitlines()
@@ -118,6 +119,7 @@ class TestRejectsNested:
 class TestDateDecimalRoundTrip:
     """Pin: ``Date`` / ``Decimal`` cells round-trip via the existing
     string serialization on ``dump`` / ``load``."""
+
     def test_date_round_trip(self):
         @s.seared
         class Event(s.Seared):

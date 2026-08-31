@@ -10,6 +10,7 @@ Module name has a trailing underscore (``pandas_.py``) to avoid
 shadowing the upstream ``pandas`` package on import. The field is
 re-exported from ``seared.__init__`` as ``s.PandasFrame``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -35,8 +36,7 @@ class PandasFrame(Field):
         super().__post_init__()
         if self.many or self.keyed:
             msg = (
-                'PandasFrame: many=True / keyed=True not supported — '
-                'wrap in a T(SomeWrapperClass) for list-of-frames.'
+                'PandasFrame: many=True / keyed=True not supported — wrap in a T(SomeWrapperClass) for list-of-frames.'
             )
             raise TypeError(msg)
 
@@ -55,10 +55,7 @@ class PandasFrame(Field):
             return value
         if not isinstance(value, list):
             if validate:
-                msg = (
-                    f'expected list of records for PandasFrame, '
-                    f'got {type(value).__name__}'
-                )
+                msg = f'expected list of records for PandasFrame, got {type(value).__name__}'
                 raise ValidationError(msg)
             return value
         return pd.DataFrame.from_records(value)

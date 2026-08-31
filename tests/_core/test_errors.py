@@ -1,5 +1,6 @@
 """Tests for ``seared._core.errors`` — the ``SearedError`` exception
 hierarchy."""
+
 from __future__ import annotations
 
 import pytest

@@ -38,8 +38,7 @@ class Field:
             object.__setattr__(self, 'missing', self.default)
         elif self.missing is not None:
             warnings.warn(
-                'seared: `missing=` is deprecated; use `default=` '
-                '(or `default_factory=` for mutable defaults).',
+                'seared: `missing=` is deprecated; use `default=` (or `default_factory=` for mutable defaults).',
                 DeprecationWarning,
                 stacklevel=2,
             )

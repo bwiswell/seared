@@ -3,6 +3,7 @@
 Folds in the ``default=<VariantCls>`` schema-evolution fallback suite
 (was ``tests/test_union_fallback.py``).
 """
+
 from __future__ import annotations
 
 import pytest
@@ -29,13 +30,16 @@ class Configure(s.Seared):
 # Envelope shapes (nested vs flat).
 # ---------------------------------------------------------------------------
 
+
 class TestNestedEnvelope:
     def test_round_trip_start(self):
         @s.seared
         class Control(s.Seared):
             action: object = s.Union(
                 variants={'start': Start, 'stop': Stop, 'configure': Configure},
-                tag_key='action', payload_key='args', required=True,
+                tag_key='action',
+                payload_key='args',
+                required=True,
             )
 
         ctrl = Control(action=Start(speed=10.0))
@@ -51,7 +55,9 @@ class TestNestedEnvelope:
         class Control(s.Seared):
             action: object = s.Union(
                 variants={'start': Start, 'stop': Stop},
-                tag_key='action', payload_key='args', required=True,
+                tag_key='action',
+                payload_key='args',
+                required=True,
             )
 
         d = Control.dump(Control(action=Stop()))
@@ -66,7 +72,8 @@ class TestFlatEnvelope:
         class Event(s.Seared):
             data: object = s.Union(
                 variants={'start': Start, 'configure': Configure},
-                tag_key='type', required=True,   # payload_key=None → flat
+                tag_key='type',
+                required=True,  # payload_key=None → flat
             )
 
         d = Event.dump(Event(data=Start(speed=5.0)))
@@ -81,13 +88,16 @@ class TestFlatEnvelope:
 # Strict tag/instance validation.
 # ---------------------------------------------------------------------------
 
+
 class TestUnknownTag:
     def test_unknown_tag_raises(self):
         @s.seared
         class Control(s.Seared):
             action: object = s.Union(
                 variants={'start': Start, 'stop': Stop},
-                tag_key='action', payload_key='args', required=True,
+                tag_key='action',
+                payload_key='args',
+                required=True,
             )
 
         with pytest.raises(s.ValidationError, match='unknown tag'):
@@ -98,7 +108,9 @@ class TestUnknownTag:
         class Control(s.Seared):
             action: object = s.Union(
                 variants={'start': Start},
-                tag_key='action', payload_key='args', required=True,
+                tag_key='action',
+                payload_key='args',
+                required=True,
             )
 
         with pytest.raises(s.ValidationError, match='missing tag'):
@@ -110,8 +122,10 @@ class TestSerializeValidation:
         @s.seared
         class Control(s.Seared):
             action: object = s.Union(
-                variants={'start': Start}, tag_key='action',
-                payload_key='args', required=True,
+                variants={'start': Start},
+                tag_key='action',
+                payload_key='args',
+                required=True,
             )
 
         class Unrelated:
@@ -128,7 +142,9 @@ class TestWithOtherFields:
             issued_by: str = s.Str(required=True)
             action: object = s.Union(
                 variants={'start': Start, 'stop': Stop},
-                tag_key='action', payload_key='args', required=True,
+                tag_key='action',
+                payload_key='args',
+                required=True,
             )
 
         cmd = Command(issued_by='alice', action=Start(speed=7.5))
@@ -148,15 +164,20 @@ class TestMultipleUnwrapDisjointKeys:
     """0.1.9 relaxes the single-UNWRAP-per-class constraint when each
     Union's wire keys are disjoint. The collision-rejection side lives
     in ``tests/_core/test_decorator.py::TestKeyCollisionRejected``."""
+
     def test_two_unions_with_disjoint_keys_accepted(self):
         # Both Unions use distinct tag_key strings — no collision.
         @s.seared
         class Cmd(s.Seared):
             one: object = s.Union(
-                variants={'a': Start}, tag_key='k1', required=True,
+                variants={'a': Start},
+                tag_key='k1',
+                required=True,
             )
             two: object = s.Union(
-                variants={'b': Stop}, tag_key='k2', required=True,
+                variants={'b': Stop},
+                tag_key='k2',
+                required=True,
             )
 
         cmd = Cmd(one=Start(speed=5.0), two=Stop())
@@ -171,6 +192,7 @@ class TestMultipleUnwrapDisjointKeys:
 # tests/test_union_fallback.py).
 # ---------------------------------------------------------------------------
 
+
 @s.seared
 class _StartInt(s.Seared):
     speed: int = s.Int(required=True)
@@ -184,11 +206,13 @@ class _StopReason(s.Seared):
 @s.seared
 class Unknown(s.Seared):
     """Generic catch-all for variants the consumer doesn't yet know about."""
+
     raw_tag: str = s.Str(missing='')
 
 
 class TestNoFallback:
     """Default behaviour — unknown tags raise."""
+
     def test_unknown_tag_raises(self):
         @s.seared
         class Cmd(s.Seared):
@@ -202,6 +226,7 @@ class TestNoFallback:
 
 class TestWithFallback:
     """``default=<Variant>`` opts into graceful fallback."""
+
     def test_unknown_tag_coerces_to_default(self):
         @s.seared
         class Cmd(s.Seared):
@@ -233,7 +258,7 @@ class TestWithFallback:
         with pytest.raises(TypeError, match='default must be a class'):
             s.Union(
                 variants={'start': _StartInt},
-                default='not-a-class',         # type: ignore[arg-type]
+                default='not-a-class',  # type: ignore[arg-type]
             )
 
     def test_default_none_preserves_strict_behavior(self):

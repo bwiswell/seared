@@ -5,6 +5,7 @@ expected diagnostics. Skipped when ``ty`` isn't on PATH (e.g. a minimal env).
 These are the guardrail for the PEP 681 ``@dataclass_transform`` support — see
 ``project-plans/01-ty-compat-dataclass-transform.md``.
 """
+
 import shutil
 import subprocess
 from pathlib import Path
@@ -37,6 +38,4 @@ def test_ok_idiom_typechecks() -> None:
 def test_must_error_is_flagged(diagnostic: str) -> None:
     result = _run_ty('must_error.py')
     assert result.returncode != 0, 'expected ty to report errors, but it passed'
-    assert diagnostic in result.stdout, (
-        f'expected {diagnostic!r} in ty output:\n{result.stdout}'
-    )
+    assert diagnostic in result.stdout, f'expected {diagnostic!r} in ty output:\n{result.stdout}'

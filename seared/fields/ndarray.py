@@ -9,6 +9,7 @@ from .field import Field
 
 try:
     import numpy as np
+
     _NUMPY_AVAILABLE = True
 except ImportError:
     _NUMPY_AVAILABLE = False
@@ -20,10 +21,7 @@ class NDArray(Field):
         """Fail fast when the ``seared[numpy]`` extra isn't installed."""
         super().__post_init__()
         if not _NUMPY_AVAILABLE:
-            msg = (
-                "seared.NDArray requires numpy. "
-                "Install it with: uv add 'seared[numpy]'"
-            )
+            msg = "seared.NDArray requires numpy. Install it with: uv add 'seared[numpy]'"
             raise ImportError(msg)
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:

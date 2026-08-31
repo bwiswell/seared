@@ -2,6 +2,7 @@
 
 marshmallow is not a seared dependency; install via ``uv sync --extra bench``.
 """
+
 from __future__ import annotations
 
 from marshmallow import EXCLUDE, Schema
@@ -35,7 +36,12 @@ class OuterSchema(Schema):
 def cases() -> list[Case]:
     """The marshmallow comparator case."""
     schema = OuterSchema()
-    return [Case(
-        library='marshmallow', variant='default', version=dist_version('marshmallow'),
-        load=schema.load, dump=schema.dump,
-    )]
+    return [
+        Case(
+            library='marshmallow',
+            variant='default',
+            version=dist_version('marshmallow'),
+            load=schema.load,
+            dump=schema.dump,
+        )
+    ]

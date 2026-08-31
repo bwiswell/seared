@@ -1,4 +1,5 @@
 """seared cases: strict (default) and lax (``validate=False``)."""
+
 from __future__ import annotations
 
 import seared as s
@@ -27,8 +28,13 @@ def cases() -> list[Case]:
     out = []
     for variant, validate in [('strict', True), ('lax', False)]:
         outer = _build(validate)
-        out.append(Case(
-            library='seared', variant=variant, version=s.__version__,
-            load=outer.load, dump=outer.dump,
-        ))
+        out.append(
+            Case(
+                library='seared',
+                variant=variant,
+                version=s.__version__,
+                load=outer.load,
+                dump=outer.dump,
+            )
+        )
     return out

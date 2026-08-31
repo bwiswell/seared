@@ -5,6 +5,7 @@ method accepts either a path-like (read the file as UTF-8) or a string
 of content (parse directly). Same rule across all formats so callers
 don't have to remember per-format quirks.
 """
+
 from __future__ import annotations
 
 import os

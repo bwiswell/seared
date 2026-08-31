@@ -4,6 +4,7 @@ The stdlib module is ``decimal``; we name this module ``decimal_`` (with
 trailing underscore) to avoid shadowing it. The class is exported as
 ``Decimal`` from the ``seared`` package.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,6 +28,7 @@ class Decimal(Field):
     via IEEE 754 double). Use the default unless you specifically need
     JSON-native numeric typing on the wire.
     """
+
     as_number: bool = False
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:

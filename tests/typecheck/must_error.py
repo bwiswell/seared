@@ -4,12 +4,13 @@ Proves the checking is real — the transform makes seared classes strict enough
 to catch genuine mistakes, not merely silence `invalid-assignment`. Each marked
 line names the diagnostic ``tests/typing/test_ty.py`` asserts on.
 """
+
 import seared as s
 
 
 @s.seared
 class Point(s.Seared):
-    x: int = s.Int(required=True)   # no default -> required
+    x: int = s.Int(required=True)  # no default -> required
     y: int = s.Int(default=0)
 
 

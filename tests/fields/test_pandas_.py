@@ -1,4 +1,5 @@
 """Pin: ``PandasFrame`` field — round-trip via JSON-records form."""
+
 from __future__ import annotations
 
 import sys
@@ -69,6 +70,7 @@ class TestValidation:
 
 class TestManyKeyedRejected:
     """Pin: ``many=True`` / ``keyed=True`` not supported."""
+
     def test_many_raises_at_field_construction(self):
         with pytest.raises(TypeError, match='many=True'):
             s.PandasFrame(many=True)
@@ -80,6 +82,7 @@ class TestManyKeyedRejected:
 
 class TestMissingPandas:
     """Pin: a graceful ``ImportError`` when pandas isn't installed."""
+
     def test_helpful_import_error(self):
         # Simulate pandas being absent. The class returned from the
         # graceful-degrade try/except in seared/__init__.py raises on
@@ -94,6 +97,7 @@ class TestMissingPandas:
                 import importlib
 
                 import seared as s_mod
+
                 # Force reimport so the try/except in __init__ runs.
                 if 'seared.fields.pandas_' in sys.modules:
                     del sys.modules['seared.fields.pandas_']
@@ -111,4 +115,5 @@ class TestMissingPandas:
             import importlib
 
             import seared as s_mod
+
             importlib.reload(s_mod)

@@ -5,6 +5,7 @@ Built from small section functions (``render_header`` / ``render_fields_table``
 wire-aware one — can recompose them around their own sections. ``document()``
 assembles the core (Message-agnostic) page.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -80,8 +81,7 @@ def render_enums(schema: SchemaDoc) -> str:
         return ''
     out = ['## Enumerations']
     for f, enum in enum_fields:
-        out += ['', f'### `{f.attr}` → `{enum.name}`', '',
-                '| member | wire value |', '|--------|------------|']
+        out += ['', f'### `{f.attr}` → `{enum.name}`', '', '| member | wire value |', '|--------|------------|']
         for name, value in enum.members:
             out.append(f'| `{name}` | `{_pipe(repr(value))}` |')
     return '\n'.join(out)

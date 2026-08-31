@@ -1,13 +1,18 @@
 # House hooks run via `prek` (`uv run prek install` once per clone).
-# Local hooks gate every commit touching Python on a clean `ruff` lint and
-# `ty` check. `ruff format` is deliberately NOT wired up yet — the repo
-# predates the formatter and adopting it is its own (cosmetic) pass.
+# Local hooks gate every commit touching Python on clean `ruff` lint +
+# format and a clean `ty` check. Order follows ruff's own guidance: lint
+# first, formatter last so it tidies anything the lint pass touched.
 repos:
   - repo: local
     hooks:
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --force-exclude
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
         language: system
         types_or: [python, pyi]
       - id: ty-check

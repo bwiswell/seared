@@ -3,6 +3,7 @@
 The ``Report`` / ``Measurement`` classes are seared classes on purpose —
 the bench dogfoods the library it measures to produce its own artifact.
 """
+
 from __future__ import annotations
 
 import platform
@@ -88,8 +89,12 @@ def run_case(case: Case, data: dict[str, Any], n: int) -> list[Measurement]:
 
     return [
         Measurement(
-            library=case.library, variant=case.variant, version=case.version,
-            op=op, ops_per_s=n / t, us_per_op=t * 1e6 / n,
+            library=case.library,
+            variant=case.variant,
+            version=case.version,
+            op=op,
+            ops_per_s=n / t,
+            us_per_op=t * 1e6 / n,
         )
         for op, t in [('load', t_load), ('dump', t_dump)]
     ]
