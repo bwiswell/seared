@@ -1,5 +1,6 @@
 from typing import Any
 
+from ._core.accel import AccelInfo, accel_status
 from ._core.errors import SearedError, ValidationError
 from .doc import document, introspect
 from .fields.bool_ import Bool
@@ -55,10 +56,11 @@ except ImportError:
             raise ImportError(msg)
 
 
-__version__ = '0.2.6'
+__version__ = '0.2.8'
 
 __all__ = [
     'UUID',
+    'AccelInfo',
     'Bool',
     'Bytes',
     'Date',
@@ -83,6 +85,7 @@ __all__ = [
     'Union',
     'ValidationError',
     '__version__',
+    'accel_status',
     'document',
     'introspect',
     'seared',
