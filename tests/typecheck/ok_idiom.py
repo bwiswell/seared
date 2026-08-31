@@ -1,11 +1,11 @@
 """Type-checker fixture: the canonical seared idiom must type-clean under ty.
 
-Run by ``tests/typing/test_ty.py``. This file is intentionally NOT excluded
+Run by ``tests/typecheck/test_ty.py``. This file is intentionally NOT excluded
 from ty — it is the thing under test. It must produce zero diagnostics.
 """
 
 from enum import Enum
-from typing import assert_type
+from typing import Any, assert_type
 
 import seared as s
 
@@ -56,3 +56,13 @@ class Lax(s.Seared):
 
 lax = Lax()
 assert_type(lax.name, str)
+
+
+# Introspection surfaces are declared on the base, so reading them
+# type-checks. `__seared_accel__` was assigned only at decoration time until
+# 0.3.0, which made every caller work around a checker error.
+assert_type(Outer.__seared_accel__, s.AccelInfo)
+assert_type(Outer.__seared_accel__.accelerated, bool)
+assert_type(Outer.__seared_accel__.backend, str | None)
+assert_type(Outer.__seared_accel__.reason, str | None)
+assert_type(Outer.__seared_fields__, tuple[tuple[str, str, Any], ...])

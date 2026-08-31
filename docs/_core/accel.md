@@ -77,6 +77,11 @@ AccelInfo(accelerated=False, backend=None,
 class and always names *why* a class wasn't accelerated. `accel_status()`
 is the other half — whether a backend loaded at all.
 
+Both are declared on `Seared` itself, so reading them type-checks; an
+undecorated subclass inherits honest defaults (`()` and
+`AccelInfo(accelerated=False, reason='class is not decorated with @seared')`)
+rather than raising `AttributeError`.
+
 ## Control
 
 | Control | Effect |

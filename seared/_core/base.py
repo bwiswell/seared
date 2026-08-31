@@ -3,13 +3,27 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
+from .accel import AccelInfo
+
 if TYPE_CHECKING:
     import os
     from collections.abc import Iterable
 
 
 class Seared:
+    #: ``(attr_name, wire_key, Field)`` per declared field, in order. Set by
+    #: the decorator; ``()`` on an undecorated subclass.
     __seared_fields__: ClassVar[tuple[tuple[str, str, Any], ...]] = ()
+
+    #: Whether a compiled accelerator took this class, and the reason if not
+    #: (see ``_core.accel``). Declared here, rather than only assigned at
+    #: decoration time, so that reading it type-checks — it is a documented
+    #: introspection surface, and an attribute a checker can't see is one
+    #: callers have to work around.
+    __seared_accel__: ClassVar[AccelInfo] = AccelInfo(
+        accelerated=False,
+        reason='class is not decorated with @seared',
+    )
 
     @classmethod
     def dump(cls, obj: Seared, format: str = 'json') -> dict[str, Any]:
