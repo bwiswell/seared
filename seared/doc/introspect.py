@@ -11,7 +11,7 @@ import enum as _enum
 import inspect
 import re
 from dataclasses import dataclass, field as _dc_field
-from typing import Any, Optional, get_args, get_origin, get_type_hints
+from typing import Any, Optional, TypeGuard, get_args, get_origin, get_type_hints
 
 from .._core.base import Seared
 
@@ -60,7 +60,7 @@ class SchemaDoc:
     references: tuple[type, ...] = _dc_field(default=())
 
 
-def is_seared_class(obj: Any) -> bool:
+def is_seared_class(obj: Any) -> TypeGuard[type[Seared]]:
     """True for a decorated ``@seared`` class (not the base itself)."""
     return (
         isinstance(obj, type)
@@ -70,7 +70,7 @@ def is_seared_class(obj: Any) -> bool:
     )
 
 
-def introspect(cls: type) -> SchemaDoc:
+def introspect(cls: type[Seared]) -> SchemaDoc:
     """Introspect a ``@seared`` class into a :class:`SchemaDoc`."""
     type_strings = _type_strings(cls)
     fields: list[FieldDoc] = []

@@ -15,11 +15,12 @@ import sys
 from pathlib import PurePosixPath
 from typing import Callable
 
+from .._core.base import Seared
 from .introspect import introspect, is_seared_class
 from .render import LinkFor, render_schema
 
 # render_one(cls, link_for) -> markdown page for one class.
-RenderOne = Callable[[type, LinkFor], str]
+RenderOne = Callable[[type[Seared], LinkFor], str]
 
 
 def _import_tree(target: str) -> list[object]:
@@ -36,12 +37,12 @@ def _import_tree(target: str) -> list[object]:
     return modules
 
 
-def collect(target: str) -> list[type]:
+def collect(target: str) -> list[type[Seared]]:
     """All ``@seared`` classes reachable from ``target``, plus the transitive
     closure of referenced (nested / variant) classes, deduped and sorted."""
-    found: dict[int, type] = {}
+    found: dict[int, type[Seared]] = {}
 
-    def add(cls: type) -> None:
+    def add(cls: type[Seared]) -> None:
         if id(cls) in found:
             return
         found[id(cls)] = cls
@@ -75,7 +76,7 @@ def _rel_path(cls: type, target: str) -> PurePosixPath:
     return PurePosixPath(*dirs, f'{cls.__name__}.md')
 
 
-def _index(pages: dict[PurePosixPath, tuple[type, str]]) -> str:
+def _index(pages: dict[PurePosixPath, tuple[type[Seared], str]]) -> str:
     """Build ``index.md`` grouping models by top-level category dir."""
     groups: dict[str, list[tuple[str, PurePosixPath, str | None]]] = {}
     for path, (cls, _content) in pages.items():
@@ -91,7 +92,7 @@ def _index(pages: dict[PurePosixPath, tuple[type, str]]) -> str:
     return '\n'.join(out).rstrip() + '\n'
 
 
-def build_docs(target: str, *, render_one: RenderOne = None) -> dict[str, str]:
+def build_docs(target: str, *, render_one: RenderOne | None = None) -> dict[str, str]:
     """Return ``{relative_posix_path: markdown}`` for the whole doc set,
     including ``index.md``. Pure — no disk I/O."""
     if render_one is None:
@@ -104,7 +105,7 @@ def build_docs(target: str, *, render_one: RenderOne = None) -> dict[str, str]:
             print(f'warning: output path collision at {p} ({cls.__name__})', file=sys.stderr)
         path_of[cls] = p
 
-    pages: dict[PurePosixPath, tuple[type, str]] = {}
+    pages: dict[PurePosixPath, tuple[type[Seared], str]] = {}
     for cls in classes:
         here = path_of[cls]
 
@@ -154,7 +155,8 @@ def check_docs(docs: dict[str, str], outdir: str) -> list[str]:
     return drift
 
 
-def main(argv: list[str] | None = None, *, render_one: RenderOne = None, prog: str = None) -> int:
+def main(argv: list[str] | None = None, *, render_one: RenderOne | None = None,
+         prog: str | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog=prog,
         description='Generate Markdown schema docs from @seared / @zeared classes.',
