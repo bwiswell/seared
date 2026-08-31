@@ -33,6 +33,7 @@ bench  = [
 
 [dependency-groups]
 dev = [
+    "deptry",
     "prek",
     "pytest>=8.0,<9.0",
     "ruff",
@@ -108,6 +109,14 @@ ignore-variadic-names = true
 docstring-code-format = true
 line-ending = "lf"
 quote-style = "single"
+
+[tool.deptry.package_module_name_map]
+# The comparator packages live behind the repo-only `[bench]` extra, so a
+# default dev sync doesn't install them and deptry can't introspect their
+# module names. Naming them keeps `bench/` in scope (its imports still get
+# checked against the extra) instead of excluding it wholesale.
+marshmallow = ["marshmallow"]
+pydantic = ["pydantic"]
 
 [tool.ty.src]
 # The comparator bench suites import `seared[bench]` extras (marshmallow,
