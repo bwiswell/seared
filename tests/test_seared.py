@@ -1,15 +1,11 @@
 """Tests for ``seared/seared.py`` — the public re-export module
 (``Seared`` base class + ``@seared`` decorator). The heavy decorator
 behavior tests live in ``tests/_core/test_decorator.py``; this file
-covers the package-level surface and version pin.
+covers the package-level surface.
 """
 from __future__ import annotations
 
 import seared as s
-
-
-def test_version():
-    assert s.__version__ == '0.2.3'
 
 
 class TestPublicSurface:

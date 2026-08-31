@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-08-31T01:04:32+00:00",
+  "python": "3.14.3",
+  "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "iterations": 20000,
+  "measurements": [
+    {
+      "library": "seared",
+      "variant": "strict",
+      "version": "0.2.4",
+      "op": "load",
+      "ops_per_s": 28405.42862618183,
+      "us_per_op": 35.20453830005863
+    },
+    {
+      "library": "seared",
+      "variant": "strict",
+      "version": "0.2.4",
+      "op": "dump",
+      "ops_per_s": 44771.60809531483,
+      "us_per_op": 22.335583700078132
+    },
+    {
+      "library": "seared",
+      "variant": "lax",
+      "version": "0.2.4",
+      "op": "load",
+      "ops_per_s": 27758.251775199486,
+      "us_per_op": 36.02532350014371
+    },
+    {
+      "library": "seared",
+      "variant": "lax",
+      "version": "0.2.4",
+      "op": "dump",
+      "ops_per_s": 47047.84920366026,
+      "us_per_op": 21.25495674990816
+    },
+    {
+      "library": "marshmallow",
+      "variant": "default",
+      "version": "4.3.1",
+      "op": "load",
+      "ops_per_s": 7738.606626864635,
+      "us_per_op": 129.2222293001032
+    },
+    {
+      "library": "marshmallow",
+      "variant": "default",
+      "version": "4.3.1",
+      "op": "dump",
+      "ops_per_s": 25388.266278828298,
+      "us_per_op": 39.38827444999333
+    },
+    {
+      "library": "pydantic",
+      "variant": "default",
+      "version": "2.13.5",
+      "op": "load",
+      "ops_per_s": 148995.44773714774,
+      "us_per_op": 6.711614449886838
+    },
+    {
+      "library": "pydantic",
+      "variant": "default",
+      "version": "2.13.5",
+      "op": "dump",
+      "ops_per_s": 181316.6451409723,
+      "us_per_op": 5.515213450053125
+    }
+  ]
+}
