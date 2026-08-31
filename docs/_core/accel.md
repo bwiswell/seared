@@ -75,7 +75,7 @@ AccelInfo(accelerated=False, backend=None,
 
 >>> s.accel_status()
 {'mode': 'auto', 'spec_abi': 1, 'available': True, 'backend': 'rusted',
- 'backend_version': '0.1.2', 'supports_seared': '>=0.2.8,<0.3', 'reason': None}
+ 'backend_version': '0.2.0', 'supports_seared': '>=0.2.8,<0.4', 'reason': None}
 ```
 
 `__seared_accel__` sits alongside `__seared_fields__` on every decorated

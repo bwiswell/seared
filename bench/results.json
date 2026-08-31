@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-31T17:44:26+00:00",
+  "timestamp": "2026-08-31T18:19:21+00:00",
   "python": "3.14.3",
   "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
   "iterations": 20000,
@@ -7,98 +7,98 @@
     {
       "library": "seared",
       "variant": "strict",
-      "version": "0.2.9",
+      "version": "0.3.0",
       "op": "load",
-      "ops_per_s": 30552.946554573336,
-      "us_per_op": 32.7300674000071
+      "ops_per_s": 28912.531597641264,
+      "us_per_op": 34.58707849995335
     },
     {
       "library": "seared",
       "variant": "strict",
-      "version": "0.2.9",
+      "version": "0.3.0",
       "op": "dump",
-      "ops_per_s": 44453.3980502905,
-      "us_per_op": 22.4954681500094
+      "ops_per_s": 44776.355548051695,
+      "us_per_op": 22.33321555004295
     },
     {
       "library": "seared",
       "variant": "lax",
-      "version": "0.2.9",
+      "version": "0.3.0",
       "op": "load",
-      "ops_per_s": 30588.29806850307,
-      "us_per_op": 32.69224059999942
+      "ops_per_s": 30504.835830192107,
+      "us_per_op": 32.78168765000373
     },
     {
       "library": "seared",
       "variant": "lax",
-      "version": "0.2.9",
+      "version": "0.3.0",
       "op": "dump",
-      "ops_per_s": 50550.640544807015,
-      "us_per_op": 19.78214300002037
+      "ops_per_s": 50535.61166099393,
+      "us_per_op": 19.78802604999146
     },
     {
       "library": "seared+rusted",
       "variant": "strict",
-      "version": "0.2.9/rusted 0.1.2",
+      "version": "0.3.0/rusted 0.2.0",
       "op": "load",
-      "ops_per_s": 342157.12066930375,
-      "us_per_op": 2.9226339000160806
+      "ops_per_s": 328174.80821905955,
+      "us_per_op": 3.0471564999970724
     },
     {
       "library": "seared+rusted",
       "variant": "strict",
-      "version": "0.2.9/rusted 0.1.2",
+      "version": "0.3.0/rusted 0.2.0",
       "op": "dump",
-      "ops_per_s": 416141.53073779657,
-      "us_per_op": 2.4030285999742773
+      "ops_per_s": 409038.5075386099,
+      "us_per_op": 2.444757600005687
     },
     {
       "library": "seared+rusted",
       "variant": "lax",
-      "version": "0.2.9/rusted 0.1.2",
+      "version": "0.3.0/rusted 0.2.0",
       "op": "load",
-      "ops_per_s": 341737.0167896528,
-      "us_per_op": 2.9262267500143935
+      "ops_per_s": 325951.7857334252,
+      "us_per_op": 3.067938399999548
     },
     {
       "library": "seared+rusted",
       "variant": "lax",
-      "version": "0.2.9/rusted 0.1.2",
+      "version": "0.3.0/rusted 0.2.0",
       "op": "dump",
-      "ops_per_s": 479492.17942555546,
-      "us_per_op": 2.0855397499872197
+      "ops_per_s": 466014.4623314541,
+      "us_per_op": 2.145856150036707
     },
     {
       "library": "marshmallow",
       "variant": "default",
       "version": "4.3.1",
       "op": "load",
-      "ops_per_s": 8394.534283640018,
-      "us_per_op": 119.12513144998229
+      "ops_per_s": 8731.752076711944,
+      "us_per_op": 114.52455260005081
     },
     {
       "library": "marshmallow",
       "variant": "default",
       "version": "4.3.1",
       "op": "dump",
-      "ops_per_s": 25848.912804822194,
-      "us_per_op": 38.686346599979515
+      "ops_per_s": 24919.69351532364,
+      "us_per_op": 40.12890445001176
     },
     {
       "library": "pydantic",
       "variant": "default",
       "version": "2.13.5",
       "op": "load",
-      "ops_per_s": 159730.4057435539,
-      "us_per_op": 6.260548799991739
+      "ops_per_s": 150235.04648563205,
+      "us_per_op": 6.656236500020896
     },
     {
       "library": "pydantic",
       "variant": "default",
       "version": "2.13.5",
       "op": "dump",
-      "ops_per_s": 184525.4520210344,
-      "us_per_op": 5.4193065999697865
+      "ops_per_s": 180340.03781320542,
+      "us_per_op": 5.545080350020726
     }
   ]
 }

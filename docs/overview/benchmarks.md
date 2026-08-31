@@ -71,42 +71,47 @@ being accelerated.
 ## Results
 
 Recorded 2026-08-31 — Python 3.14.3, Linux x86_64 (WSL2), laptop-class
-CPU. seared 0.3.0, rusted 0.1.2, marshmallow 4.3.1, pydantic 2.13.5. Raw
-numbers: [`bench/results.json`](../../bench/results.json).
+CPU, otherwise idle. seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1,
+pydantic 2.13.5. Raw numbers:
+[`bench/results.json`](../../bench/results.json).
 
 | Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
 |------|---------------|-------------------|----------------|------------|-----------------|
-| load | 8,395 ops/s   | 30,553 ops/s (~3.6×) | 30,588 ops/s (~3.6×) | 159,730 ops/s | 342,157 ops/s |
-| dump | 25,849 ops/s  | 44,453 ops/s (~1.7×) | 50,551 ops/s (~2.0×) | 184,525 ops/s | 416,142 ops/s |
+| load | 8,732 ops/s   | 28,913 ops/s (~3.3×) | 30,505 ops/s (~3.5×) | 150,235 ops/s | 328,175 ops/s |
+| dump | 24,920 ops/s  | 44,776 ops/s (~1.8×) | 50,536 ops/s (~2.0×) | 180,340 ops/s | 409,039 ops/s |
 
 Per-op timing:
 
 | Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
 |------|---------------|-------------------|----------------|------------|-----------------|
-| load | 119 µs        | 32.7 µs           | 32.7 µs        | 6.3 µs     | 2.9 µs          |
-| dump | 39 µs         | 22.5 µs           | 19.8 µs        | 5.4 µs     | 2.4 µs          |
+| load | 114.5 µs      | 34.6 µs           | 32.8 µs        | 6.7 µs     | 3.0 µs          |
+| dump | 40.1 µs       | 22.3 µs           | 19.8 µs        | 5.5 µs     | 2.4 µs          |
 
 Ratios in the first table are versus `marshmallow`. Earlier recorded
 baselines (e.g. the 2026-04-24 run against marshmallow 3.26, where seared
 led load by ~8×) are in the git history of `bench/results.json`'s
 predecessors; marshmallow 4 closed part of the gap.
 
-Run-to-run spread on this hardware is roughly ±10%, so treat the ratios as
-the durable claim and the absolute numbers as one sample.
+One recorded run is one sample. On an idle machine the spread across
+repeated runs is ~4% on the pure-Python cases and ~9% on the accelerated
+ones; under background load it widens to ±20% and the *ratios* move with it
+(the `rusted` load ratio was seen anywhere from 10.0× to 11.8×). Bench on a
+quiet box, and read the ratios as approximate: seared is ~3.5× marshmallow
+on load and ~1.8× on dump, and `rusted` is ~11× / ~9× over pure Python.
 
 ## Reading the results
 
 - **Versus marshmallow** (the like-for-like pure-Python comparison),
-  seared loads ~3.6× and dumps ~1.7× faster.
+  seared loads ~3.5× and dumps ~1.8× faster.
 - **Versus pydantic**, pure-Python seared is ~5× slower. That is the
   expected cost of pure Python versus a compiled Rust core, and it is the
   trade seared makes by default: zero runtime dependencies, no binary
   wheels.
 - **With `rusted` installed that trade is optional rather than permanent.**
   The same classes run ~11× faster on `load` and ~9× on `dump` than the
-  Python path, and ahead of pydantic on this schema — for a `uv add` and no
-  code change. The default stays pure Python; every platform without a
-  wheel keeps working.
+  Python path, and roughly 2× ahead of pydantic on this schema — for an
+  install and no code change. The default stays pure Python; every platform
+  without a wheel keeps working.
 - **Strict versus lax is within noise on `load`** (the guards are cheap
   `isinstance` checks against builtin types) but costs ~14% on `dump`,
   where those guards are most of what the pass actually does. `rusted`
@@ -151,7 +156,7 @@ uv run --no-sync python -m bench
 ```
 
 Each recorded `Measurement` carries the version of what produced it —
-`seared+rusted` rows read `0.3.0/rusted 0.1.2` — so a results file always
+`seared+rusted` rows read `0.3.0/rusted 0.2.0` — so a results file always
 says which code the numbers came from.
 
 ## Caveats
