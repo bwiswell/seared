@@ -16,8 +16,10 @@ if TYPE_CHECKING:
     # mypy) that ``@seared`` synthesises a dataclass, and ``field_specifiers``
     # lists the Field constructors so ``x: str = s.Str(...)`` is read as a field
     # (annotation drives the type; the ``.pyi`` stubs return ``Any`` so the
-    # assignment is legal). ``default=`` / ``default_factory=`` are the names the
-    # checker keys required/optional off — hence Option A in the plan.
+    # assignment is legal). ``default=`` / ``default_factory=`` are the names
+    # PEP 681 keys required-vs-optional off, which is why they are the canonical
+    # spelling and ``missing=`` is deprecated: a field declared with ``missing=``
+    # reads as *required* to a checker regardless of its runtime behaviour.
     from typing import dataclass_transform, overload
 
     from seared.fields.bool_ import Bool
@@ -163,8 +165,11 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> typ
         load_fn = _make_load(cls, specs_t, validate)
     else:
         load_fn, dump_fn = compiled
-    cls.dump = classmethod(lambda _c, o, format='json': dump_fn(o, format))
-    cls.load = classmethod(lambda _c, d, format='json': load_fn(d, format))
+    # Parameter names are API: they must match ``Seared.dump`` / ``Seared.load``
+    # or a caller writing to the documented signature (``Cls.load(data=...)``)
+    # gets a TypeError at runtime while type-checking clean.
+    cls.dump = classmethod(lambda _c, obj, format='json': dump_fn(obj, format))
+    cls.load = classmethod(lambda _c, data, format='json': load_fn(data, format))
 
     # Attach per-format codec methods (to_json/from_json/to_toml/...) once
     # at decorator time. Optional formats (TOML write, YAML, ...) raise

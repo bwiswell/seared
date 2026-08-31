@@ -7,6 +7,8 @@ seared dataclasses. Without the ``@seared`` decorator the class has
 
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 import seared as s
@@ -62,3 +64,72 @@ class TestDecoratedSearedBase:
         assert d == {'x': 1}
         loaded = Foo.load(d)
         assert loaded.x == 1
+
+
+# ---------------------------------------------------------------------------
+# The base declarations are the *typed* surface; the decorator attaches the
+# real implementations at class-creation time. Nothing but these tests keeps
+# the two in step, and when they drifted (0.2.8: base said `data`, the
+# attached lambda took `d`) the result was code that type-checked and then
+# raised TypeError — the worst of both.
+# ---------------------------------------------------------------------------
+
+CODEC_METHODS = [
+    'to_json',
+    'from_json',
+    'to_toml',
+    'from_toml',
+    'to_yaml',
+    'from_yaml',
+    'to_csv',
+    'from_csv',
+]
+
+
+@s.seared
+class Sig(s.Seared):
+    x: int = s.Int(required=True)
+
+
+class TestBaseDeclarationsMatchImplementations:
+    @pytest.mark.parametrize('name', ['dump', 'load'])
+    def test_signatures_are_identical(self, name):
+        declared = inspect.signature(getattr(s.Seared, name))
+        attached = inspect.signature(getattr(Sig, name))
+        assert declared.parameters.keys() == attached.parameters.keys()
+        for param, decl in declared.parameters.items():
+            assert decl.default == attached.parameters[param].default, param
+
+    @pytest.mark.parametrize('name', ['dump', 'load'])
+    def test_format_is_accepted_positionally_and_by_keyword(self, name):
+        # zeared threads the carrier hint as a keyword; the bench and rusted's
+        # own tests pass it positionally. Both have to work.
+        params = inspect.signature(getattr(Sig, name)).parameters
+        assert params['format'].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+        assert params['format'].default == 'json'
+
+    @pytest.mark.parametrize('name', CODEC_METHODS)
+    def test_codec_params_are_callable_as_declared(self, name):
+        # Weaker than identity: a codec impl may accept *more* (``to_json``
+        # names ``indent``, which the base absorbs into ``**kwargs``). What
+        # must hold is that anything the base promises actually exists.
+        declared = inspect.signature(getattr(s.Seared, name))
+        attached = inspect.signature(getattr(Sig, name))
+        for param, decl in declared.parameters.items():
+            if decl.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
+                continue
+            assert param in attached.parameters, f'{name}: base declares {param!r}, impl does not'
+
+
+class TestDocumentedKeywordsWork:
+    """The names above are API — these call through them, as a caller would."""
+
+    def test_load_by_keyword(self):
+        assert Sig.load(data={'x': 1}).x == 1
+
+    def test_dump_by_keyword(self):
+        assert Sig.dump(obj=Sig(x=1)) == {'x': 1}
+
+    def test_format_by_keyword(self):
+        assert Sig.dump(Sig(x=1), format='msgpack') == {'x': 1}
+        assert Sig.load({'x': 1}, format='msgpack').x == 1

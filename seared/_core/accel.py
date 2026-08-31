@@ -129,8 +129,14 @@ def _reset() -> None:
 def _kinds() -> dict[Any, str]:
     """Exact field class → spec kind name.
 
-    Tiers 1 and 2 (see ``project-plans/02-rusted-outline.md`` §4). Imported
-    lazily: ``_core`` must not import ``fields`` at module load.
+    Two groups, in the order accelerator backends implement them: the
+    scalars plus nested ``T`` — cheap to coerce, and where the large speedups
+    live — then the parse-and-construct types (``UUID``, the date-likes,
+    ``Decimal``, ``Bytes``, ...), whose cost is dominated by building the
+    Python object either way. A backend may implement only the first group; it
+    declines the rest by name, and the class keeps the Python path.
+
+    Imported lazily: ``_core`` must not import ``fields`` at module load.
 
     Still absent, and each for a reason: ``Union`` (an UNWRAP field consuming
     multiple keys from the *parent's* map), ``Tuple`` (per-slot sub-fields),

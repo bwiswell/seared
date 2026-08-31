@@ -27,7 +27,7 @@ class EnumDoc:
 @dataclass(frozen=True, slots=True)
 class VariantDoc:
     tag: str
-    cls: type
+    cls: type[Seared]
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,15 +42,15 @@ class FieldDoc:
     dump: bool
     doc: str | None
     enum: EnumDoc | None = None
-    nested: type | None = None  # T(schema) target
+    nested: type[Seared] | None = None  # T(schema) target
     variants: tuple[VariantDoc, ...] | None = None
     envelope: str | None = None  # Union envelope description
-    fallback: type | None = None  # Union default variant
+    fallback: type[Seared] | None = None  # Union default variant
 
 
 @dataclass(frozen=True, slots=True)
 class SchemaDoc:
-    cls: type
+    cls: type[Seared]
     name: str
     module: str
     doc: str | None
@@ -59,7 +59,7 @@ class SchemaDoc:
     is_message: bool = False
     # Classes this schema references (T targets, Union variants) — the
     # transitive set the generator should also document + cross-link.
-    references: tuple[type, ...] = _dc_field(default=())
+    references: tuple[type[Seared], ...] = _dc_field(default=())
 
 
 def is_seared_class(obj: Any) -> TypeGuard[type[Seared]]:
@@ -76,7 +76,7 @@ def introspect(cls: type[Seared]) -> SchemaDoc:
     """Introspect a ``@seared`` class into a :class:`SchemaDoc`."""
     type_strings = _type_strings(cls)
     fields: list[FieldDoc] = []
-    references: list[type] = []
+    references: list[type[Seared]] = []
     for attr, wire, f in cls.__seared_fields__:
         fd = _field_doc(attr, wire, f, type_strings.get(attr, '?'))
         fields.append(fd)
