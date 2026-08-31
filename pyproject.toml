@@ -119,12 +119,14 @@ marshmallow = ["marshmallow"]
 pydantic = ["pydantic"]
 
 [tool.ty.src]
-# The comparator bench suites import `seared[bench]` extras (marshmallow,
-# pydantic) that a default dev sync doesn't install; ty skips just those.
+# Bench suites that import packages a default dev sync doesn't install: the
+# comparators (marshmallow, pydantic, behind the `bench` extra) and `rusted`,
+# the optional accelerator wheel. ty skips just those files.
 exclude = [
     "tests",
     "bench/suite_marshmallow.py",
     "bench/suite_pydantic.py",
+    "bench/suite_rusted.py",
 ]
 
 [tool.pytest.ini_options]

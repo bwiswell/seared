@@ -36,11 +36,23 @@ uv add 'seared[core]'      # when rusted ships; nothing in your code changes
 | Tier | Kinds | Status |
 |------|-------|--------|
 | 1 | `Int`, `Float`, `Str`, `Bool`, `T` | supported |
-| 2 | `UUID`, `Date`, `DateTime`, `Time`, `TimeDelta`, `Decimal`, `Bytes`, `Enum`, `Path`, `Dict` | planned |
+| 2 | `UUID`, `Date`, `DateTime`, `Time`, `TimeDelta`, `Decimal`, `Bytes`, `Enum`, `Path`, `Dict` | supported |
 | 3 | `Tuple`, `Union`, `NDArray`, `PandasFrame`, `PolarsFrame` | deferred |
 
 The field *flags* — `many`, `keyed`, `required`, `default`,
 `default_factory`, `data_key`, `dump=False` — are all carried in Tier 1.
+
+Tier 2 does not run as fast as Tier 1, and can't: those kinds spend their
+time building Python objects (`uuid.UUID`, `datetime.strptime`, `Decimal`),
+which no compiled core removes. Their value is that acceleration is
+per-class all-or-nothing — a single `Bytes` field used to disqualify a whole
+class, Tier 1 fields included.
+
+Tier 3 is deferred on shape, not effort. `Union` is an UNWRAP field: it
+consumes several keys from its *parent's* map and merges its output back at
+the parent's level, which a single-pass interpreter isn't built for. `Tuple`
+adds per-slot sub-fields. The frame fields cross an optional-import boundary
+for workloads dominated by the frame conversion either way.
 
 A class is also declined when it defines its own `__init__` or a
 `__post_init__`: a compiled core constructs through `__new__` plus
@@ -50,15 +62,15 @@ attribute assignment, which would skip both.
 
 ```python
 >>> Telemetry.__seared_accel__
-AccelInfo(accelerated=True, backend='rusted')
+AccelInfo(accelerated=True, backend='rusted', reason=None)
 
->>> HasDecimal.__seared_accel__
+>>> HasTuple.__seared_accel__
 AccelInfo(accelerated=False, backend=None,
-          reason='HasDecimal.amount: Decimal is not an accelerated field type')
+          reason='HasTuple.pair: Tuple is not an accelerated field type')
 
 >>> s.accel_status()
 {'mode': 'auto', 'spec_abi': 1, 'available': True, 'backend': 'rusted',
- 'backend_version': '0.1.0', 'supports_seared': '>=0.2.8,<0.3', 'reason': None}
+ 'backend_version': '0.1.2', 'supports_seared': '>=0.2.8,<0.3', 'reason': None}
 ```
 
 `__seared_accel__` sits alongside `__seared_fields__` on every decorated
