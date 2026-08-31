@@ -10,7 +10,7 @@ from .field import Field
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Enum(Field):
-    enum: Type[PEnum] = None  # type: ignore[assignment]
+    enum: Type[PEnum]
 
     def __post_init__(self):
         super().__post_init__()

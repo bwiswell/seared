@@ -6,7 +6,7 @@ import seared as s
 from .harness import Case
 
 
-def _build(validate: bool) -> type:
+def _build(validate: bool) -> type[s.Seared]:
     @s.seared(validate=validate)
     class Inner(s.Seared):
         x: int = s.Int(required=True)

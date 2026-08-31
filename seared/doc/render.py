@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Callable
 
+from .._core.base import Seared
 from .introspect import SchemaDoc, introspect
 
 LinkFor = Callable[[type], str]
@@ -97,7 +98,7 @@ def render_variants(schema: SchemaDoc, link_for: LinkFor = _default_link) -> str
     return '\n'.join(out)
 
 
-def document(cls: type, *, link_for: LinkFor = _default_link) -> str:
+def document(cls: type[Seared], *, link_for: LinkFor = _default_link) -> str:
     """Render the full core Markdown page for a ``@seared`` class."""
     schema = introspect(cls)
     return render_schema(schema, link_for=link_for)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, Optional, Type
 
+from .._core.base import Seared
 from .._core.errors import ValidationError
 from .field import Field
 
@@ -35,10 +36,10 @@ class Union(Field):
     also raises ``ValidationError`` on serialize (strict).
     """
 
-    variants: Dict[str, Type]
+    variants: Dict[str, Type[Seared]]
     tag_key: str = 'type'
     payload_key: Optional[str] = None
-    default: Optional[Type] = None
+    default: Optional[Type[Seared]] = None
 
     UNWRAP: ClassVar[bool] = True
 
@@ -80,14 +81,14 @@ class Union(Field):
             )
         return {}
 
-    def deserialize(self, data: Any, validate: bool = True, **kwargs) -> Any:
-        if not isinstance(data, dict):
+    def deserialize(self, value: Any, validate: bool = True, **kwargs) -> Any:
+        if not isinstance(value, dict):
             if validate:
                 raise ValidationError(
-                    f'Union: expected dict, got {type(data).__name__}'
+                    f'Union: expected dict, got {type(value).__name__}'
                 )
             return None
-        tag = data.get(self.tag_key)
+        tag = value.get(self.tag_key)
         if tag is None:
             raise ValidationError(
                 f'Union: missing tag {self.tag_key!r} in envelope'
@@ -104,7 +105,7 @@ class Union(Field):
                     f'{sorted(self.variants)}'
                 )
         if self.payload_key is None:
-            payload = {k: v for k, v in data.items() if k != self.tag_key}
+            payload = {k: v for k, v in value.items() if k != self.tag_key}
         else:
-            payload = data.get(self.payload_key, {})
+            payload = value.get(self.payload_key, {})
         return variant_cls.load(payload)
