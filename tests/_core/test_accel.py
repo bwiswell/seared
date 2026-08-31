@@ -172,14 +172,17 @@ class TestModes:
 
     def test_require_tolerates_a_class_declining(self, use_backend):
         # `require` asserts the *backend* loaded, not that every class is
-        # accelerable — seared's own suite is full of classes Tier 1 can't take.
+        # accelerable — seared's own suite is full of classes no backend takes.
+        # `Tuple` is deliberate: it is out of scope by design (per-slot
+        # sub-fields), not merely unimplemented, so a future tier won't quietly
+        # turn this into a test of nothing the way `Decimal` did.
         use_backend('refcore', mode='require')
 
         @s.seared
-        class HasBytes(s.Seared):
-            blob: bytes = s.Bytes(required=True)
+        class HasTuple(s.Seared):
+            pair: tuple = s.Tuple(s.Int(), s.Str(), required=True)
 
-        assert HasBytes.__seared_accel__.accelerated is False
+        assert HasTuple.__seared_accel__.accelerated is False
 
     def test_unknown_mode_raises(self, use_backend):
         use_backend('refcore', mode='requrie')
@@ -209,13 +212,13 @@ class TestClassDecisions:
         use_backend('refcore')
 
         @s.seared
-        class HasDecimal(s.Seared):
+        class HasTuple(s.Seared):
             ok: int = s.Int(required=True)
-            amount: object = s.Decimal(required=True)
+            pair: tuple = s.Tuple(s.Int(), s.Str(), required=True)
 
-        reason = HasDecimal.__seared_accel__.reason
-        assert 'HasDecimal.amount' in reason
-        assert 'Decimal is not an accelerated field type' in reason
+        reason = HasTuple.__seared_accel__.reason
+        assert 'HasTuple.pair' in reason
+        assert 'Tuple is not an accelerated field type' in reason
 
     def test_field_subclass_declines_exact_type_gate(self, use_backend):
         use_backend('refcore')
@@ -262,7 +265,7 @@ class TestClassDecisions:
 
         @s.seared
         class Leaf(s.Seared):
-            blob: bytes = s.Bytes(required=True)
+            pair: tuple = s.Tuple(s.Int(), s.Str(), required=True)
 
         @s.seared
         class Branch(s.Seared):
@@ -270,7 +273,7 @@ class TestClassDecisions:
 
         reason = Branch.__seared_accel__.reason
         assert 'Branch.leaf →' in reason
-        assert 'Leaf.blob' in reason
+        assert 'Leaf.pair' in reason
 
     def test_accel_false_opts_out(self, use_backend):
         use_backend('refcore')

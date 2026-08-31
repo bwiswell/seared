@@ -19,6 +19,12 @@ Three properties make it a useful oracle rather than a mock:
   *cannot* import the library it accelerates, so an oracle that could would
   hide exactly the gap this is meant to surface.
 
+Scope is deliberately **Tier 1 only** (`int` / `float` / `str` / `bool` /
+`T`). It exists to prove the seam works with no compiled core present — on a
+platform with no wheel, or in CI with no Rust toolchain — not to be a second
+full implementation. It declines everything else, which is a legal backend
+answer and exercises the decline path for free.
+
 Not shipped: ``tests/`` is on ``pythonpath``, so seared's own suite can run
 against it with ``SEARED_ACCEL=require SEARED_ACCEL_BACKEND=refcore``.
 """

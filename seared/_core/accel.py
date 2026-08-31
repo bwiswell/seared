@@ -129,16 +129,68 @@ def _reset() -> None:
 def _kinds() -> dict[Any, str]:
     """Exact field class → spec kind name.
 
-    Tier 1 only (see ``project-plans/02-rusted-outline.md`` §4). Imported
+    Tiers 1 and 2 (see ``project-plans/02-rusted-outline.md`` §4). Imported
     lazily: ``_core`` must not import ``fields`` at module load.
+
+    Still absent, and each for a reason: ``Union`` (an UNWRAP field consuming
+    multiple keys from the *parent's* map), ``Tuple`` (per-slot sub-fields),
+    and the ``NDArray`` / DataFrame fields (optional imports, and dominated by
+    frame conversion anyway).
     """
     from seared.fields.bool_ import Bool
+    from seared.fields.bytes_ import Bytes
+    from seared.fields.date import Date
+    from seared.fields.datetime_ import DateTime
+    from seared.fields.decimal_ import Decimal
+    from seared.fields.dict_ import Dict
+    from seared.fields.enum_ import Enum
     from seared.fields.float_ import Float
     from seared.fields.int_ import Int
+    from seared.fields.path import Path
     from seared.fields.str_ import Str
     from seared.fields.t import T
+    from seared.fields.time_ import Time
+    from seared.fields.timedelta import TimeDelta
+    from seared.fields.uuid_ import UUID
 
-    return {Int: 'int', Float: 'float', Str: 'str', Bool: 'bool', T: 'nested'}
+    return {
+        # Tier 1
+        Int: 'int',
+        Float: 'float',
+        Str: 'str',
+        Bool: 'bool',
+        T: 'nested',
+        # Tier 2 — parse-and-construct
+        UUID: 'uuid',
+        Date: 'date',
+        DateTime: 'datetime',
+        Time: 'time',
+        TimeDelta: 'timedelta',
+        Decimal: 'decimal',
+        Bytes: 'bytes',
+        Enum: 'enum',
+        Path: 'path',
+        Dict: 'dict',
+    }
+
+
+#: Per-kind configuration a backend needs beyond the universal flags, as
+#: attribute names read off the ``Field``. User-supplied classes (an enum, a
+#: concrete path type) and per-field options travel here; how to *use* them is
+#: the backend's business.
+#:
+#: Adding a kind is additive and needs no :data:`SPEC_ABI` bump: a backend
+#: that predates one declines it by name, before it ever looks for the config.
+#: Changing the shape of an *existing* field spec is what would need the bump.
+_KIND_CONFIG: dict[str, tuple[str, ...]] = {
+    'bytes': ('encoding',),
+    'date': ('format',),
+    'datetime': ('format',),
+    'time': ('format',),
+    'decimal': ('as_number',),
+    'enum': ('enum',),
+    'path': ('concrete',),
+}
 
 
 def _nested_spec(cls: Any) -> dict[str, Any]:
@@ -184,6 +236,8 @@ def _field_spec(owner: str, attr: str, wire: str, f: Field) -> dict[str, Any]:
         except _NotAccelerableError as exc:
             msg = f'{owner}.{attr} → {exc}'
             raise _NotAccelerableError(msg) from exc
+    for option in _KIND_CONFIG.get(kind, ()):
+        spec[option] = getattr(f, option)
     return spec
 
 
