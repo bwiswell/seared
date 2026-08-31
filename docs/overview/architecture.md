@@ -37,6 +37,11 @@ When `@s.seared` runs:
    accept an optional `format='json'` kwarg (default JSON-safe wire
    shape; `'msgpack'` opts into native binary for `Bytes` and
    `NDArray`).
+6. **Offer the class to an accelerator backend** — when one is
+   installed and every field is a supported seared-native type, the
+   generated closures are replaced by compiled equivalents. Nothing is
+   paid, and nothing is emitted, when no backend is present. See
+   [`accel.md`](../_core/accel.md).
 
 ## Field interface
 
@@ -104,6 +109,8 @@ See [`../_core/errors.md`](../_core/errors.md) for the full hierarchy.
 - [`../_core/decorator.md`](../_core/decorator.md) — `@seared` decorator
   internals.
 - [`../_core/errors.md`](../_core/errors.md) — exception hierarchy.
+- [`../_core/accel.md`](../_core/accel.md) — the optional-accelerator
+  seam (`rusted`).
 - [`../fields/`](../fields/) — every Field subclass (one doc per file).
 - [`../formats/index.md`](../formats/index.md) — codec orchestrator +
   per-format pages.

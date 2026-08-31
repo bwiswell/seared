@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import TYPE_CHECKING, Any
 
+from .accel import try_compile
 from .errors import ValidationError
 
 FieldSpec = tuple[str, str, Any]  # (attr_name, wire_key, Field instance)
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
         *,
         slots: bool = ...,
         validate: bool = ...,
+        accel: bool = ...,
     ) -> Callable[[type[ClsT]], type[ClsT]]: ...
     @dataclass_transform(
         kw_only_default=True,
@@ -75,7 +77,7 @@ if TYPE_CHECKING:
             UUID,
         ),
     )
-    def seared(cls=None, *, slots=True, validate=True): ...
+    def seared(cls=None, *, slots=True, validate=True, accel=True): ...
 else:
 
     def seared(
@@ -83,23 +85,34 @@ else:
         *,
         slots: bool = True,
         validate: bool = True,
+        accel: bool = True,
     ) -> Any:
         """Decorator turning a class into a seared dataclass.
 
         Usable bare (``@s.seared``) or parameterised
         (``@s.seared(slots=False, validate=False)``).
+
+        ``accel=False`` keeps the class on the pure-Python ``load`` / ``dump``
+        even when an accelerator backend is installed (see
+        ``seared._core.accel``); it is the per-class opt-out and always wins.
         """
 
         def decorate(c: type) -> type:
-            return _build(c, slots=slots, validate=validate)
+            return _build(c, slots=slots, validate=validate, accel=accel)
 
         if cls is None:
             return decorate
         return decorate(cls)
 
 
-def _build(cls: type, *, slots: bool, validate: bool) -> type:
+def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> type:
     from seared.fields.field import Field  # local import avoids core<->field cycle
+
+    # Sampled before ``dataclass()`` — with ``slots=True`` it returns a *new*
+    # class, and it replaces ``__init__`` either way, so this is the only
+    # moment the class as *written* is observable. The accelerator seam needs
+    # it: a backend constructing via ``__new__`` would skip a hand-written one.
+    custom_init = '__init__' in cls.__dict__
 
     cls = dataclass(cls, slots=slots)
     specs: list[FieldSpec] = []
@@ -135,8 +148,21 @@ def _build(cls: type, *, slots: bool, validate: bool) -> type:
 
     _wrap_init_replaces_field_defaults(cls, specs_t)
 
-    dump_fn = _make_dump(specs_t, validate)
-    load_fn = _make_load(cls, specs_t, validate)
+    # Optional compiled core. Returns None — and records why on
+    # ``cls.__seared_accel__`` — whenever the class stays on the Python path,
+    # which is every class when no backend is installed.
+    compiled = try_compile(
+        cls,
+        specs_t,
+        validate=validate,
+        accel=accel,
+        custom_init=custom_init,
+    )
+    if compiled is None:
+        dump_fn = _make_dump(specs_t, validate)
+        load_fn = _make_load(cls, specs_t, validate)
+    else:
+        load_fn, dump_fn = compiled
     cls.dump = classmethod(lambda _c, o, format='json': dump_fn(o, format))
     cls.load = classmethod(lambda _c, d, format='json': load_fn(d, format))
 
