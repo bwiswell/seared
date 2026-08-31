@@ -12,7 +12,16 @@ class Seared:
     __seared_fields__: ClassVar[tuple[tuple[str, str, Any], ...]] = ()
 
     @classmethod
-    def dump(cls, obj: Seared) -> dict[str, Any]:
+    def dump(cls, obj: Seared, format: str = 'json') -> dict[str, Any]:
+        """Instance → wire dict.
+
+        ``format`` is the carrier hint threaded into every field (see
+        ``_core.decorator``); ``Bytes`` and ``NDArray`` emit native binary
+        under ``'msgpack'``, and the rest ignore it.
+
+        This declaration and the implementation the decorator attaches must
+        stay signature-identical — ``tests/_core/test_base.py`` asserts it.
+        """
         raise NotImplementedError
 
     @classmethod
@@ -20,7 +29,8 @@ class Seared:
         return json.dumps(cls.dump(obj))
 
     @classmethod
-    def load(cls, data: dict[str, Any]) -> Self:
+    def load(cls, data: dict[str, Any], format: str = 'json') -> Self:
+        """Wire dict → instance. ``format`` as in :meth:`dump`."""
         raise NotImplementedError
 
     @classmethod
