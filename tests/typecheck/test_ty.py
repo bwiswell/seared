@@ -33,7 +33,12 @@ def test_ok_idiom_typechecks() -> None:
 
 @pytest.mark.parametrize(
     'diagnostic',
-    ['missing-argument', 'unknown-argument', 'unresolved-attribute'],
+    [
+        'missing-argument',
+        'unknown-argument',
+        'unresolved-attribute',
+        'invalid-argument-type',
+    ],
 )
 def test_must_error_is_flagged(diagnostic: str) -> None:
     result = _run_ty('must_error.py')

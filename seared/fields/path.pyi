@@ -1,9 +1,10 @@
 from collections.abc import Callable
+from pathlib import PurePath
 from typing import Any
 
 def Path(
     *,
-    concrete: type = ...,
+    concrete: type[PurePath] = ...,
     data_key: str | None = ...,
     keyed: bool = ...,
     many: bool = ...,

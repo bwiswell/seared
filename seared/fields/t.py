@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from seared._core.base import Seared
+
 from seared._core.errors import ValidationError
 
 from .field import Field
@@ -15,7 +17,7 @@ class T(Field):
 
     def __init__(  # noqa: PLR0913 — mirrors the full Field option set
         self,
-        schema: type[Any],
+        schema: type[Seared],
         *,
         default: Any = None,
         default_factory: Callable[[], Any] | None = None,

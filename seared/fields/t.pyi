@@ -1,8 +1,10 @@
 from collections.abc import Callable
 from typing import Any
 
+from seared._core.base import Seared
+
 def T(
-    schema: type[Any],
+    schema: type[Seared],
     *,
     default: Any = ...,
     default_factory: Callable[[], Any] = ...,

@@ -26,7 +26,7 @@ from .field import Field
 class Path(Field):
     """``pathlib.Path`` serialised as a POSIX string."""
 
-    concrete: type = _Path
+    concrete: type[PurePath] = _Path
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> str:
         """``pathlib.Path`` → POSIX string (forward slashes on every OS)."""

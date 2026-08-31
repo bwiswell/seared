@@ -54,6 +54,10 @@ def collect(target: str) -> list[type[Seared]]:
             return
         found[id(cls)] = cls
         for ref in introspect(cls).references:
+            # ``references`` is typed ``type[Seared]``, but annotations are not
+            # enforcement: ``T(NotASearedClass)`` still *constructs* at runtime
+            # (it only fails later, on ``.dump``). The guard keeps a mistyped
+            # schema out of the doc set instead of crashing the generator.
             if is_seared_class(ref):
                 add(ref)
 
