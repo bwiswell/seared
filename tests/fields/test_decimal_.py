@@ -3,7 +3,6 @@ JSON-number form via ``as_number=True``."""
 from __future__ import annotations
 
 from decimal import Decimal as D
-from typing import Optional
 
 import pytest
 
@@ -45,7 +44,7 @@ class TestStringDefault:
         # load coerces from any reasonable string-able form.
         for inp, expected in (
             ('1.5', D('1.5')),
-            ('100', D('100')),
+            ('100', D(100)),
             ('0.000001', D('0.000001')),
         ):
             assert Money.load({'amount': inp}).amount == expected

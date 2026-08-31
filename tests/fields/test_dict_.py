@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 
 import seared as s
@@ -13,7 +11,7 @@ class TestDict:
         @s.seared
         class Obj(s.Seared):
             meta: dict = s.Dict(required=True)
-            extras: Optional[dict] = s.Dict(data_key='extra_data')
+            extras: dict | None = s.Dict(data_key='extra_data')
 
         return Obj
 

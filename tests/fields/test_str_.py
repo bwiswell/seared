@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 
 import seared as s
@@ -13,7 +11,7 @@ class TestStr:
         @s.seared
         class Obj(s.Seared):
             name: str = s.Str(required=True)
-            alias: Optional[str] = s.Str(data_key='alias_key')
+            alias: str | None = s.Str(data_key='alias_key')
 
         return Obj
 

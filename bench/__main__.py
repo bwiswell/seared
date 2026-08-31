@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .harness import DEFAULT_ITERATIONS, Report, environment, payload, run_case
@@ -31,6 +31,7 @@ def _collect_cases() -> list:
 
 
 def main() -> None:
+    """Parse args, run every discovered suite, print and write the results."""
     parser = argparse.ArgumentParser(
         prog='python -m bench', description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -54,7 +55,7 @@ def main() -> None:
 
     python, plat = environment()
     report = Report(
-        timestamp=datetime.now(timezone.utc).isoformat(timespec='seconds'),
+        timestamp=datetime.now(UTC).isoformat(timespec='seconds'),
         python=python, platform=plat,
         iterations=args.iterations, measurements=measurements,
     )

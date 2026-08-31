@@ -57,7 +57,7 @@ class TestValidation:
 
         bad = R.__new__(R)
         object.__setattr__(bad, 'data', 'not-a-dataframe')
-        with pytest.raises(s.ValidationError, match='expected pandas.DataFrame'):
+        with pytest.raises(s.ValidationError, match=r'expected pandas\.DataFrame'):
             R.dump(bad)
 
     def test_deserialize_passes_through_existing_dataframe(self):
@@ -109,5 +109,6 @@ class TestMissingPandas:
                 sys.modules['pandas'] = real_pandas
             # Reload seared once more so the package state matches reality.
             import importlib
+
             import seared as s_mod
             importlib.reload(s_mod)

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 import seared as s
-
 
 _UUID_A = uuid.UUID('12345678-1234-5678-1234-567812345678')
 _UUID_B = uuid.UUID('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
@@ -39,7 +37,7 @@ class TestUUID:
     def test_optional_none_excluded_from_dump(self):
         @s.seared
         class Obj(s.Seared):
-            uid: Optional[uuid.UUID] = s.UUID()
+            uid: uuid.UUID | None = s.UUID()
 
         d = Obj.dump(Obj(uid=None))
         assert 'uid' not in d

@@ -31,15 +31,16 @@ class TestPackageReExports:
 
 class TestRaiseAndCatch:
     def test_validation_error_caught_as_seared_error(self):
+        msg = 'test'
         with pytest.raises(SearedError):
-            raise ValidationError('test')
+            raise ValidationError(msg)
 
     def test_validation_error_caught_as_value_error(self):
-        with pytest.raises(ValueError):
-            raise ValidationError('test')
+        msg = 'test'
+        with pytest.raises(ValueError, match='test'):
+            raise ValidationError(msg)
 
     def test_validation_error_carries_message(self):
-        try:
-            raise ValidationError('descriptive message')
-        except ValidationError as e:
-            assert 'descriptive message' in str(e)
+        msg = 'descriptive message'
+        with pytest.raises(ValidationError, match=msg):
+            raise ValidationError(msg)

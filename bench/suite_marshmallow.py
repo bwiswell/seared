@@ -12,6 +12,8 @@ from .harness import Case, dist_version
 
 class InnerSchema(Schema):
     class Meta:
+        """Ignore unknown keys, matching seared's load behaviour."""
+
         unknown = EXCLUDE
 
     x = Integer(required=True)
@@ -21,6 +23,8 @@ class InnerSchema(Schema):
 
 class OuterSchema(Schema):
     class Meta:
+        """Ignore unknown keys, matching seared's load behaviour."""
+
         unknown = EXCLUDE
 
     name = String(required=True)
@@ -29,6 +33,7 @@ class OuterSchema(Schema):
 
 
 def cases() -> list[Case]:
+    """The marshmallow comparator case."""
     schema = OuterSchema()
     return [Case(
         library='marshmallow', variant='default', version=dist_version('marshmallow'),

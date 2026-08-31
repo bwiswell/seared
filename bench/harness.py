@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import platform
 import time
-from importlib.metadata import version as dist_version
 from dataclasses import dataclass
-from typing import Any, Callable
+from importlib.metadata import version as dist_version
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 import seared as s
 
@@ -98,6 +101,12 @@ def environment() -> tuple[str, str]:
 
 
 __all__ = [
-    'Case', 'DEFAULT_ITERATIONS', 'Measurement', 'Report',
-    'dist_version', 'environment', 'payload', 'run_case',
+    'DEFAULT_ITERATIONS',
+    'Case',
+    'Measurement',
+    'Report',
+    'dist_version',
+    'environment',
+    'payload',
+    'run_case',
 ]

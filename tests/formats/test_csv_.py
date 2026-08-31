@@ -2,7 +2,7 @@
 nested / many / keyed fields raise ``TypeError``."""
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal as D
 
 import pytest

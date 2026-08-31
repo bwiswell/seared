@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, StrEnum
 
 
 class Color(Enum):
@@ -7,7 +7,7 @@ class Color(Enum):
     BLUE  = 2
 
 
-class Status(str, Enum):
+class Status(StrEnum):
     ACTIVE   = 'active'
     INACTIVE = 'inactive'
     PENDING  = 'pending'

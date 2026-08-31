@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
+from conftest import Color, Status
 
 import seared as s
-from conftest import Color, Status
 
 
 class TestEnum:
@@ -14,7 +12,7 @@ class TestEnum:
         @s.seared
         class Obj(s.Seared):
             color: Color = s.Enum(enum=Color, required=True)
-            optional_color: Optional[Color] = s.Enum(enum=Color, missing=Color.RED)
+            optional_color: Color | None = s.Enum(enum=Color, missing=Color.RED)
 
         return Obj
 
@@ -38,7 +36,7 @@ class TestEnum:
     def test_optional_none_excluded_from_dump(self):
         @s.seared
         class Obj(s.Seared):
-            color: Optional[Color] = s.Enum(enum=Color)
+            color: Color | None = s.Enum(enum=Color)
 
         d = Obj.dump(Obj(color=None))
         assert 'color' not in d
@@ -105,7 +103,7 @@ class TestEnum:
     def test_str_enum_missing_default(self):
         @s.seared
         class Obj(s.Seared):
-            status: Optional[Status] = s.Enum(enum=Status, missing=Status.INACTIVE)
+            status: Status | None = s.Enum(enum=Status, missing=Status.INACTIVE)
 
         obj = Obj.load({})
         assert obj.status == Status.INACTIVE

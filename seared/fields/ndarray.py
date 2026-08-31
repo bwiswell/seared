@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from .._core.errors import ValidationError
+from seared._core.errors import ValidationError
+
 from .field import Field
 
 try:
@@ -14,20 +16,25 @@ except ImportError:
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class NDArray(Field):
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """Fail fast when the ``seared[numpy]`` extra isn't installed."""
         super().__post_init__()
         if not _NUMPY_AVAILABLE:
-            raise ImportError(
+            msg = (
                 "seared.NDArray requires numpy. "
                 "Install it with: uv add 'seared[numpy]'"
             )
+            raise ImportError(msg)
 
-    def serialize(self, value, validate: bool = True, **kwargs):
+    def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:
+        """``numpy.ndarray`` → nested lists."""
         if not isinstance(value, np.ndarray):
             if validate:
-                raise ValidationError(f'expected ndarray, got {type(value).__name__}')
+                msg = f'expected ndarray, got {type(value).__name__}'
+                raise ValidationError(msg)
             return value
         return value.tolist()
 
-    def deserialize(self, value, validate: bool = True, **kwargs):
+    def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:  # noqa: ARG002 — signature fixed by Field
+        """Nested lists → ``numpy.ndarray``."""
         return np.array(value)

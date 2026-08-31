@@ -1,19 +1,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from .._core.errors import ValidationError
+from seared._core.errors import ValidationError
+
 from .field import Field
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Bool(Field):
-    def serialize(self, value: bool, validate: bool = True, **kwargs) -> bool:
+    def serialize(self, value: bool, validate: bool = True, **kwargs: Any) -> bool:
+        """Python ``bool`` → JSON boolean."""
         if validate and not isinstance(value, bool):
-            raise ValidationError(f'expected bool, got {type(value).__name__}')
+            msg = f'expected bool, got {type(value).__name__}'
+            raise ValidationError(msg)
         return bool(value)
 
-    def deserialize(self, value, validate: bool = True, **kwargs) -> bool:
+    def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> bool:
+        """JSON boolean → ``bool``, coercing the usual string and int spellings."""
         if isinstance(value, bool):
             return value
         if not validate:
@@ -26,4 +31,5 @@ class Bool(Field):
                 return False
         if isinstance(value, int):
             return bool(value)
-        raise ValidationError(f'cannot deserialize {value!r} as bool')
+        msg = f'cannot deserialize {value!r} as bool'
+        raise ValidationError(msg)

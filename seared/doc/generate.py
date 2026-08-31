@@ -1,5 +1,7 @@
-"""Doc-set generation: discover models, mirror the package tree, cross-link,
-build the index, and diff for ``--check``.
+"""Doc-set generation.
+
+Discover models, mirror the package tree, cross-link, build the index,
+and diff for ``--check``.
 
 Factored apart from any single renderer so zeared reuses the whole pipeline
 (discovery / pathing / links / index / check) with its own Message-aware
@@ -12,10 +14,11 @@ import importlib
 import os
 import pkgutil
 import sys
-from pathlib import PurePosixPath
-from typing import Callable
+from collections.abc import Callable
+from pathlib import Path, PurePosixPath
 
-from .._core.base import Seared
+from seared._core.base import Seared
+
 from .introspect import introspect, is_seared_class
 from .render import LinkFor, render_schema
 
@@ -38,8 +41,11 @@ def _import_tree(target: str) -> list[object]:
 
 
 def collect(target: str) -> list[type[Seared]]:
-    """All ``@seared`` classes reachable from ``target``, plus the transitive
-    closure of referenced (nested / variant) classes, deduped and sorted."""
+    """All ``@seared`` classes reachable from ``target``.
+
+    Includes the transitive closure of referenced (nested / variant)
+    classes, deduped and sorted.
+    """
     found: dict[int, type[Seared]] = {}
 
     def add(cls: type[Seared]) -> None:
@@ -93,8 +99,10 @@ def _index(pages: dict[PurePosixPath, tuple[type[Seared], str]]) -> str:
 
 
 def build_docs(target: str, *, render_one: RenderOne | None = None) -> dict[str, str]:
-    """Return ``{relative_posix_path: markdown}`` for the whole doc set,
-    including ``index.md``. Pure — no disk I/O."""
+    """Return ``{relative_posix_path: markdown}`` for the whole doc set.
+
+    Includes ``index.md``. Pure — no disk I/O.
+    """
     if render_one is None:
         render_one = lambda cls, link_for: render_schema(introspect(cls), link_for=link_for)  # noqa: E731
     classes = collect(target)
@@ -124,19 +132,18 @@ def build_docs(target: str, *, render_one: RenderOne | None = None) -> dict[str,
 
 
 def write_docs(docs: dict[str, str], outdir: str) -> tuple[int, int]:
-    """Write pages under ``outdir`` (create/overwrite ``.md`` only). Returns
-    ``(written, unchanged)``."""
+    """Write pages under ``outdir`` (create/overwrite ``.md`` only).
+
+    Returns ``(written, unchanged)``.
+    """
     written = unchanged = 0
     for rel, content in sorted(docs.items()):
-        path = os.path.join(outdir, rel)
-        if os.path.exists(path):
-            with open(path, encoding='utf-8') as fh:
-                if fh.read() == content:
-                    unchanged += 1
-                    continue
-        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-        with open(path, 'w', encoding='utf-8') as fh:
-            fh.write(content)
+        path = Path(outdir) / rel
+        if path.exists() and path.read_text(encoding='utf-8') == content:
+            unchanged += 1
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding='utf-8')
         written += 1
     return written, unchanged
 
@@ -145,18 +152,18 @@ def check_docs(docs: dict[str, str], outdir: str) -> list[str]:
     """Return a list of drift descriptions (empty == in sync)."""
     drift = []
     for rel, content in sorted(docs.items()):
-        path = os.path.join(outdir, rel)
-        if not os.path.exists(path):
+        path = Path(outdir) / rel
+        if not path.exists():
             drift.append(f'missing: {rel}')
             continue
-        with open(path, encoding='utf-8') as fh:
-            if fh.read() != content:
-                drift.append(f'stale:   {rel}')
+        if path.read_text(encoding='utf-8') != content:
+            drift.append(f'stale:   {rel}')
     return drift
 
 
 def main(argv: list[str] | None = None, *, render_one: RenderOne | None = None,
          prog: str | None = None) -> int:
+    """CLI entry point for ``seared-doc``. Returns the process exit code."""
     parser = argparse.ArgumentParser(
         prog=prog,
         description='Generate Markdown schema docs from @seared / @zeared classes.',
@@ -176,7 +183,7 @@ def main(argv: list[str] | None = None, *, render_one: RenderOne | None = None,
             print(f'{len(drift)} doc(s) out of date under {args.output!r}:', file=sys.stderr)
             for line in drift:
                 print(f'  {line}', file=sys.stderr)
-            print("run without --check to regenerate.", file=sys.stderr)
+            print('run without --check to regenerate.', file=sys.stderr)
             return 1
         print(f'{len(docs)} doc(s) up to date.')
         return 0

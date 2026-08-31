@@ -7,9 +7,12 @@ trailing underscore) to avoid shadowing it. The class is exported as
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal as _Decimal, InvalidOperation
+from decimal import Decimal as _Decimal
+from decimal import InvalidOperation
+from typing import Any
 
-from .._core.errors import ValidationError
+from seared._core.errors import ValidationError
+
 from .field import Field
 
 
@@ -26,25 +29,25 @@ class Decimal(Field):
     """
     as_number: bool = False
 
-    def serialize(self, value, validate: bool = True, **kwargs):
+    def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:
+        """``Decimal`` → lossless string, or a JSON float when ``as_number=True``."""
         if not isinstance(value, _Decimal):
             if validate:
-                raise ValidationError(
-                    f'expected Decimal, got {type(value).__name__}'
-                )
+                msg = f'expected Decimal, got {type(value).__name__}'
+                raise ValidationError(msg)
             return value
         if self.as_number:
             return float(value)
         return str(value)
 
-    def deserialize(self, value, validate: bool = True, **kwargs) -> _Decimal:
+    def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> _Decimal:
+        """String or number → ``Decimal``."""
         if isinstance(value, _Decimal):
             return value
         try:
             return _Decimal(str(value))
         except (InvalidOperation, TypeError, ValueError) as e:
             if validate:
-                raise ValidationError(
-                    f'cannot parse {value!r} as Decimal: {e}'
-                ) from e
+                msg = f'cannot parse {value!r} as Decimal: {e}'
+                raise ValidationError(msg) from e
             return value

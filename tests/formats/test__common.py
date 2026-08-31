@@ -3,7 +3,6 @@ detection helper used by every codec's ``from_*`` method.
 """
 from __future__ import annotations
 
-import os
 import tempfile
 from pathlib import Path
 
@@ -22,7 +21,7 @@ class TestPathSource:
         try:
             assert read_source(tmp_path) == 'file-content-payload'
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
     def test_accepts_pathlike(self):
         with tempfile.NamedTemporaryFile(
@@ -33,7 +32,7 @@ class TestPathSource:
         try:
             assert read_source(Path(tmp_path)) == 'via-pathlib'
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
     def test_utf8_round_trip(self):
         with tempfile.NamedTemporaryFile(
@@ -44,7 +43,7 @@ class TestPathSource:
         try:
             assert read_source(tmp_path) == 'emoji-✨ and 中文'
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
 
 class TestContentSource:

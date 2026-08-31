@@ -23,6 +23,7 @@ def _build(validate: bool) -> type[s.Seared]:
 
 
 def cases() -> list[Case]:
+    """The seared cases — one strict, one lax (``validate=False``)."""
     out = []
     for variant, validate in [('strict', True), ('lax', False)]:
         outer = _build(validate)

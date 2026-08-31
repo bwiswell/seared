@@ -26,6 +26,7 @@ class Outer(BaseModel):
 
 
 def cases() -> list[Case]:
+    """The pydantic v2 comparator case."""
     return [Case(
         library='pydantic', variant='default', version=dist_version('pydantic'),
         load=Outer.model_validate, dump=lambda obj: obj.model_dump(),

@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import json
-from typing import Optional
-
 import seared as s
 
 
@@ -53,7 +50,7 @@ class TestTuple:
     def test_optional_none_excluded_from_dump(self):
         @s.seared
         class Obj(s.Seared):
-            point: Optional[tuple] = s.Tuple(s.Float(), s.Float())
+            point: tuple | None = s.Tuple(s.Float(), s.Float())
 
         d = Obj.dump(Obj(point=None))
         assert 'point' not in d

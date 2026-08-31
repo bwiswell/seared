@@ -1,23 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from .._core.errors import ValidationError
+from seared._core.errors import ValidationError
+
 from .field import Field
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Int(Field):
-    def serialize(self, value, validate: bool = True, **kwargs) -> int:
-        if validate:
-            if isinstance(value, bool) or not isinstance(value, int):
-                raise ValidationError(f'expected int, got {type(value).__name__}')
+    def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> int:
+        """Python ``int`` → JSON integer (rejects ``bool``)."""
+        if validate and (isinstance(value, bool) or not isinstance(value, int)):
+                msg = f'expected int, got {type(value).__name__}'
+                raise ValidationError(msg)
         return int(value)
 
-    def deserialize(self, value, validate: bool = True, **kwargs) -> int:
+    def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> int:
+        """JSON integer, float, or numeric string → ``int`` (rejects ``bool``)."""
         if isinstance(value, bool):
             if validate:
-                raise ValidationError('expected int, got bool')
+                msg = 'expected int, got bool'
+                raise ValidationError(msg)
             return int(value)
         if isinstance(value, int):
             return value
@@ -25,5 +30,7 @@ class Int(Field):
             try:
                 return int(value)
             except (TypeError, ValueError) as e:
-                raise ValidationError(f'cannot deserialize {value!r} as int') from e
-        raise ValidationError(f'cannot deserialize {value!r} as int')
+                msg = f'cannot deserialize {value!r} as int'
+                raise ValidationError(msg) from e
+        msg = f'cannot deserialize {value!r} as int'
+        raise ValidationError(msg)

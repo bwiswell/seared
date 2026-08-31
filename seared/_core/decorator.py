@@ -1,53 +1,52 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import TYPE_CHECKING, Any, Callable, Tuple
+from typing import TYPE_CHECKING, Any
 
 from .errors import ValidationError
 
-
-FieldSpec = Tuple[str, str, Any]  # (attr_name, wire_key, Field instance)
+FieldSpec = tuple[str, str, Any]  # (attr_name, wire_key, Field instance)
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     # PEP 681 view. ``@dataclass_transform`` teaches type checkers (ty, pyright,
     # mypy) that ``@seared`` synthesises a dataclass, and ``field_specifiers``
     # lists the Field constructors so ``x: str = s.Str(...)`` is read as a field
     # (annotation drives the type; the ``.pyi`` stubs return ``Any`` so the
     # assignment is legal). ``default=`` / ``default_factory=`` are the names the
     # checker keys required/optional off — hence Option A in the plan.
-    from typing import TypeVar, dataclass_transform, overload
+    from typing import dataclass_transform, overload
 
-    from ..fields.bool_ import Bool
-    from ..fields.bytes_ import Bytes
-    from ..fields.date import Date
-    from ..fields.datetime_ import DateTime
-    from ..fields.decimal_ import Decimal
-    from ..fields.dict_ import Dict
-    from ..fields.enum_ import Enum
-    from ..fields.field import Field as _Field
-    from ..fields.float_ import Float
-    from ..fields.int_ import Int
-    from ..fields.ndarray import NDArray
-    from ..fields.pandas_ import PandasFrame
-    from ..fields.path import Path
-    from ..fields.polars_ import PolarsFrame
-    from ..fields.str_ import Str
-    from ..fields.t import T
-    from ..fields.time_ import Time
-    from ..fields.timedelta import TimeDelta
-    from ..fields.tuple_ import Tuple as _Tuple
-    from ..fields.union import Union
-    from ..fields.uuid_ import UUID
-
-    _T = TypeVar('_T')
+    from seared.fields.bool_ import Bool
+    from seared.fields.bytes_ import Bytes
+    from seared.fields.date import Date
+    from seared.fields.datetime_ import DateTime
+    from seared.fields.decimal_ import Decimal
+    from seared.fields.dict_ import Dict
+    from seared.fields.enum_ import Enum
+    from seared.fields.field import Field as _Field
+    from seared.fields.float_ import Float
+    from seared.fields.int_ import Int
+    from seared.fields.ndarray import NDArray
+    from seared.fields.pandas_ import PandasFrame
+    from seared.fields.path import Path
+    from seared.fields.polars_ import PolarsFrame
+    from seared.fields.str_ import Str
+    from seared.fields.t import T
+    from seared.fields.time_ import Time
+    from seared.fields.timedelta import TimeDelta
+    from seared.fields.tuple_ import Tuple as _Tuple
+    from seared.fields.union import Union
+    from seared.fields.uuid_ import UUID
 
     @overload
-    def seared(cls: type[_T], /) -> type[_T]: ...
+    def seared[ClsT](cls: type[ClsT], /) -> type[ClsT]: ...
     @overload
-    def seared(
+    def seared[ClsT](
         *, slots: bool = ..., validate: bool = ...,
-    ) -> Callable[[type[_T]], type[_T]]: ...
+    ) -> Callable[[type[ClsT]], type[ClsT]]: ...
     @dataclass_transform(
         kw_only_default=True,
         field_specifiers=(
@@ -58,24 +57,26 @@ if TYPE_CHECKING:
     )
     def seared(cls=None, *, slots=True, validate=True): ...
 else:
-    def seared(cls=None, *, slots: bool = True, validate: bool = True):
+    def seared(
+        cls: type | None = None, *, slots: bool = True, validate: bool = True,
+    ) -> Any:
         """Decorator turning a class into a seared dataclass.
 
         Usable bare (``@s.seared``) or parameterised
         (``@s.seared(slots=False, validate=False)``).
         """
-        def decorate(c):
+        def decorate(c: type) -> type:
             return _build(c, slots=slots, validate=validate)
         if cls is None:
             return decorate
         return decorate(cls)
 
 
-def _build(cls, *, slots: bool, validate: bool):
-    from ..fields.field import Field  # local import avoids core<->field cycle
+def _build(cls: type, *, slots: bool, validate: bool) -> type:
+    from seared.fields.field import Field  # local import avoids core<->field cycle
     cls = dataclass(cls, slots=slots)
     specs: list[FieldSpec] = []
-    unwrap_specs: list[Tuple[str, Any]] = []
+    unwrap_specs: list[tuple[str, Any]] = []
     for f in fields(cls):
         default = f.default
         if isinstance(default, Field):
@@ -95,18 +96,19 @@ def _build(cls, *, slots: bool, validate: bool):
                 if key is None:
                     continue
                 if key in seen:
-                    raise TypeError(
+                    msg = (
                         f'{cls.__name__}: multiple UNWRAP fields share wire '
                         f'key {key!r} ({seen[key]} and {attr}); each Union '
                         f'must use distinct tag_key / payload_key strings'
                     )
+                    raise TypeError(msg)
                 seen[key] = attr
-    specs_t: Tuple[FieldSpec, ...] = tuple(specs)
+    specs_t: tuple[FieldSpec, ...] = tuple(specs)
     cls.__seared_fields__ = specs_t
 
     _wrap_init_replaces_field_defaults(cls, specs_t)
 
-    dump_fn = _make_dump(cls, specs_t, validate)
+    dump_fn = _make_dump(specs_t, validate)
     load_fn = _make_load(cls, specs_t, validate)
     cls.dump = classmethod(lambda _c, o, format='json': dump_fn(o, format))
     cls.load = classmethod(lambda _c, d, format='json': load_fn(d, format))
@@ -115,22 +117,24 @@ def _build(cls, *, slots: bool, validate: bool):
     # at decorator time. Optional formats (TOML write, YAML, ...) raise
     # informative ImportError from inside the call when the extra is
     # missing — no import cost here for users who don't use those.
-    from ..formats import _attach_format_methods
+    from seared.formats import _attach_format_methods
     _attach_format_methods(cls)
 
     return cls
 
 
-def _is_unwrap(f) -> bool:
+def _is_unwrap(f: Any) -> bool:
     return getattr(type(f), 'UNWRAP', False)
 
 
 _MUTABLE_DEFAULT_TYPES = (list, dict, set, frozenset)
 
 
-def _wrap_init_replaces_field_defaults(cls, specs: Tuple[FieldSpec, ...]) -> None:
-    """Wrap ``cls.__init__`` so Field-instance defaults are replaced with the
-    field's ``missing`` value on natural instantiation.
+def _wrap_init_replaces_field_defaults(cls: type, specs: tuple[FieldSpec, ...]) -> None:
+    """Replace Field-instance defaults with the field's resolved value.
+
+    Wraps ``cls.__init__`` so the substitution happens on natural
+    instantiation.
 
     Without this wrapper, ``Foo()`` (where ``x: Optional[int] = s.Int()``)
     would leave ``self.x`` as the ``Int`` metadata object instead of ``None``.
@@ -144,11 +148,12 @@ def _wrap_init_replaces_field_defaults(cls, specs: Tuple[FieldSpec, ...]) -> Non
     isolated per-instance.
     """
     import copy as _copy
-    from ..fields.field import Field
+
+    from seared.fields.field import Field
 
     original_init = cls.__init__
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self: Any, *args: Any, **kwargs: Any) -> None:  # noqa: N807
         original_init(self, *args, **kwargs)
         for attr, _, f in specs:
             v = getattr(self, attr, None)
@@ -162,11 +167,11 @@ def _wrap_init_replaces_field_defaults(cls, specs: Tuple[FieldSpec, ...]) -> Non
                 object.__setattr__(self, attr, missing)
 
     __init__.__qualname__ = f'{cls.__qualname__}.__init__'
-    cls.__init__ = __init__
+    cls.__init__ = __init__  # ty: ignore[invalid-assignment]
 
 
-def _make_dump(cls, specs: Tuple[FieldSpec, ...], validate: bool) -> Callable:
-    def dump(obj, format: str = 'json') -> dict[str, Any]:
+def _make_dump(specs: tuple[FieldSpec, ...], validate: bool) -> Callable:
+    def dump(obj: Any, format: str = 'json') -> dict[str, Any]:
         out: dict[str, Any] = {}
         for attr, wire, f in specs:
             if not f.dump:
@@ -186,12 +191,13 @@ def _make_dump(cls, specs: Tuple[FieldSpec, ...], validate: bool) -> Callable:
     return dump
 
 
-def _make_load(cls, specs: Tuple[FieldSpec, ...], validate: bool) -> Callable:
+def _make_load(cls: type, specs: tuple[FieldSpec, ...], validate: bool) -> Callable:
     cls_name = cls.__name__
 
-    def load(data, format: str = 'json') -> Any:
+    def load(data: Any, format: str = 'json') -> Any:
         if not isinstance(data, dict):
-            raise ValidationError(f'{cls_name}.load expected dict, got {type(data).__name__}')
+            msg = f'{cls_name}.load expected dict, got {type(data).__name__}'
+            raise ValidationError(msg)
         kwargs: dict[str, Any] = {}
         for attr, wire, f in specs:
             if _is_unwrap(f):
@@ -204,7 +210,8 @@ def _make_load(cls, specs: Tuple[FieldSpec, ...], validate: bool) -> Callable:
                     f, data[wire], 'deserialize', validate, format=format,
                 )
             elif f.required:
-                raise ValidationError(f'{cls_name}.{attr} is required')
+                msg = f'{cls_name}.{attr} is required'
+                raise ValidationError(msg)
             elif f.default_factory is not None:
                 kwargs[attr] = f.default_factory()
             else:
@@ -213,16 +220,18 @@ def _make_load(cls, specs: Tuple[FieldSpec, ...], validate: bool) -> Callable:
     return load
 
 
-def _apply(f, v: Any, op: str, validate: bool, *, format: str = 'json') -> Any:
+def _apply(f: Any, v: Any, op: str, validate: bool, *, format: str = 'json') -> Any:
     method = getattr(f, op)
     if v is None:
         return None
     if f.keyed:
         if validate and not isinstance(v, dict):
-            raise ValidationError(f'expected dict for keyed field, got {type(v).__name__}')
+            msg = f'expected dict for keyed field, got {type(v).__name__}'
+            raise ValidationError(msg)
         return {k: method(x, validate, format=format) for k, x in v.items()}
     if f.many:
         if validate and not isinstance(v, (list, tuple)):
-            raise ValidationError(f'expected list for many field, got {type(v).__name__}')
+            msg = f'expected list for many field, got {type(v).__name__}'
+            raise ValidationError(msg)
         return [method(x, validate, format=format) for x in v]
     return method(v, validate, format=format)

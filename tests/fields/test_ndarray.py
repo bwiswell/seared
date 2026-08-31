@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import numpy as np
 
 import seared as s
@@ -46,7 +44,7 @@ class TestNDArray:
     def test_optional_none_excluded_from_dump(self):
         @s.seared
         class Obj(s.Seared):
-            arr: Optional[np.ndarray] = s.NDArray()
+            arr: np.ndarray | None = s.NDArray()
 
         d = Obj.dump(Obj(arr=None))
         assert 'arr' not in d

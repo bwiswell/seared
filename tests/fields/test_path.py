@@ -2,7 +2,8 @@
 on receive (or ``PurePosixPath`` via ``concrete=`` opt-in)."""
 from __future__ import annotations
 
-from pathlib import Path as P, PurePosixPath, PureWindowsPath
+from pathlib import Path as P
+from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
 
@@ -43,7 +44,7 @@ class TestPosixWireFormat:
 
     def test_empty_path_round_trips_as_dot(self):
         # Python semantics: P('') → P('.') round-trips through wire.
-        d = Document(location=P(''))
+        d = Document(location=P())
         out = Document.dump(d)
         # P('') stringifies to '.' via parts=('',) → PosixPath('.').
         # Document the round-trip target.
@@ -61,9 +62,9 @@ class TestConcreteOverride:
 
 class TestValidation:
     def test_serialize_rejects_non_path(self):
-        with pytest.raises(s.ValidationError, match='expected pathlib.Path'):
-            d = Document.__new__(Document)
-            object.__setattr__(d, 'location', 'not-a-path')
+        d = Document.__new__(Document)
+        object.__setattr__(d, 'location', 'not-a-path')
+        with pytest.raises(s.ValidationError, match=r'expected pathlib\.Path'):
             Document.dump(d)
 
     def test_deserialize_rejects_non_string(self):

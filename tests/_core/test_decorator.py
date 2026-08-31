@@ -14,13 +14,11 @@ decorator's responsibilities:
 from __future__ import annotations
 
 import json
-from typing import Optional
 
 import pytest
-
-import seared as s
 from conftest import Color
 
+import seared as s
 
 # ---------------------------------------------------------------------------
 # Decorator basics — class gets dump/load/loads/dumps + __seared_fields__.
@@ -78,7 +76,7 @@ class TestSearedDecorator:
         @s.seared
         class Foo(s.Seared):
             x: int = s.Int(required=True)
-            y: Optional[int] = s.Int()
+            y: int | None = s.Int()
             z: int = s.Int(missing=42)
 
         f = Foo(x=1)
@@ -89,7 +87,7 @@ class TestSearedDecorator:
     def test_none_values_excluded_from_dump(self):
         @s.seared
         class Foo(s.Seared):
-            x: Optional[int] = s.Int()
+            x: int | None = s.Int()
 
         d = Foo.dump(Foo(x=None))
         assert 'x' not in d
@@ -119,9 +117,9 @@ class TestMixedClass:
     def test_readme_example(self):
         @s.seared
         class A(s.Seared):
-            a: Optional[int]   = s.Int(data_key='propertyA')
-            b: Optional[float] = s.Float(data_key='propertyB')
-            c: Optional[str]   = s.Str(data_key='propertyC')
+            a: int | None   = s.Int(data_key='propertyA')
+            b: float | None = s.Float(data_key='propertyB')
+            c: str | None   = s.Str(data_key='propertyC')
 
         @s.seared
         class B(s.Seared):

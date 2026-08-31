@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Optional
 
 import seared as s
 
@@ -53,7 +52,7 @@ class TestTimeDelta:
     def test_optional_none_excluded_from_dump(self):
         @s.seared
         class Obj(s.Seared):
-            duration: Optional[timedelta] = s.TimeDelta()
+            duration: timedelta | None = s.TimeDelta()
 
         d = Obj.dump(Obj(duration=None))
         assert 'duration' not in d

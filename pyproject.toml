@@ -35,6 +35,7 @@ bench  = [
 dev = [
     "prek",
     "pytest>=8.0,<9.0",
+    "ruff",
     "ty",
     "seared[all]",
 ]
@@ -49,6 +50,60 @@ packages = ["seared"]
 # The bench ships with the repo, not the package.
 [tool.hatch.build.targets.sdist]
 exclude = ["/bench"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM",     # comma rules (formatter owns these)
+    "CPY",     # copyright notice at top of file
+    "FLY",     # str.join -> f-string (we join to avoid the {{}} brace footgun)
+    "D100",    # missing docstring in public module
+    "D101",    # missing docstring in public class
+    "D104",    # missing docstring in public package
+    "PLC0415", # allow intentional lazy imports
+    "TD",      # TODO formatting
+    "FIX002",  # disallow TODOs
+    "TRY003",  # long messages outside exception class
+    # --- seared-specific deviations from the house list ---
+    "ANN401",  # `Any` *is* the wire boundary type; (de)serialize are dynamically typed by design
+    "FBT001",  # `validate: bool = True` is established public API on every Field method...
+    "FBT002",  # ...so making it keyword-only would be a breaking change for consumers
+    "A002",    # the public carrier-hint kwarg is spelled `format=` (shadows the builtin)
+    "A006",    # ditto, for the lambdas the decorator builds around it
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+
+[tool.ruff.lint.flake8-unused-arguments]
+# Most fields accept the optional codec hints (`format=`, ...) and ignore them;
+# the uniform `**kwargs` tail is the point, not an oversight.
+ignore-variadic-names = true
+
+[tool.ruff.lint.per-file-ignores]
+# `N` — tests alias field types to initials (`Decimal as D`) and name cases after
+# them (`test_T_field_rejected`); `DTZ` — naive datetimes are fixtures under test.
+"tests/**/*.py" = ["S", "SLF", "ANN", "D", "INP", "ARG", "PLR", "N", "DTZ"]
+# Field constructors are deliberately PascalCase — classes in the .py, overload
+# stubs in the .pyi. Only the stubs read as "functions" to pep8-naming.
+"seared/fields/*.pyi" = ["N802"]
+# CLIs whose product *is* stdout.
+"seared/doc/generate.py" = ["T201"]
+"bench/**/*.py" = ["T201"]
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+quote-style = "single"
 
 [tool.ty.src]
 # The comparator bench suites import `seared[bench]` extras (marshmallow,

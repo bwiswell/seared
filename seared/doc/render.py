@@ -7,10 +7,13 @@ assembles the core (Message-agnostic) page.
 """
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
-from .._core.base import Seared
 from .introspect import SchemaDoc, introspect
+
+if TYPE_CHECKING:
+    from seared._core.base import Seared
 
 LinkFor = Callable[[type], str]
 
@@ -32,6 +35,7 @@ def _cell(text: str | None) -> str:
 
 
 def render_header(schema: SchemaDoc) -> str:
+    """Render the ``# Name`` heading and the class docstring beneath it."""
     out = [f'# {schema.name}']
     if schema.doc:
         out.append('')
@@ -40,6 +44,7 @@ def render_header(schema: SchemaDoc) -> str:
 
 
 def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) -> str:
+    """Render the ``## Fields`` table, linking nested schemas via ``link_for``."""
     if not schema.fields:
         return ''
     rows = [
@@ -69,31 +74,31 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
 
 
 def render_enums(schema: SchemaDoc) -> str:
-    enum_fields = [f for f in schema.fields if f.enum is not None]
+    """Render one ``## Enumerations`` member table per Enum field."""
+    enum_fields = [(f, f.enum) for f in schema.fields if f.enum is not None]
     if not enum_fields:
         return ''
     out = ['## Enumerations']
-    for f in enum_fields:
-        assert f.enum is not None
-        out += ['', f'### `{f.attr}` → `{f.enum.name}`', '',
+    for f, enum in enum_fields:
+        out += ['', f'### `{f.attr}` → `{enum.name}`', '',
                 '| member | wire value |', '|--------|------------|']
-        for name, value in f.enum.members:
+        for name, value in enum.members:
             out.append(f'| `{name}` | `{_pipe(repr(value))}` |')
     return '\n'.join(out)
 
 
 def render_variants(schema: SchemaDoc, link_for: LinkFor = _default_link) -> str:
-    union_fields = [f for f in schema.fields if f.variants is not None]
+    """Render one ``## Variants`` tag table per Union field."""
+    union_fields = [(f, f.variants) for f in schema.fields if f.variants is not None]
     if not union_fields:
         return ''
     out = ['## Variants']
-    for f in union_fields:
-        assert f.variants is not None
+    for f, variants in union_fields:
         out += ['', f'### `{f.attr}`', '', f'Envelope: {f.envelope}.']
         if f.fallback is not None:
             out.append(f'Unknown tags fall back to `{f.fallback.__name__}`.')
         out += ['', '| tag | class |', '|-----|-------|']
-        for v in f.variants:
+        for v in variants:
             out.append(f'| `{v.tag}` | [`{v.cls.__name__}`]({link_for(v.cls)}) |')
     return '\n'.join(out)
 
