@@ -284,8 +284,12 @@ installed, `@s.seared` swaps its generated `load` / `dump` for compiled
 equivalents — same classes, same API, same error messages, ~11× / ~9×.
 
 ```sh
-uv add rusted        # nothing in your code changes
+uv add git+https://www.github.com/bwiswell/rusted.git   # nothing in your code changes
 ```
+
+(It isn't on a package index yet, so that git form builds from source and
+needs a Rust toolchain. A prebuilt wheel is the intent; until then the
+accelerator is developer-only.)
 
 Acceleration is **per class, all or nothing**: a class qualifies only if
 every field, recursively through `T`, is a seared-native type the backend

@@ -11,8 +11,13 @@ zero-dependency and pure Python, and any platform without a wheel simply
 runs the Python path.
 
 ```sh
-uv add 'seared[core]'      # when rusted ships; nothing in your code changes
+uv add git+https://www.github.com/bwiswell/rusted.git   # nothing in your code changes
 ```
+
+There is no `seared[core]` extra: seared declares no dependency on the
+backend in either direction, so the accelerator is installed alongside
+seared rather than through it. That is what keeps a missing or broken wheel
+from being seared's problem.
 
 ## The four rules
 

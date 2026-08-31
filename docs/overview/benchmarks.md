@@ -108,10 +108,11 @@ the durable claim and the absolute numbers as one sample.
   code change. The default stays pure Python; every platform without a
   wheel keeps working.
 - **Strict versus lax is within noise on `load`** (the guards are cheap
-  `isinstance` checks against builtin types) and worth a few percent on
-  `dump`. Most of seared's advantage over marshmallow comes from
-  per-call overhead, not validation. Under `rusted` the two are nearly
-  identical, because the guards become C-level pointer type checks.
+  `isinstance` checks against builtin types) but costs ~14% on `dump`,
+  where those guards are most of what the pass actually does. `rusted`
+  closes the load gap to nothing and leaves the dump gap at ~15% — cheaper
+  guards, not absent ones. Most of seared's advantage over marshmallow comes
+  from per-call overhead, not validation.
 
 ## Why seared is fast (for pure Python)
 

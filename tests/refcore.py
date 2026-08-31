@@ -34,7 +34,7 @@ from __future__ import annotations
 from typing import Any
 
 SPEC_ABI = 1
-SUPPORTS_SEARED = '>=0.2.8,<0.3'
+SUPPORTS_SEARED = '>=0.2.8,<0.4'
 __version__ = '0.0.0'
 
 
