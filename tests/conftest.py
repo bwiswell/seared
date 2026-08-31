@@ -1,13 +1,13 @@
-from enum import Enum
+from enum import Enum, StrEnum
 
 
 class Color(Enum):
-    RED   = 0
+    RED = 0
     GREEN = 1
-    BLUE  = 2
+    BLUE = 2
 
 
-class Status(str, Enum):
-    ACTIVE   = 'active'
+class Status(StrEnum):
+    ACTIVE = 'active'
     INACTIVE = 'inactive'
-    PENDING  = 'pending'
+    PENDING = 'pending'

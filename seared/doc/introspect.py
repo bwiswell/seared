@@ -5,15 +5,17 @@ annotations and returns a :class:`SchemaDoc` tree — the stable, render-agnosti
 intermediate that ``seared.doc.render`` (and zeared's wire-aware renderer, and
 any future JSON-Schema / HTML output) consume. Pure stdlib.
 """
+
 from __future__ import annotations
 
 import enum as _enum
 import inspect
 import re
-from dataclasses import dataclass, field as _dc_field
-from typing import Any, Optional, TypeGuard, get_args, get_origin, get_type_hints
+from dataclasses import dataclass
+from dataclasses import field as _dc_field
+from typing import Any, TypeGuard, get_args, get_origin, get_type_hints
 
-from .._core.base import Seared
+from seared._core.base import Seared
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,19 +33,19 @@ class VariantDoc:
 @dataclass(frozen=True, slots=True)
 class FieldDoc:
     attr: str
-    wire_key: Optional[str]        # None when identical to ``attr``
+    wire_key: str | None  # None when identical to ``attr``
     type_str: str
     required: bool
     default_repr: str
     many: bool
     keyed: bool
     dump: bool
-    doc: Optional[str]
-    enum: Optional[EnumDoc] = None
-    nested: Optional[type] = None                 # T(schema) target
-    variants: Optional[tuple[VariantDoc, ...]] = None
-    envelope: Optional[str] = None                # Union envelope description
-    fallback: Optional[type] = None               # Union default variant
+    doc: str | None
+    enum: EnumDoc | None = None
+    nested: type | None = None  # T(schema) target
+    variants: tuple[VariantDoc, ...] | None = None
+    envelope: str | None = None  # Union envelope description
+    fallback: type | None = None  # Union default variant
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,8 +53,8 @@ class SchemaDoc:
     cls: type
     name: str
     module: str
-    doc: Optional[str]
-    summary: Optional[str]
+    doc: str | None
+    summary: str | None
     fields: tuple[FieldDoc, ...]
     is_message: bool = False
     # Classes this schema references (T targets, Union variants) — the
@@ -119,10 +121,7 @@ def _field_doc(attr: str, wire: str, f: Any, type_str: str) -> FieldDoc:
         enum = EnumDoc(name=e.__name__, members=tuple((m.name, m.value) for m in e))
     elif hasattr(f, 'variants'):
         variants = tuple(VariantDoc(tag=t, cls=c) for t, c in f.variants.items())
-        envelope = (
-            'flat' if getattr(f, 'payload_key', None) is None
-            else f'nested under `{f.payload_key}`'
-        )
+        envelope = 'flat' if getattr(f, 'payload_key', None) is None else f'nested under `{f.payload_key}`'
         fallback = getattr(f, 'default', None)
     elif hasattr(f, 'schema'):
         nested = f.schema
@@ -159,7 +158,7 @@ def _default_repr(f: Any) -> str:
 
 
 def _type_strings(cls: type) -> dict[str, str]:
-    """attr -> display type string, resolving stringized annotations.
+    """Attr -> display type string, resolving stringized annotations.
 
     Falls back to raw annotation strings walked up the MRO when
     ``get_type_hints`` can't resolve a forward ref (degrade, never fail).
@@ -199,4 +198,5 @@ def _format_type(tp: Any) -> str:
 def _is_union(tp: Any) -> bool:
     import types as _types
     import typing as _typing
+
     return get_origin(tp) is _typing.Union or isinstance(tp, _types.UnionType)

@@ -1,5 +1,6 @@
 """Pin: TOML codec — read via stdlib ``tomllib``, write via optional
 ``seared[toml]`` extra (lazy ``tomli-w`` import)."""
+
 from __future__ import annotations
 
 import sys
@@ -67,9 +68,8 @@ class TestWriteRequiresExtra:
     def test_to_toml_without_tomli_w_raises_helpful_import(self):
         real_tomli_w = sys.modules.pop('tomli_w', None)
         try:
-            with patch.dict(sys.modules, {'tomli_w': None}):
-                with pytest.raises(ImportError, match='tomli-w'):
-                    Cfg.to_toml(Cfg(name='x', port=1))
+            with patch.dict(sys.modules, {'tomli_w': None}), pytest.raises(ImportError, match='tomli-w'):
+                Cfg.to_toml(Cfg(name='x', port=1))
         finally:
             if real_tomli_w is not None:
                 sys.modules['tomli_w'] = real_tomli_w

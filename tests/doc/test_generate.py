@@ -11,7 +11,10 @@ class TestBuildDocs:
 
     def test_paths_mirror_package_tree(self):
         assert set(self.docs) == {
-            'Geo.md', 'Widget.md', 'telemetry/Reading.md', 'index.md',
+            'Geo.md',
+            'Widget.md',
+            'telemetry/Reading.md',
+            'index.md',
         }
 
     def test_private_base_excluded_but_fields_inherited(self):

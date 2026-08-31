@@ -1,6 +1,6 @@
 from typing import Any
 
-from .._core.base import Seared
+from seared._core.base import Seared
 
 # ``Union`` is an UNWRAP field. Its ``default`` names a fallback *variant*
 # class (schema-evolution), not a field default — so no ``default_factory`` /

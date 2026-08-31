@@ -1,9 +1,9 @@
 """Pin: ``Decimal`` field — lossless string by default; opt-in
 JSON-number form via ``as_number=True``."""
+
 from __future__ import annotations
 
 from decimal import Decimal as D
-from typing import Optional
 
 import pytest
 
@@ -39,13 +39,13 @@ class TestStringDefault:
 
     def test_serialize_rejects_non_decimal_when_validating(self):
         with pytest.raises(s.ValidationError, match='expected Decimal'):
-            Money.dump(Money.__new__(Money).__class__(amount=12.34))   # type: ignore[arg-type]
+            Money.dump(Money.__new__(Money).__class__(amount=12.34))  # type: ignore[arg-type]
 
     def test_deserialize_parses_int_string_float(self):
         # load coerces from any reasonable string-able form.
         for inp, expected in (
             ('1.5', D('1.5')),
-            ('100', D('100')),
+            ('100', D(100)),
             ('0.000001', D('0.000001')),
         ):
             assert Money.load({'amount': inp}).amount == expected
@@ -73,4 +73,4 @@ class TestNumberOptIn:
         m = MoneyNumber(amount=big)
         loaded = MoneyNumber.load(MoneyNumber.dump(m))
         # Lossy via float — round-trip != original beyond 17 digits.
-        assert loaded.amount != big   # documented contract
+        assert loaded.amount != big  # documented contract

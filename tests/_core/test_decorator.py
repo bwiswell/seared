@@ -11,20 +11,20 @@ decorator's responsibilities:
 - ``test_binary_format`` — ``format=`` kwarg threading through
   ``dump``/``load`` into each field's ``serialize``/``deserialize``.
 """
+
 from __future__ import annotations
 
 import json
-from typing import Optional
 
 import pytest
-
-import seared as s
 from conftest import Color
 
+import seared as s
 
 # ---------------------------------------------------------------------------
 # Decorator basics — class gets dump/load/loads/dumps + __seared_fields__.
 # ---------------------------------------------------------------------------
+
 
 class TestSearedDecorator:
     def test_creates_dataclass(self):
@@ -78,7 +78,7 @@ class TestSearedDecorator:
         @s.seared
         class Foo(s.Seared):
             x: int = s.Int(required=True)
-            y: Optional[int] = s.Int()
+            y: int | None = s.Int()
             z: int = s.Int(missing=42)
 
         f = Foo(x=1)
@@ -89,7 +89,7 @@ class TestSearedDecorator:
     def test_none_values_excluded_from_dump(self):
         @s.seared
         class Foo(s.Seared):
-            x: Optional[int] = s.Int()
+            x: int | None = s.Int()
 
         d = Foo.dump(Foo(x=None))
         assert 'x' not in d
@@ -119,19 +119,19 @@ class TestMixedClass:
     def test_readme_example(self):
         @s.seared
         class A(s.Seared):
-            a: Optional[int]   = s.Int(data_key='propertyA')
-            b: Optional[float] = s.Float(data_key='propertyB')
-            c: Optional[str]   = s.Str(data_key='propertyC')
+            a: int | None = s.Int(data_key='propertyA')
+            b: float | None = s.Float(data_key='propertyB')
+            c: str | None = s.Str(data_key='propertyC')
 
         @s.seared
         class B(s.Seared):
-            a: int   = s.Int(missing=5)
+            a: int = s.Int(missing=5)
             b: float = s.Float(missing=3.14)
-            c: str   = s.Str(missing='hello')
-            d: A     = s.T(A, required=True)
+            c: str = s.Str(missing='hello')
+            d: A = s.T(A, required=True)
             e: Color = s.Enum(enum=Color, missing=Color.GREEN)
-            f: list  = s.Int(many=True, missing=[])
-            g: dict  = s.Float(keyed=True, missing={})
+            f: list = s.Int(many=True, missing=[])
+            g: dict = s.Float(keyed=True, missing={})
 
         data = {
             'a': 3,
@@ -164,7 +164,7 @@ class TestMixedClass:
         @s.seared
         class Mid(s.Seared):
             leaf: Leaf = s.T(schema=Leaf, required=True)
-            tag: str   = s.Str(required=True)
+            tag: str = s.Str(required=True)
 
         @s.seared
         class Root(s.Seared):
@@ -183,6 +183,7 @@ class TestMixedClass:
 # tests/test_mutable_defaults.py).
 # ---------------------------------------------------------------------------
 
+
 class TestListMissing:
     def test_two_instances_have_distinct_lists(self):
         @s.seared
@@ -193,9 +194,7 @@ class TestListMissing:
         b = Bag()
         a.tags.append('one')
         # Pre-fix: b.tags would also contain 'one' (same list object).
-        assert b.tags == [], (
-            'mutable-default fix regressed — instances are sharing the list'
-        )
+        assert b.tags == [], 'mutable-default fix regressed — instances are sharing the list'
         assert a.tags == ['one']
 
     def test_explicit_value_unaffected(self):
@@ -208,7 +207,7 @@ class TestListMissing:
         # Mutating the original list passed in changes a.tags (we don't
         # copy explicit user values; only missing-defaults).
         explicit.append('c')
-        assert a.tags == ['a', 'b', 'c']     # documented passthrough
+        assert a.tags == ['a', 'b', 'c']  # documented passthrough
 
 
 class TestDictMissing:
@@ -226,6 +225,7 @@ class TestDictMissing:
         """Pin deepcopy semantics: ``missing={'tags': ['default']}``
         gives each instance its own OUTER dict AND its own INNER list.
         With shallow copy, the inner list would be shared."""
+
         @s.seared
         class Doc(s.Seared):
             meta: dict = s.Dict(missing={'tags': ['default']})
@@ -234,8 +234,7 @@ class TestDictMissing:
         b = Doc()
         a.meta['tags'].append('shared?')
         assert b.meta == {'tags': ['default']}, (
-            'nested mutable inside missing-default got shared — deepcopy '
-            'failed to isolate the inner list'
+            'nested mutable inside missing-default got shared — deepcopy failed to isolate the inner list'
         )
 
 
@@ -299,6 +298,7 @@ class TestImmutableMissing:
 # Multi-Union fields — disjoint-key validation in ``_build`` (was
 # tests/test_multi_union.py).
 # ---------------------------------------------------------------------------
+
 
 @s.seared
 class _Up(s.Seared):
@@ -374,32 +374,38 @@ class TestDisjointUnions:
 class TestKeyCollisionRejected:
     def test_shared_tag_key_raises(self):
         with pytest.raises(TypeError, match='share wire key'):
+
             @s.seared
             class Bad(s.Seared):
                 a: object = s.Union(
-                    variants={'up': _Up}, tag_key='type',
+                    variants={'up': _Up},
+                    tag_key='type',
                 )
                 b: object = s.Union(
-                    variants={'read': _Read}, tag_key='type',  # collision
+                    variants={'read': _Read},
+                    tag_key='type',  # collision
                 )
 
     def test_tag_payload_key_collision(self):
         """A's tag_key collides with B's payload_key — also rejected."""
         with pytest.raises(TypeError, match='share wire key'):
+
             @s.seared
             class Bad(s.Seared):
                 a: object = s.Union(
-                    variants={'up': _Up}, tag_key='kind',
+                    variants={'up': _Up},
+                    tag_key='kind',
                 )
                 b: object = s.Union(
                     variants={'read': _Read},
                     tag_key='b_type',
-                    payload_key='kind',                       # collision
+                    payload_key='kind',  # collision
                 )
 
     def test_default_tag_key_is_collision(self):
         """Two Unions both using the default ``tag_key='type'`` collide."""
         with pytest.raises(TypeError, match='share wire key'):
+
             @s.seared
             class Bad(s.Seared):
                 a: object = s.Union(variants={'up': _Up})
@@ -408,6 +414,7 @@ class TestKeyCollisionRejected:
 
 class TestSingleUnionUnchanged:
     """Existing single-Union semantics still work — no regression."""
+
     def test_single_unwrap_field(self):
         @s.seared
         class Cmd(s.Seared):
@@ -426,6 +433,7 @@ class TestSingleUnionUnchanged:
 # down into each field's serialize / deserialize.
 # ---------------------------------------------------------------------------
 
+
 @s.seared
 class _Blob(s.Seared):
     payload: bytes = s.Bytes(required=True)
@@ -440,7 +448,7 @@ class TestJSONDefault:
     def test_default_serializes_to_base64_string(self):
         b = _Blob(payload=b'hello')
         d = _Blob.dump(b)
-        assert d == {'payload': 'aGVsbG8='}     # base64 of 'hello'
+        assert d == {'payload': 'aGVsbG8='}  # base64 of 'hello'
         assert isinstance(d['payload'], str)
 
     def test_default_deserializes_from_base64_string(self):
@@ -467,7 +475,7 @@ class TestMsgpackFormat:
         assert loaded.payload == b'binary-data'
 
     def test_round_trip_lossless(self):
-        original = bytes(range(256))     # all byte values
+        original = bytes(range(256))  # all byte values
         b = _Blob(payload=original)
         d = _Blob.dump(b, format='msgpack')
         loaded = _Blob.load(d, format='msgpack')
@@ -487,6 +495,7 @@ class TestFormatPassesThroughOtherFields:
     """Pin: non-binary fields (``Str``, ``Int``, etc.) accept the
     ``format=`` kwarg without complaint and produce identical output
     regardless of carrier."""
+
     def test_string_field_unaffected(self):
         @s.seared
         class M(s.Seared):

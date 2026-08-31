@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from doc.models import Band, Demo, Inner, StartCmd
-
 from seared.doc import introspect, is_seared_class
 
 

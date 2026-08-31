@@ -3,13 +3,17 @@
 The ``Report`` / ``Measurement`` classes are seared classes on purpose —
 the bench dogfoods the library it measures to produce its own artifact.
 """
+
 from __future__ import annotations
 
 import platform
 import time
-from importlib.metadata import version as dist_version
 from dataclasses import dataclass
-from typing import Any, Callable
+from importlib.metadata import version as dist_version
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 import seared as s
 
@@ -85,8 +89,12 @@ def run_case(case: Case, data: dict[str, Any], n: int) -> list[Measurement]:
 
     return [
         Measurement(
-            library=case.library, variant=case.variant, version=case.version,
-            op=op, ops_per_s=n / t, us_per_op=t * 1e6 / n,
+            library=case.library,
+            variant=case.variant,
+            version=case.version,
+            op=op,
+            ops_per_s=n / t,
+            us_per_op=t * 1e6 / n,
         )
         for op, t in [('load', t_load), ('dump', t_dump)]
     ]
@@ -98,6 +106,12 @@ def environment() -> tuple[str, str]:
 
 
 __all__ = [
-    'Case', 'DEFAULT_ITERATIONS', 'Measurement', 'Report',
-    'dist_version', 'environment', 'payload', 'run_case',
+    'DEFAULT_ITERATIONS',
+    'Case',
+    'Measurement',
+    'Report',
+    'dist_version',
+    'environment',
+    'payload',
+    'run_case',
 ]

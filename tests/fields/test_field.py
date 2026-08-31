@@ -6,6 +6,7 @@ dataclass holding the orchestration knobs (``data_key``, ``keyed``,
 ``serialize`` / ``deserialize`` methods. Concrete behaviour lives in
 each subclass file.
 """
+
 from __future__ import annotations
 
 import warnings

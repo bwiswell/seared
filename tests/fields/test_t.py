@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import seared as s
 
 
 @s.seared
 class Inner(s.Seared):
     x: int = s.Int(required=True)
-    label: Optional[str] = s.Str()
+    label: str | None = s.Str()
 
 
 class TestT:
@@ -43,7 +41,7 @@ class TestT:
     def test_optional_none_excluded_from_dump(self):
         @s.seared
         class Outer(s.Seared):
-            inner: Optional[Inner] = s.T(schema=Inner)
+            inner: Inner | None = s.T(schema=Inner)
 
         d = Outer.dump(Outer(inner=None))
         assert 'inner' not in d

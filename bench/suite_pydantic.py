@@ -2,6 +2,7 @@
 
 pydantic is not a seared dependency; install via ``uv sync --extra bench``.
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
@@ -26,7 +27,13 @@ class Outer(BaseModel):
 
 
 def cases() -> list[Case]:
-    return [Case(
-        library='pydantic', variant='default', version=dist_version('pydantic'),
-        load=Outer.model_validate, dump=lambda obj: obj.model_dump(),
-    )]
+    """The pydantic v2 comparator case."""
+    return [
+        Case(
+            library='pydantic',
+            variant='default',
+            version=dist_version('pydantic'),
+            load=Outer.model_validate,
+            dump=lambda obj: obj.model_dump(),
+        )
+    ]

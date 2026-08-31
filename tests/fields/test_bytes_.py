@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-from typing import Optional
 
 import seared as s
 
@@ -61,7 +60,7 @@ class TestBytes:
     def test_optional_none_excluded_from_dump(self):
         @s.seared
         class Obj(s.Seared):
-            data: Optional[bytes] = s.Bytes()
+            data: bytes | None = s.Bytes()
 
         d = Obj.dump(Obj(data=None))
         assert 'data' not in d

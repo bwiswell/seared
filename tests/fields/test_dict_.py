@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 
 import seared as s
@@ -13,23 +11,27 @@ class TestDict:
         @s.seared
         class Obj(s.Seared):
             meta: dict = s.Dict(required=True)
-            extras: Optional[dict] = s.Dict(data_key='extra_data')
+            extras: dict | None = s.Dict(data_key='extra_data')
 
         return Obj
 
     def test_load(self, cls):
-        obj = cls.load({
-            'meta': {'name': 'widget', 'count': 3},
-            'extra_data': {'nested': {'k': 'v'}, 'num': 1},
-        })
+        obj = cls.load(
+            {
+                'meta': {'name': 'widget', 'count': 3},
+                'extra_data': {'nested': {'k': 'v'}, 'num': 1},
+            }
+        )
         assert obj.meta == {'name': 'widget', 'count': 3}
         assert obj.extras == {'nested': {'k': 'v'}, 'num': 1}
 
     def test_dump(self, cls):
-        d = cls.dump(cls(
-            meta={'name': 'widget', 'count': 3},
-            extras={'foo': 'bar'},
-        ))
+        d = cls.dump(
+            cls(
+                meta={'name': 'widget', 'count': 3},
+                extras={'foo': 'bar'},
+            )
+        )
         assert d == {
             'meta': {'name': 'widget', 'count': 3},
             'extra_data': {'foo': 'bar'},
@@ -58,8 +60,7 @@ class TestDict:
         class Obj(s.Seared):
             meta: dict = s.Dict(required=True)
 
-        raw = {'meta': {'s': 'hello', 'i': 7, 'f': 1.5, 'b': True, 'n': None,
-                        'list': [1, 2, 3], 'nested': {'k': 'v'}}}
+        raw = {'meta': {'s': 'hello', 'i': 7, 'f': 1.5, 'b': True, 'n': None, 'list': [1, 2, 3], 'nested': {'k': 'v'}}}
         obj = Obj.load(raw)
         assert Obj.dump(obj) == raw
 

@@ -3,6 +3,7 @@
 Run by ``tests/typing/test_ty.py``. This file is intentionally NOT excluded
 from ty — it is the thing under test. It must produce zero diagnostics.
 """
+
 from enum import Enum
 from typing import assert_type
 
@@ -45,6 +46,7 @@ assert_type(obj.f, list[int])
 # `.load` / `.loads` are visible classmethods.
 loaded = Outer.load({'d': {'x': 2}})
 assert_type(loaded.a, int)
+
 
 # Parameterised decorator form also type-checks.
 @s.seared(slots=False, validate=False)

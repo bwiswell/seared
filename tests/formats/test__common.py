@@ -1,9 +1,9 @@
 """Tests for ``seared.formats._common.read_source`` — the path-vs-content
 detection helper used by every codec's ``from_*`` method.
 """
+
 from __future__ import annotations
 
-import os
 import tempfile
 from pathlib import Path
 
@@ -15,36 +15,45 @@ from seared.formats._common import read_source
 class TestPathSource:
     def test_reads_existing_file(self):
         with tempfile.NamedTemporaryFile(
-            mode='w', encoding='utf-8', suffix='.txt', delete=False,
+            mode='w',
+            encoding='utf-8',
+            suffix='.txt',
+            delete=False,
         ) as fh:
             fh.write('file-content-payload')
             tmp_path = fh.name
         try:
             assert read_source(tmp_path) == 'file-content-payload'
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
     def test_accepts_pathlike(self):
         with tempfile.NamedTemporaryFile(
-            mode='w', encoding='utf-8', suffix='.txt', delete=False,
+            mode='w',
+            encoding='utf-8',
+            suffix='.txt',
+            delete=False,
         ) as fh:
             fh.write('via-pathlib')
             tmp_path = fh.name
         try:
             assert read_source(Path(tmp_path)) == 'via-pathlib'
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
     def test_utf8_round_trip(self):
         with tempfile.NamedTemporaryFile(
-            mode='w', encoding='utf-8', suffix='.txt', delete=False,
+            mode='w',
+            encoding='utf-8',
+            suffix='.txt',
+            delete=False,
         ) as fh:
             fh.write('emoji-✨ and 中文')
             tmp_path = fh.name
         try:
             assert read_source(tmp_path) == 'emoji-✨ and 中文'
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
 
 class TestContentSource:

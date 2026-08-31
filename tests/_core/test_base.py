@@ -4,6 +4,7 @@ seared dataclasses. Without the ``@seared`` decorator the class has
 ``NotImplementedError``. With the decorator (covered in
 ``test_decorator.py``) it gains the full serialisation surface.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -38,6 +39,7 @@ class TestBareSearedBase:
         """``dumps`` / ``loads`` are JSON convenience wrappers — they
         bottom out in the unimplemented dump/load, so they bubble the
         ``NotImplementedError`` out via the base class."""
+
         class Foo(Seared):
             pass
 
@@ -50,6 +52,7 @@ class TestBareSearedBase:
 class TestDecoratedSearedBase:
     """Once decorated, the same base methods are replaced with real
     implementations — verified more thoroughly in test_decorator.py."""
+
     def test_decorated_dump_load_round_trip(self):
         @s.seared
         class Foo(s.Seared):

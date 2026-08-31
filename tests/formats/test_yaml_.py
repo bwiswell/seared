@@ -1,5 +1,6 @@
 """Pin: YAML codec — both directions via the optional ``seared[yaml]``
 extra (lazy ``PyYAML`` import)."""
+
 from __future__ import annotations
 
 import sys

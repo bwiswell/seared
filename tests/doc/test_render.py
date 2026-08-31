@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from doc.models import Demo
-
 import seared as s
+from doc.models import Demo
 from seared.doc import document
 
 

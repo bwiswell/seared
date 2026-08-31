@@ -1,4 +1,5 @@
 """Pin: ``PolarsFrame`` field — round-trip via JSON-records form."""
+
 from __future__ import annotations
 
 import sys
@@ -57,7 +58,7 @@ class TestValidation:
 
         bad = R.__new__(R)
         object.__setattr__(bad, 'data', 'not-a-dataframe')
-        with pytest.raises(s.ValidationError, match='expected polars.DataFrame'):
+        with pytest.raises(s.ValidationError, match=r'expected polars\.DataFrame'):
             R.dump(bad)
 
 
@@ -73,6 +74,7 @@ class TestManyKeyedRejected:
 
 class TestMissingPolars:
     """Pin: graceful ``ImportError`` when polars isn't installed."""
+
     def test_helpful_import_error(self):
         real_polars = sys.modules.get('polars')
         try:
@@ -80,7 +82,9 @@ class TestMissingPolars:
                 if 'seared.fields.polars_' in sys.modules:
                     del sys.modules['seared.fields.polars_']
                 import importlib
+
                 import seared as s_mod
+
                 importlib.reload(s_mod)
                 with pytest.raises(ImportError, match='polars'):
                     s_mod.PolarsFrame()
@@ -88,5 +92,7 @@ class TestMissingPolars:
             if real_polars is not None:
                 sys.modules['polars'] = real_polars
             import importlib
+
             import seared as s_mod
+
             importlib.reload(s_mod)

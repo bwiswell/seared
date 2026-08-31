@@ -1,5 +1,6 @@
 """Pin: ``Cls.to_json`` / ``Cls.from_json`` are auto-attached to every
 ``@s.seared`` class. Stdlib-only — always available."""
+
 from __future__ import annotations
 
 import json
@@ -60,4 +61,4 @@ class TestErrors:
 
     def test_missing_required_field_raises_validation(self):
         with pytest.raises(s.ValidationError):
-            Telemetry.from_json('{"id": 1}')      # missing x, y
+            Telemetry.from_json('{"id": 1}')  # missing x, y
