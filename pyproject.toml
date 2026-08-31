@@ -1,6 +1,6 @@
 [project]
 name = "seared"
-version = "0.2.9"
+version = "0.3.0"
 description = "A lightweight Python serialization/deserialization tool"
 authors = [
     { name = "Benj Wiswell", email = "benjwiswell@gmail.com" },
@@ -118,13 +118,25 @@ quote-style = "single"
 marshmallow = ["marshmallow"]
 pydantic = ["pydantic"]
 
+[tool.deptry.per_rule_ignores]
+# `rusted` is the optional compiled accelerator, deliberately declared
+# nowhere: pending published wheels you either have it on your system and
+# `bench/suite_rusted.py` runs, or the suite sits out. `DEP001` covers the
+# absent case, `DEP003` the case where it *is* installed out of band — both
+# are intended, so both are ignored. Revisit when rusted ships to PyPI and
+# can become an ordinary optional dependency.
+DEP001 = ["rusted"]
+DEP003 = ["rusted"]
+
 [tool.ty.src]
-# The comparator bench suites import `seared[bench]` extras (marshmallow,
-# pydantic) that a default dev sync doesn't install; ty skips just those.
+# Bench suites that import packages a default dev sync doesn't install: the
+# comparators (marshmallow, pydantic, behind the `bench` extra) and `rusted`,
+# the optional accelerator wheel. ty skips just those files.
 exclude = [
     "tests",
     "bench/suite_marshmallow.py",
     "bench/suite_pydantic.py",
+    "bench/suite_rusted.py",
 ]
 
 [tool.pytest.ini_options]

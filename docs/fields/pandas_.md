@@ -31,7 +31,7 @@ most JSON consumers expect; round-trips cleanly through
 can't represent (datetime, Categorical, timezone-aware timestamps,
 nullable integers, etc.). Round-trip is lossy for those columns. For
 dtype-preserving wire transport, layer your own Arrow / Parquet codec
-on top — out of scope for 0.2.x.
+on top — out of scope for this field.
 
 ## What's not supported
 

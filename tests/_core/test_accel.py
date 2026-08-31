@@ -18,6 +18,7 @@ import sys
 from types import SimpleNamespace
 
 import pytest
+import refcore
 
 import seared as s
 from seared._core import accel
@@ -103,7 +104,7 @@ class TestBackendResolution:
         assert status['spec_abi'] == accel.SPEC_ABI
         assert status['backend_version'] == '0.0.0'
         # Diagnostic only — never enforced.
-        assert status['supports_seared'] == '>=0.2.8,<0.3'
+        assert status['supports_seared'] == refcore.SUPPORTS_SEARED
 
     def test_missing_module_declines(self, use_backend):
         use_backend('no_such_accelerator_module')

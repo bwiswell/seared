@@ -133,3 +133,42 @@ class TestDocumentedKeywordsWork:
     def test_format_by_keyword(self):
         assert Sig.dump(Sig(x=1), format='msgpack') == {'x': 1}
         assert Sig.load({'x': 1}, format='msgpack').x == 1
+
+
+class TestIntrospectionSurfaces:
+    """``__seared_fields__`` and ``__seared_accel__`` are declared on the base.
+
+    Both are assigned by the decorator, but a surface that only exists after
+    decoration is invisible to a type checker — callers reading it get an
+    ``unresolved-attribute`` error and have to work around it. Declaring them
+    with honest defaults costs nothing and makes the documented introspection
+    actually usable. ``tests/typecheck/ok_idiom.py`` guards the typed half.
+    """
+
+    def test_base_has_defaults(self):
+        assert s.Seared.__seared_fields__ == ()
+        assert s.Seared.__seared_accel__.accelerated is False
+        assert s.Seared.__seared_accel__.backend is None
+        assert 'not decorated' in s.Seared.__seared_accel__.reason
+
+    def test_undecorated_subclass_inherits_the_defaults(self):
+        class Bare(s.Seared):
+            pass
+
+        assert Bare.__seared_fields__ == ()
+        assert Bare.__seared_accel__.accelerated is False
+
+    def test_decorator_replaces_both(self):
+        @s.seared
+        class Dec(s.Seared):
+            x: int = s.Int(required=True)
+
+        assert Dec.__seared_fields__ != ()
+        # Whether it accelerated depends on the environment; that it is no
+        # longer the base's "not decorated" placeholder does not.
+        assert Dec.__seared_accel__ is not s.Seared.__seared_accel__
+        assert Dec.__seared_accel__.reason != s.Seared.__seared_accel__.reason
+
+    def test_accel_info_is_immutable(self):
+        with pytest.raises((AttributeError, TypeError)):
+            s.Seared.__seared_accel__.accelerated = True

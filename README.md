@@ -13,7 +13,8 @@ for free.
 ## Why seared
 
 - **Zero runtime dependencies.** Pure stdlib core. Numpy / pandas / polars / PyYAML / tomli-w live behind opt-in extras.
-- **Fast for pure Python.** ~3.7× faster `load` and ~1.8× faster `dump` than `marshmallow` on a representative nested schema; compiled-core libraries (pydantic v2) are faster still, at the cost of binary dependencies (see [Benchmarks](#benchmarks)).
+- **Fast for pure Python.** ~3.5× faster `load` and ~1.8× faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
+- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run ~11× faster on `load`, ~9× on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
 - **Compact.** `@s.seared` classes are `__slots__` dataclasses by default — lower memory per instance, faster attribute access.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
 - **Typed-callable fields.** `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, plus optional `NDArray`, `PandasFrame`, `PolarsFrame`.
@@ -255,23 +256,73 @@ See [`docs/_core/errors.md`](docs/_core/errors.md) for the full hierarchy.
 ## Benchmarks
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
-a list of strings), 20k iterations. seared 0.2.4, marshmallow 4.3.1,
-pydantic 2.13.5; ratios are versus marshmallow:
+a list of strings), 20k iterations on an idle machine. seared 0.3.0,
+rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5; ratios are versus
+marshmallow:
 
-| Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` v2 |
-|------|---------------|-------------------|----------------|---------------|
-| load | 7,739 ops/s   | 28,405 ops/s (~3.7×) | 27,758 ops/s (~3.6×) | 148,995 ops/s |
-| dump | 25,388 ops/s  | 44,772 ops/s (~1.8×) | 47,048 ops/s (~1.9×) | 181,317 ops/s |
+| Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` v2 | `seared`+`rusted` |
+|------|---------------|-------------------|----------------|---------------|-------------------|
+| load | 8,732 ops/s   | 28,913 ops/s (~3.3×) | 30,505 ops/s (~3.5×) | 150,235 ops/s | 328,175 ops/s |
+| dump | 24,920 ops/s  | 44,776 ops/s (~1.8×) | 50,536 ops/s (~2.0×) | 180,340 ops/s | 409,039 ops/s |
 
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
-same schema decorated `@s.seared(validate=False)`. pydantic's compiled Rust
-core outruns any pure-Python implementation — seared's trade is zero runtime
-dependencies, not beating native code. The bench lives in
-[`bench/`](bench/) (`uv sync --extra bench && uv run python -m bench`) and
-records each run to [`bench/results.json`](bench/results.json); methodology
-and caveats in [`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
+same schema decorated `@s.seared(validate=False)`. Both are benched with the
+accelerator explicitly off, so these are the pure-Python numbers whatever
+happens to be installed. One run is one sample — the spread is a few percent
+on an idle box and much wider under load. pydantic's compiled Rust core outruns pure Python —
+that is the trade seared makes by default, and [`rusted`](#accelerator) is
+how you opt out of it without changing a line of your own code.
 
-## Limits (v0.2.0)
+The bench lives in [`bench/`](bench/)
+(`uv sync --extra bench && uv run python -m bench`) and records each run to
+[`bench/results.json`](bench/results.json); methodology and caveats in
+[`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
+
+## Accelerator
+
+seared is pure Python and zero-dependency, and stays that way. When the
+optional compiled core [`rusted`](https://github.com/bwiswell/rusted) is
+installed, `@s.seared` swaps its generated `load` / `dump` for compiled
+equivalents — same classes, same API, same error messages, ~11× on `load`
+and ~9× on `dump`.
+
+```sh
+uv add git+https://www.github.com/bwiswell/rusted.git   # nothing in your code changes
+```
+
+(It isn't on a package index yet, so that git form builds from source and
+needs a Rust toolchain. A prebuilt wheel is the intent; until then the
+accelerator is developer-only.)
+
+Acceleration is **per class, all or nothing**: a class qualifies only if
+every field, recursively through `T`, is a seared-native type the backend
+implements — today that is everything except `Tuple`, `Union`, and the
+`NDArray` / DataFrame fields. Classes with a hand-written `__init__` or a
+`__post_init__` are also declined, since a compiled core builds instances
+through `__new__`.
+
+Anything unexpected — no wheel for your platform, a version mismatch, a
+field the backend doesn't know — falls back to the Python path rather than
+failing. So ask, rather than assume:
+
+```python
+>>> s.accel_status()          # did a backend load at all?
+{'mode': 'auto', 'spec_abi': 1, 'available': True, 'backend': 'rusted', ...}
+
+>>> Telemetry.__seared_accel__   # and did *this* class qualify?
+AccelInfo(accelerated=True, backend='rusted', reason=None)
+
+>>> HasTuple.__seared_accel__
+AccelInfo(accelerated=False, backend=None,
+          reason='HasTuple.pair: Tuple is not an accelerated field type')
+```
+
+Opt out per class with `@s.seared(accel=False)`, or globally with
+`SEARED_ACCEL=off`. `SEARED_ACCEL=require` raises instead of falling back —
+for CI that needs to assert the wheel is actually engaged. Full details in
+[`docs/_core/accel.md`](docs/_core/accel.md).
+
+## Limits (v0.3.0)
 
 - **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` and `NDArray` honour the hint; other fields are unaffected.
 - **No nullable-true fields** — `None` is always stripped from dumps; explicit JSON `null` is not emittable.

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .harness import DEFAULT_ITERATIONS, Report, environment, payload, run_case
 
-_SUITES = ['suite_seared', 'suite_marshmallow', 'suite_pydantic']
+_SUITES = ['suite_seared', 'suite_rusted', 'suite_marshmallow', 'suite_pydantic']
 _DEFAULT_OUT = Path(__file__).parent / 'results.json'
 
 
