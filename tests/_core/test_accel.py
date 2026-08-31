@@ -42,6 +42,13 @@ def use_backend(monkeypatch):
     accel._reset()
 
 
+#: Stands in for "no backend available". Deliberately not "just don't set the
+#: env var": `rusted` may well be installed in the environment running these
+#: tests, and a fixture that assumed otherwise would quietly stop testing the
+#: unavailable path the moment it was.
+MISSING = 'seared_no_such_backend'
+
+
 def _tier1(**kwargs):
     """The bench schema — the canonical fully-accelerable shape."""
 
@@ -75,12 +82,17 @@ PAYLOAD = {
 
 
 class TestBackendResolution:
-    def test_no_backend_installed_is_the_default(self, use_backend):
-        use_backend(None)
+    def test_unavailable_backend_reports_why(self, use_backend):
+        use_backend(MISSING)
         status = accel.accel_status()
         assert status['available'] is False
         assert status['backend'] is None
-        assert 'rusted' in status['reason']
+        assert MISSING in status['reason']
+
+    def test_rusted_is_the_default_backend_name(self):
+        # Asserted on the constant, not on an import: whether rusted is
+        # installed in *this* environment is not what's under test.
+        assert accel.DEFAULT_BACKEND == 'rusted'
 
     def test_refcore_loads(self, use_backend):
         use_backend('refcore')
@@ -154,7 +166,7 @@ class TestModes:
         assert outer.__seared_accel__.reason == 'SEARED_ACCEL=off'
 
     def test_require_raises_when_no_backend(self, use_backend):
-        use_backend(None, mode='require')
+        use_backend(MISSING, mode='require')
         with pytest.raises(s.SearedError, match='require'):
             _tier1()
 
@@ -188,7 +200,7 @@ class TestClassDecisions:
         assert outer.__seared_accel__ == s.AccelInfo(accelerated=True, backend='refcore')
 
     def test_no_backend_means_no_acceleration(self, use_backend):
-        use_backend(None)
+        use_backend(MISSING)
         _inner, outer = _tier1()
         assert outer.__seared_accel__.accelerated is False
         assert not hasattr(outer, '__seared_spec__')
@@ -362,8 +374,7 @@ class TestDifferential:
         """The same schema built twice: accelerated, and pure Python."""
         use_backend('refcore')
         _i, accelerated = _tier1()
-        use_backend(None)
-        _i, pure = _tier1()
+        _i, pure = _tier1(accel=False)
         assert accelerated.__seared_accel__.accelerated is True
         assert pure.__seared_accel__.accelerated is False
         return accelerated, pure
@@ -407,8 +418,7 @@ class TestDifferential:
     def test_lax_mode_matches(self, use_backend):
         use_backend('refcore')
         _i, accelerated = _tier1(validate=False)
-        use_backend(None)
-        _i, pure = _tier1(validate=False)
+        _i, pure = _tier1(validate=False, accel=False)
         lax_cases = [
             {**PAYLOAD, 'name': 42},
             {**PAYLOAD, 'flag': 'nonsense'},

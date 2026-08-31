@@ -41,7 +41,7 @@ from functools import cache
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
-from .errors import SearedError
+from .errors import SearedError, ValidationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -195,6 +195,11 @@ def _class_spec(cls: type, specs: tuple[tuple[str, str, Any], ...], validate: bo
         'cls': cls,
         'name': name,
         'validate': validate,
+        # The exception class to raise, carried as data. A backend must raise
+        # *seared's* ValidationError or a caller's ``except s.ValidationError``
+        # would stop catching it — and a backend that imported seared to get it
+        # would no longer be the dependency-free leaf the design rests on.
+        'error': ValidationError,
         'fields': [_field_spec(name, attr, wire, f) for attr, wire, f in specs],
     }
 
