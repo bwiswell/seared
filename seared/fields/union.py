@@ -66,7 +66,7 @@ class Union(Field):
         """Variant instance → the ``{tag, payload}`` envelope (flat or nested)."""
         for tag, variant_cls in self.variants.items():
             if isinstance(value, variant_cls):
-                payload = variant_cls.dump(value)
+                payload = variant_cls.dump(value, kwargs.get('format', 'json'))
                 if self.payload_key is None:
                     # Flat: merge tag + payload at top level.
                     if self.tag_key in payload:
@@ -108,4 +108,4 @@ class Union(Field):
             payload = {k: v for k, v in value.items() if k != self.tag_key}
         else:
             payload = value.get(self.payload_key, {})
-        return variant_cls.load(payload)
+        return variant_cls.load(payload, kwargs.get('format', 'json'))

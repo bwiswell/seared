@@ -261,6 +261,25 @@ class TestClassDecisions:
 
         assert WithInit.__seared_accel__.reason == 'class defines its own __init__'
 
+    def test_plain_dataclass_field_declines(self, use_backend):
+        # ``b`` is a dataclass field but not a seared ``Field``, so it never
+        # reaches the spec. The Python path still sets it — ``load`` runs
+        # ``__init__`` — but a core constructing via ``__new__`` would leave
+        # the slot unset, and ``repr`` / ``__eq__`` would raise on it.
+        use_backend('refcore')
+
+        @s.seared
+        class Mixed(s.Seared):
+            a: int = s.Int(required=True)
+            b: int = 5
+
+        info = Mixed.__seared_accel__
+        assert info.accelerated is False
+        assert info.reason == 'Mixed.b is a plain dataclass field, not a seared Field'
+        obj = Mixed.load({'a': 1})
+        assert (obj.a, obj.b) == (1, 5)
+        assert obj == Mixed(a=1)
+
     def test_nested_declines_poison_the_parent(self, use_backend):
         use_backend('refcore')
 

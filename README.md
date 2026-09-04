@@ -297,9 +297,10 @@ accelerator is developer-only.)
 Acceleration is **per class, all or nothing**: a class qualifies only if
 every field, recursively through `T`, is a seared-native type the backend
 implements — today that is everything except `Tuple`, `Union`, and the
-`NDArray` / DataFrame fields. Classes with a hand-written `__init__` or a
-`__post_init__` are also declined, since a compiled core builds instances
-through `__new__`.
+`NDArray` / DataFrame fields. Classes with a hand-written `__init__`, a
+`__post_init__`, or a plain dataclass attribute that isn't a seared field
+(`b: int = 5`) are also declined, since a compiled core builds instances
+through `__new__` and only `__init__` would ever set those.
 
 Anything unexpected — no wheel for your platform, a version mismatch, a
 field the backend doesn't know — falls back to the Python path rather than
@@ -322,7 +323,7 @@ Opt out per class with `@s.seared(accel=False)`, or globally with
 for CI that needs to assert the wheel is actually engaged. Full details in
 [`docs/_core/accel.md`](docs/_core/accel.md).
 
-## Limits (v0.3.0)
+## Limits (v0.3.1)
 
 - **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` and `NDArray` honour the hint; other fields are unaffected.
 - **No nullable-true fields** — `None` is always stripped from dumps; explicit JSON `null` is not emittable.

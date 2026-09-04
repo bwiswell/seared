@@ -36,7 +36,7 @@ Environment:
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from functools import cache
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
@@ -269,6 +269,37 @@ def _decline(cls: type, reason: str | None) -> None:
     cls.__seared_accel__ = AccelInfo(accelerated=False, reason=reason)  # ty: ignore[unresolved-attribute]
 
 
+def _plain_fields(cls: type) -> list[str]:
+    """Dataclass fields of ``cls`` that are not seared ``Field``s, in order.
+
+    ``dataclasses.fields`` rather than ``__dataclass_fields__``: the latter
+    also lists the ``ClassVar`` pseudo-fields ``Seared`` declares.
+    """
+    from seared.fields.field import Field
+
+    return [f.name for f in fields(cls) if not isinstance(f.default, Field)]  # ty: ignore[invalid-argument-type]
+
+
+def _construction_gate(cls: type, custom_init: bool) -> str | None:
+    """Why ``cls`` can't be built through ``__new__`` + slot assignment.
+
+    That is how a compiled core constructs, bypassing ``__init__`` entirely —
+    so anything only ``__init__`` would do is observable, and disqualifies
+    the class. A plain dataclass attribute (``b: int = 5``) is the subtle
+    one: it is not a ``Field``, so it never reaches the spec, and the slot
+    would simply be left unset — ``repr`` and ``__eq__`` would then raise
+    where the Python path, which runs ``__init__`` from ``load``, is fine.
+    """
+    if custom_init:
+        return 'class defines its own __init__'
+    if hasattr(cls, '__post_init__'):
+        return 'class defines __post_init__'
+    plain = _plain_fields(cls)
+    if plain:
+        return f'{cls.__name__}.{plain[0]} is a plain dataclass field, not a seared Field'
+    return None
+
+
 def _blocked(cls: type, *, mode: str, accel: bool, unavailable: str | None, custom_init: bool) -> str | None:
     """The reason ``cls`` can't be handed to a backend at all, or ``None``.
 
@@ -282,13 +313,7 @@ def _blocked(cls: type, *, mode: str, accel: bool, unavailable: str | None, cust
         return 'accel=False on the decorator'
     if unavailable is not None:
         return unavailable
-    # Both of these are bypassed by the ``__new__`` + slot assignment a
-    # compiled core constructs through, so they are not accelerable.
-    if custom_init:
-        return 'class defines its own __init__'
-    if hasattr(cls, '__post_init__'):
-        return 'class defines __post_init__'
-    return None
+    return _construction_gate(cls, custom_init)
 
 
 def try_compile(

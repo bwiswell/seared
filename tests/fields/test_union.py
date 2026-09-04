@@ -271,3 +271,36 @@ class TestWithFallback:
 
         with pytest.raises(s.ValidationError, match='unknown tag'):
             Cmd.load({'type': 'reboot'})
+
+
+# ---------------------------------------------------------------------------
+# The carrier hint crosses the variant boundary (0.3.1).
+# ---------------------------------------------------------------------------
+
+
+@s.seared
+class Chunk(s.Seared):
+    data: bytes = s.Bytes(required=True)
+
+
+class TestFormatHint:
+    @s.seared
+    class Frame(s.Seared):
+        body: Chunk = s.Union(variants={'chunk': Chunk}, payload_key='payload', required=True)
+
+    @s.seared
+    class FlatFrame(s.Seared):
+        body: Chunk = s.Union(variants={'chunk': Chunk}, payload_key=None, required=True)
+
+    def test_nested_envelope_dump_and_load_thread_msgpack(self):
+        Frame = self.Frame
+        d = Frame.dump(Frame(body=Chunk(data=b'\x01')), format='msgpack')
+        assert d == {'type': 'chunk', 'payload': {'data': b'\x01'}}
+        assert Frame.load(d, format='msgpack').body.data == b'\x01'
+        assert Frame.dump(Frame(body=Chunk(data=b'\x01'))) == {'type': 'chunk', 'payload': {'data': 'AQ=='}}
+
+    def test_flat_envelope_dump_and_load_thread_msgpack(self):
+        FlatFrame = self.FlatFrame
+        d = FlatFrame.dump(FlatFrame(body=Chunk(data=b'\x01')), format='msgpack')
+        assert d == {'type': 'chunk', 'data': b'\x01'}
+        assert FlatFrame.load(d, format='msgpack').body.data == b'\x01'

@@ -127,3 +127,62 @@ class TestT:
         d = Outer.dump(obj)
         assert 'nested' in d
         assert 'inner' not in d
+
+
+class TestFormatHint:
+    """``format=`` must cross the nesting boundary.
+
+    Before 0.3.1 ``T`` called ``schema.dump(value)`` / ``schema.load(value)``
+    with no hint, so a nested ``Bytes`` fell back to base64 under
+    ``format='msgpack'`` while a top-level one went native — and the compiled
+    core, which threads the hint, observably diverged from the Python path.
+    """
+
+    @s.seared
+    class Blob(s.Seared):
+        data: bytes = s.Bytes(required=True)
+
+    def _outer(self):
+        Blob = self.Blob
+
+        @s.seared
+        class Outer(s.Seared):
+            top: bytes = s.Bytes(required=True)
+            one: Blob = s.T(Blob, required=True)
+            many: list[Blob] = s.T(Blob, many=True, default_factory=list)
+            keyed: dict[str, Blob] = s.T(Blob, keyed=True, default_factory=dict)
+
+        return Outer
+
+    def test_dump_threads_msgpack_into_nested(self):
+        Outer = self._outer()
+        obj = Outer(
+            top=b'\x00',
+            one=self.Blob(data=b'\x01'),
+            many=[self.Blob(data=b'\x02')],
+            keyed={'k': self.Blob(data=b'\x03')},
+        )
+        d = Outer.dump(obj, format='msgpack')
+        assert d == {
+            'top': b'\x00',
+            'one': {'data': b'\x01'},
+            'many': [{'data': b'\x02'}],
+            'keyed': {'k': {'data': b'\x03'}},
+        }
+
+    def test_dump_default_is_still_json(self):
+        Outer = self._outer()
+        obj = Outer(top=b'\x00', one=self.Blob(data=b'\x01'))
+        assert Outer.dump(obj) == {'top': 'AA==', 'one': {'data': 'AQ=='}, 'many': [], 'keyed': {}}
+
+    def test_load_threads_msgpack_into_nested(self):
+        Outer = self._outer()
+        raw = {'top': b'\x00', 'one': {'data': b'\x01'}, 'many': [{'data': b'\x02'}]}
+        obj = Outer.load(raw, format='msgpack')
+        assert (obj.top, obj.one.data, obj.many[0].data) == (b'\x00', b'\x01', b'\x02')
+
+    def test_direct_field_call_defaults_to_json(self):
+        # ``T.serialize`` called outside the decorator, with no hint at all.
+        field = s.T(self.Blob)
+        assert field.serialize(self.Blob(data=b'\x01')) == {'data': 'AQ=='}
+        assert field.deserialize({'data': 'AQ=='}).data == b'\x01'
