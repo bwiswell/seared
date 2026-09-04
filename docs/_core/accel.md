@@ -59,9 +59,11 @@ the parent's level, which a single-pass interpreter isn't built for. `Tuple`
 adds per-slot sub-fields. The frame fields cross an optional-import boundary
 for workloads dominated by the frame conversion either way.
 
-A class is also declined when it defines its own `__init__` or a
-`__post_init__`: a compiled core constructs through `__new__` plus
-attribute assignment, which would skip both.
+A class is also declined when it defines its own `__init__`, a
+`__post_init__`, or a plain dataclass attribute that isn't a seared field
+(`b: int = 5`): a compiled core constructs through `__new__` plus
+attribute assignment, which would skip all three — and a plain attribute
+never reaches the spec, so nothing but `__init__` would ever set it.
 
 ## Introspection
 
@@ -75,7 +77,7 @@ AccelInfo(accelerated=False, backend=None,
 
 >>> s.accel_status()
 {'mode': 'auto', 'spec_abi': 1, 'available': True, 'backend': 'rusted',
- 'backend_version': '0.2.0', 'supports_seared': '>=0.2.8,<0.4', 'reason': None}
+ 'backend_version': '0.2.1', 'supports_seared': '>=0.3.1,<0.4', 'reason': None}
 ```
 
 `__seared_accel__` sits alongside `__seared_fields__` on every decorated

@@ -48,10 +48,13 @@ class T(Field):
         if not isinstance(value, self.schema) and validate:
             msg = f'expected {self.schema.__name__}, got {type(value).__name__}'
             raise ValidationError(msg)
-        return self.schema.dump(value)
+        # The carrier hint has to cross the nesting boundary, or a nested
+        # ``Bytes`` / ``NDArray`` would silently fall back to base64 under
+        # ``format='msgpack'`` while its top-level siblings went native.
+        return self.schema.dump(value, kwargs.get('format', 'json'))
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:  # noqa: ARG002 — signature fixed by Field
         """Dict → an instance of the nested schema."""
         if isinstance(value, self.schema):
             return value
-        return self.schema.load(value)
+        return self.schema.load(value, kwargs.get('format', 'json'))

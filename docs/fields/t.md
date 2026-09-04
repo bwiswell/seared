@@ -16,3 +16,7 @@ inner class's `load`.
 
 Supports `many=True` and `keyed=True` for lists / maps of nested
 instances.
+
+The `format=` carrier hint crosses the nesting boundary: `Outer.dump(obj,
+format='msgpack')` reaches a `Bytes` inside `Inner` exactly as it would at
+the top level. (`Union` threads it to its variant the same way.)
