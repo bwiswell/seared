@@ -88,9 +88,8 @@ def introspect(cls: type[Seared]) -> SchemaDoc:
             references.append(fd.fallback)
     doc = _clean_doc(inspect.cleandoc(cls.__doc__)) if cls.__doc__ else None
     summary = doc.splitlines()[0] if doc else None
-    # Dedupe references preserving order.
-    seen: set[int] = set()
-    refs = tuple(r for r in references if not (id(r) in seen or seen.add(id(r))))
+    # Dedupe references by identity, preserving first-seen order.
+    refs = tuple({id(r): r for r in references}.values())
     return SchemaDoc(
         cls=cls,
         name=cls.__name__,

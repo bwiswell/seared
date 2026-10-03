@@ -15,6 +15,7 @@ decorator's responsibilities:
 from __future__ import annotations
 
 import json
+from dataclasses import InitVar  # noqa: TC003 — dataclass() resolves the string annotation at runtime
 
 import pytest
 from conftest import Color
@@ -292,6 +293,122 @@ class TestImmutableMissing:
 
         a = Maybe()
         assert a.value is None
+
+
+# ---------------------------------------------------------------------------
+# ``__post_init__`` sees resolved defaults — the dataclass ``__init__`` calls
+# the hook before the ``__init__`` wrapper runs, so the decorator wraps the
+# hook to substitute first.
+# ---------------------------------------------------------------------------
+
+
+def _recording():
+    """A seared class whose hook records what it saw, and the record."""
+    seen: list[dict[str, object]] = []
+
+    @s.seared
+    class Recorded(s.Seared):
+        name: str | None = s.Str(default=None)
+        count: int = s.Int(default=3)
+        tags: list[str] = s.Str(many=True, default_factory=list)
+
+        def __post_init__(self):
+            seen.append({'name': self.name, 'count': self.count, 'tags': self.tags})
+
+    return Recorded, seen
+
+
+class TestPostInitSeesDefaults:
+    def test_an_omitted_field_reads_as_its_default_in_the_hook(self):
+        recorded, seen = _recording()
+
+        recorded()
+
+        assert seen == [{'name': None, 'count': 3, 'tags': []}]
+
+    @pytest.mark.parametrize('build', ['construct', 'load'])
+    def test_construction_and_load_hand_the_hook_the_same_values(self, build):
+        # ``load`` always resolved omitted fields before constructing; natural
+        # construction used to hand the hook the ``Field`` objects instead.
+        recorded, seen = _recording()
+
+        recorded() if build == 'construct' else recorded.load({})
+
+        assert seen == [{'name': None, 'count': 3, 'tags': []}]
+
+    def test_a_hook_can_refuse_an_omitted_field(self):
+        @s.seared
+        class Paired(s.Seared):
+            layer: str = s.Str(default='')
+            zone: int = s.Int(default=0)
+
+            def __post_init__(self):
+                if bool(self.layer) != bool(self.zone):
+                    msg = 'layer and zone come together'
+                    raise s.ValidationError(msg)
+
+        Paired()
+        Paired(layer='department', zone=4)
+        with pytest.raises(s.ValidationError, match='come together'):
+            Paired(layer='department')
+        with pytest.raises(s.ValidationError, match='come together'):
+            Paired.load({'zone': 4})
+
+    def test_a_value_the_hook_assigns_is_kept(self):
+        @s.seared
+        class Derived(s.Seared):
+            first: str = s.Str(required=True)
+            label: str | None = s.Str(default=None)
+
+            def __post_init__(self):
+                if self.label is None:
+                    self.label = self.first.upper()
+
+        assert Derived(first='ab').label == 'AB'
+        assert Derived(first='ab', label='given').label == 'given'
+
+    def test_each_instance_gets_its_own_mutable_default_in_the_hook(self):
+        @s.seared
+        class Bag(s.Seared):
+            tags: list[str] = s.Str(many=True, default_factory=list)
+
+            def __post_init__(self):
+                self.tags.append('seeded')
+
+        a, b = Bag(), Bag()
+
+        assert a.tags == ['seeded']
+        assert b.tags == ['seeded']
+
+    def test_an_inherited_hook_sees_the_subclass_fields_resolved(self):
+        seen: list[object] = []
+
+        @s.seared
+        class Base(s.Seared):
+            a: int = s.Int(default=1)
+
+            def __post_init__(self):
+                seen.append(getattr(self, 'b', 'absent'))
+
+        @s.seared
+        class Child(Base):
+            b: str | None = s.Str(default=None)
+
+        Child()
+
+        assert seen == [None]
+
+    def test_initvars_reach_the_hook(self):
+        @s.seared
+        class Scaled(s.Seared):
+            value: int = s.Int(default=2)
+            factor: InitVar[int] = 1
+
+            def __post_init__(self, factor):
+                self.value *= factor
+
+        assert Scaled(factor=5).value == 10
+        assert Scaled().value == 2
 
 
 # ---------------------------------------------------------------------------
