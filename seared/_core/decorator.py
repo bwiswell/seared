@@ -205,28 +205,55 @@ def _wrap_init_replaces_field_defaults(cls: type, specs: tuple[FieldSpec, ...]) 
     every instance share the same list object). Deep copy ensures
     nested mutable structures (``missing={'tags': []}``) are also
     isolated per-instance.
+
+    A ``__post_init__`` is wrapped too, to substitute first. The dataclass
+    ``__init__`` calls the hook before it returns — before the ``__init__``
+    wrapper gets to run — so without this a hook would read an omitted field
+    as its (truthy) ``Field`` object, where ``load``, which resolves every
+    omitted field before constructing, hands it the real default. Wrapped,
+    the hook sees the same values on both paths.
     """
-    import copy as _copy
-
-    from seared.fields.field import Field
-
     original_init = cls.__init__
 
     def __init__(self: Any, *args: Any, **kwargs: Any) -> None:  # noqa: N807
         original_init(self, *args, **kwargs)
-        for attr, _, f in specs:
-            v = getattr(self, attr, None)
-            if isinstance(v, Field):
-                if f.default_factory is not None:
-                    missing = f.default_factory()
-                else:
-                    missing = f.missing
-                    if isinstance(missing, _MUTABLE_DEFAULT_TYPES):
-                        missing = _copy.deepcopy(missing)
-                object.__setattr__(self, attr, missing)
+        _fill_defaults(self, specs)
 
     __init__.__qualname__ = f'{cls.__qualname__}.__init__'
     cls.__init__ = __init__  # ty: ignore[invalid-assignment]
+
+    # Looked up on the instance by the generated ``__init__``, so replacing it
+    # after ``dataclass()`` is seen, ``slots=True`` included. An inherited hook
+    # is wrapped again here, with this class's specs, so it also sees the
+    # subclass's own omitted fields resolved; the fill is idempotent.
+    original_post_init = getattr(cls, '__post_init__', None)
+    if original_post_init is None:
+        return
+
+    def __post_init__(self: Any, *args: Any) -> None:  # noqa: N807
+        _fill_defaults(self, specs)
+        original_post_init(self, *args)  # ``*args`` carries any ``InitVar``s
+
+    __post_init__.__qualname__ = f'{cls.__qualname__}.__post_init__'
+    cls.__post_init__ = __post_init__  # ty: ignore[unresolved-attribute]
+
+
+def _fill_defaults(obj: Any, specs: tuple[FieldSpec, ...]) -> None:
+    """Replace each attribute still holding its ``Field`` with the resolved default."""
+    import copy as _copy
+
+    from seared.fields.field import Field
+
+    for attr, _, f in specs:
+        v = getattr(obj, attr, None)
+        if isinstance(v, Field):
+            if f.default_factory is not None:
+                missing = f.default_factory()
+            else:
+                missing = f.missing
+                if isinstance(missing, _MUTABLE_DEFAULT_TYPES):
+                    missing = _copy.deepcopy(missing)
+            object.__setattr__(obj, attr, missing)
 
 
 def _make_dump(specs: tuple[FieldSpec, ...], validate: bool) -> Callable:

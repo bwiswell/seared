@@ -36,6 +36,12 @@ class Foo(s.Seared): ...
    each `Field` instance with its `missing` value. Mutable `missing`
    values (`list`, `dict`, `set`, `frozenset`) are deep-copied
    per-instance to avoid the classic Python shared-default footgun.
+   A `__post_init__` is wrapped to substitute *first*: the dataclass
+   `__init__` calls the hook before it returns, so without it the hook
+   would read an omitted field as its (truthy) `Field` object — where
+   `load`, which resolves every omitted field before constructing, hands
+   it the real default. An inherited hook is wrapped again by each
+   subclass, so it sees the subclass's omitted fields resolved too.
 5. **Generate `dump` / `load`** — bound classmethods that walk the
    spec list, calling each field's `serialize` / `deserialize`. Both
    accept an optional `format=` kwarg threaded through to the field

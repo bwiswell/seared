@@ -31,7 +31,10 @@ When `@s.seared` runs:
    `Field` metadata sitting on the instance attributes; the wrapper
    replaces each `Field` with its `missing` value. Mutable `missing`
    values (`list` / `dict` / `set` / `frozenset`) are deep-copied per
-   instance to avoid the classic Python shared-default footgun.
+   instance to avoid the classic Python shared-default footgun. A
+   `__post_init__` is wrapped to substitute first, since the dataclass
+   `__init__` calls it before returning: the hook reads an omitted field
+   as its default, exactly as it does when `load` builds the instance.
 5. **Generate `dump` / `load`** — bound classmethods that walk the
    spec list, calling each field's `serialize` / `deserialize`. Both
    accept an optional `format='json'` kwarg (default JSON-safe wire
