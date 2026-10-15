@@ -70,22 +70,26 @@ being accelerated.
 
 ## Results
 
-Recorded 2026-08-31 — Python 3.14.3, Linux x86_64 (WSL2), laptop-class
-CPU, otherwise idle. seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1,
-pydantic 2.13.5. Raw numbers:
-[`bench/results.json`](../../bench/results.json).
+Recorded <!-- bench:run -->2026-08-31, Python 3.14.3, 20,000 iterations; seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run --> —
+Linux x86_64 (WSL2), laptop-class CPU, otherwise idle. Raw numbers:
+[`bench/results.json`](../../bench/results.json). The tables are rendered
+from that file (`uv run python -m bench.tables`), never typed in.
 
-| Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
-|------|---------------|-------------------|----------------|------------|-----------------|
-| load | 8,732 ops/s   | 28,913 ops/s (~3.3×) | 30,505 ops/s (~3.5×) | 150,235 ops/s | 328,175 ops/s |
-| dump | 24,920 ops/s  | 44,776 ops/s (~1.8×) | 50,536 ops/s (~2.0×) | 180,340 ops/s | 409,039 ops/s |
+<!-- bench:ops -->
+| Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
+|------|---------------|----------------------|----------------------|---------------|-----------------|
+| load | 8,732 ops/s   | 28,913 ops/s (~3.3×) | 30,505 ops/s (~3.5×) | 150,235 ops/s | 328,175 ops/s   |
+| dump | 24,920 ops/s  | 44,776 ops/s (~1.8×) | 50,536 ops/s (~2.0×) | 180,340 ops/s | 409,039 ops/s   |
+<!-- /bench:ops -->
 
 Per-op timing:
 
+<!-- bench:us -->
 | Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
 |------|---------------|-------------------|----------------|------------|-----------------|
 | load | 114.5 µs      | 34.6 µs           | 32.8 µs        | 6.7 µs     | 3.0 µs          |
 | dump | 40.1 µs       | 22.3 µs           | 19.8 µs        | 5.5 µs     | 2.4 µs          |
+<!-- /bench:us -->
 
 Ratios in the first table are versus `marshmallow`. Earlier recorded
 baselines (e.g. the 2026-04-24 run against marshmallow 3.26, where seared
@@ -142,8 +146,16 @@ uv sync --extra bench
 uv run python -m bench
 ```
 
-The runner prints an `ops/s` table and rewrites `bench/results.json`
-(suppress with `--no-write`; tune with `-n`). Missing comparators are
+The runner prints an `ops/s` table, rewrites `bench/results.json`, and
+re-renders the tables in this file and the README from it (suppress both
+with `--no-write`; tune with `-n`). To re-render without re-running, or to
+check in CI that the docs still match the committed results:
+
+```sh
+uv run python -m bench.tables           # rewrite the tables from results.json
+uv run python -m bench.tables --check   # exit 1 if a doc has drifted
+```
+ Missing comparators are
 skipped with a note, so `uv run python -m bench` also works in a plain
 dev sync and times seared alone. Absolute numbers vary by machine;
 relative ratios should hold across hardware.
@@ -186,7 +198,7 @@ says which code the numbers came from.
   Arrow IPC alternatives.
 - **Cold-start measurements.** First-decoration cost matters for short-
   lived processes (e.g. CLI tools).
-- **Table generation.** Regenerate the tables above (and the README
-  headline) from `bench/results.json` instead of hand-copying. Today the
-  numbers in this file are transcribed by hand, which is the most likely
-  way for a doc to drift from its own artifact.
+- **Prose ratios.** The tables are generated (0.3.3), but the rounded
+  ratios quoted in prose here and in the README ("~3.5× marshmallow on
+  load", "~11× / ~9×") are still written by hand. They are deliberately
+  approximate; re-read them against the tables after a re-bench.

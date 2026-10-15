@@ -48,6 +48,8 @@ if TYPE_CHECKING:
 
     from seared.fields.field import Field
 
+    from .base import FieldSpec
+
 #: Version of the spec shape handed to a backend. A backend declares the
 #: ``SPEC_ABI`` it was built against; only an exact match is used. This is
 #: the whole compatibility gate — seared is zero-dependency and has no PEP
@@ -187,7 +189,9 @@ def _kinds() -> dict[Any, str]:
 #:
 #: Adding a kind is additive and needs no :data:`SPEC_ABI` bump: a backend
 #: that predates one declines it by name, before it ever looks for the config.
-#: Changing the shape of an *existing* field spec is what would need the bump.
+#: Changing an *existing* kind is what needs the bump — its spec shape, and
+#: equally its semantics: a backend implements what a kind *means*, so a
+#: behaviour change that kept the shape would still diverge silently.
 _KIND_CONFIG: dict[str, tuple[str, ...]] = {
     'bytes': ('encoding',),
     'date': ('format',),
@@ -216,11 +220,19 @@ def _nested_spec(cls: Any) -> dict[str, Any]:
     raise _NotAccelerableError(reason)
 
 
-def _field_spec(owner: str, attr: str, wire: str, f: Field) -> dict[str, Any]:
+def _field_spec(owner: str, attr: str, wire: str, f: Field, validate: bool) -> dict[str, Any]:
     """Emit one field's plain-data spec, or decline the whole class."""
     kind = _kinds().get(type(f))
     if kind is None:
         msg = f'{owner}.{attr}: {type(f).__name__} is not an accelerated field type'
+        raise _NotAccelerableError(msg)
+    # seared 0.3.3 fixed lax ``Bool`` (``'false'`` used to load as ``True``).
+    # An ABI-1 backend still implements the old answer, and an ABI number is
+    # all seared can check — so lax Bool stays on the Python path rather than
+    # change meaning with whatever wheel happens to be installed. Lifts when
+    # the fix ships behind the next SPEC_ABI.
+    if kind == 'bool' and not validate:
+        msg = f'{owner}.{attr}: Bool under validate=False is not accelerated until SPEC_ABI 2'
         raise _NotAccelerableError(msg)
     spec: dict[str, Any] = {
         'attr': attr,
@@ -247,7 +259,7 @@ def _field_spec(owner: str, attr: str, wire: str, f: Field) -> dict[str, Any]:
     return spec
 
 
-def _class_spec(cls: type, specs: tuple[tuple[str, str, Any], ...], validate: bool) -> dict[str, Any]:
+def _class_spec(cls: type, specs: tuple[FieldSpec, ...], validate: bool) -> dict[str, Any]:
     """Emit the whole-class spec handed to a backend's ``compile_spec``."""
     name = cls.__name__
     return {
@@ -260,7 +272,7 @@ def _class_spec(cls: type, specs: tuple[tuple[str, str, Any], ...], validate: bo
         # would stop catching it — and a backend that imported seared to get it
         # would no longer be the dependency-free leaf the design rests on.
         'error': ValidationError,
-        'fields': [_field_spec(name, attr, wire, f) for attr, wire, f in specs],
+        'fields': [_field_spec(name, attr, wire, f, validate) for attr, wire, f in specs],
     }
 
 
@@ -318,7 +330,7 @@ def _blocked(cls: type, *, mode: str, accel: bool, unavailable: str | None, cust
 
 def try_compile(
     cls: type,
-    specs: tuple[tuple[str, str, Any], ...],
+    specs: tuple[FieldSpec, ...],
     *,
     validate: bool,
     accel: bool,
@@ -332,7 +344,7 @@ def try_compile(
 
     Args:
         cls: The class being built, already through ``dataclasses.dataclass``.
-        specs: The ``(attr, wire_key, Field)`` triples from the decorator.
+        specs: The decorator's :class:`FieldSpec` per declared field.
         validate: The class's strict/lax flag.
         accel: The decorator's per-class ``accel=`` opt-out.
         custom_init: Whether the class as *written* defined its own

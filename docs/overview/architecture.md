@@ -20,9 +20,9 @@ When `@s.seared` runs:
 1. **Wrap `dataclasses.dataclass`** — the underlying machinery for
    `__slots__`, `__init__`, `__eq__`, `__repr__`. `slots=True` is the default.
 2. **Walk fields** — pull every `dataclasses.Field` whose `.default` is
-   a `seared.Field` instance. Build a tuple of
-   `(attr_name, wire_key, field_instance)` entries; expose as
-   `cls.__seared_fields__` for introspection.
+   a `seared.Field` instance. Build a tuple of `FieldSpec(attr, wire,
+   field)` named tuples; expose as `cls.__seared_fields__` for
+   introspection.
 3. **Validate UNWRAP constraints** — at most one `UNWRAP` field per
    class historically; relaxed in 0.1.9 to "multiple `UNWRAP` fields
    allowed when their `tag_key` / `payload_key` wire keys are

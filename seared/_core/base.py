@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Self
 
 from .accel import AccelInfo
 
@@ -9,11 +9,29 @@ if TYPE_CHECKING:
     import os
     from collections.abc import Iterable
 
+    from seared.fields.field import Field
+
+
+class FieldSpec(NamedTuple):
+    """One declared field, as ``__seared_fields__`` lists it.
+
+    Still the ``(attr, wire, field)`` triple it always was, so unpacking keeps
+    working; the names and types are for tooling that reads one entry at a
+    time, and for a checker, which can now see ``field`` is a ``Field``.
+    """
+
+    #: The Python attribute name.
+    attr: str
+    #: The key on the wire: ``data_key`` when set, else ``attr``.
+    wire: str
+    #: The declared field instance.
+    field: Field
+
 
 class Seared:
-    #: ``(attr_name, wire_key, Field)`` per declared field, in order. Set by
-    #: the decorator; ``()`` on an undecorated subclass.
-    __seared_fields__: ClassVar[tuple[tuple[str, str, Any], ...]] = ()
+    #: One :class:`FieldSpec` per declared field, in order. Set by the
+    #: decorator; ``()`` on an undecorated subclass.
+    __seared_fields__: ClassVar[tuple[FieldSpec, ...]] = ()
 
     #: Whether a compiled accelerator took this class, and the reason if not
     #: (see ``_core.accel``). Declared here, rather than only assigned at

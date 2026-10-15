@@ -1,6 +1,7 @@
 from typing import Any
 
 from ._core.accel import AccelInfo, accel_status
+from ._core.base import FieldSpec
 from ._core.errors import SearedError, ValidationError
 from .doc import document, introspect
 from .fields.bool_ import Bool
@@ -56,7 +57,7 @@ except ImportError:
             raise ImportError(msg)
 
 
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 
 __all__ = [
     'UUID',
@@ -69,6 +70,7 @@ __all__ = [
     'Dict',
     'Enum',
     'Field',
+    'FieldSpec',
     'Float',
     'Int',
     'NDArray',

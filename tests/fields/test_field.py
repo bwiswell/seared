@@ -9,11 +9,17 @@ each subclass file.
 
 from __future__ import annotations
 
+import enum
 import warnings
 
 import pytest
 
+import seared as s
 from seared.fields.field import Field
+
+
+class _Color(enum.Enum):
+    RED = 'r'
 
 
 class TestFieldDefaults:
@@ -67,6 +73,37 @@ class TestDefaultResolution:
         with pytest.warns(DeprecationWarning, match='missing='):
             f = Field(missing=42)
         assert f.missing == 42
+
+    @pytest.mark.parametrize(
+        'build',
+        [
+            lambda: Field(missing=1),
+            lambda: s.Int(missing=1),
+            lambda: s.T(s.Seared, missing=1),
+            lambda: s.Tuple(s.Int(), missing=(1,)),
+            lambda: s.Enum(enum=_Color, missing=_Color.RED),
+        ],
+        ids=['Field', 'Int', 'T', 'Tuple', 'Enum'],
+    )
+    def test_missing_warning_points_at_the_caller(self, build):
+        # Not at the dataclass-generated ``__init__`` (``<string>``) or a
+        # seared module: those frames hid the warning under default filters
+        # and pointed anyone who did see it at the wrong file.
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            build()
+        assert [w.filename for w in caught] == [__file__]
+
+    def test_missing_warning_in_a_class_body_points_at_it(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+
+            @s.seared
+            class Legacy(s.Seared):
+                x: int = s.Int(missing=3)
+
+        assert [w.filename for w in caught] == [__file__]
+        assert Legacy().x == 3
 
     def test_no_default_no_warning(self):
         with warnings.catch_warnings():

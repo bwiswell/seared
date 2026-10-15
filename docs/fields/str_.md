@@ -2,8 +2,8 @@
 
 ```python
 name: str = s.Str(required=True)
-tags: list = s.Str(many=True, missing=[])
-labels: dict = s.Str(keyed=True, missing={})
+tags: list = s.Str(many=True, default_factory=list)
+labels: dict = s.Str(keyed=True, default_factory=dict)
 ```
 
 Python `str` ↔ JSON string. `many=True` for lists of strings; `keyed=True`

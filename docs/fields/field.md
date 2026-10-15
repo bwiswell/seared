@@ -10,16 +10,21 @@ common per-field knobs. Subclasses override `serialize` / `deserialize`.
 | `data_key` | `None` | Wire-key override (defaults to attr name) |
 | `keyed` | `False` | Wrap as `dict[str, V]` (per-key apply) |
 | `many` | `False` | Wrap as `list[V]` (per-item apply) |
-| `required` | `False` | `load` raises if absent and no `missing` |
+| `required` | `False` | `load` raises when the wire key is absent |
 | `dump` | `True` | Set `False` to suppress on `dump` |
-| `missing` | `None` | Value used when wire-key absent |
+| `default` | `None` | Static value used when the wire key is absent |
+| `default_factory` | `None` | Zero-arg callable invoked per instance instead; the home for mutable defaults |
+| `doc` | `None` | Human-facing description; never serialized, surfaced by `seared.doc` |
+| `missing` | `None` | **Deprecated** alias for `default`; warns, and is removed in 0.4.0 |
 
-`required=True` and `missing=...` are mutually meaningful: `required`
-is checked before `missing`, so requiring a field with a missing default
-is a contradiction (`missing` will never apply).
+`required` is checked before any default, so a required field's default
+never applies: give a field one or the other.
 
-Mutable `missing` values (`list`, `dict`, `set`, `frozenset`) are
-deep-copied per-instance to avoid the shared-default footgun.
+`default=` folds into the `missing` attribute at construction, which is
+where the decorator reads the resolved value; `default_factory` stays
+deferred and is called once per instance. A mutable static default (`list`,
+`dict`, `set`, `frozenset`) is deep-copied per instance as a fallback, but
+`default_factory` is the better spelling.
 
 ## `serialize(value, validate=True, **kwargs)`
 

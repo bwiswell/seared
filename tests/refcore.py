@@ -115,6 +115,10 @@ _FALSE = ('false', '0', 'no', 'off')
 
 
 def _de_bool(v, validate, err):
+    # The lax branch is the SPEC_ABI 1 answer — bare truthiness, so ``'false'``
+    # is ``True`` — which seared 0.3.3 fixed in ``fields/bool_.py``. Kept as
+    # an ABI-1 backend implements it; seared no longer hands this core a lax
+    # ``Bool`` (``accel._field_spec`` declines it), so the branch is unreached.
     if isinstance(v, bool):
         return v
     if not validate:
