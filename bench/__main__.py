@@ -2,7 +2,8 @@
 
 Prints a results table and (unless ``--no-write``) records the run to
 ``bench/results.json`` — the committed artifact behind
-``docs/overview/benchmarks.md``.
+``docs/overview/benchmarks.md`` — then re-renders the docs' tables from it
+(see ``bench.tables``).
 """
 
 from __future__ import annotations
@@ -12,10 +13,11 @@ import importlib
 from datetime import UTC, datetime
 from pathlib import Path
 
+from . import tables
 from .harness import DEFAULT_ITERATIONS, Report, environment, payload, run_case
 
 _SUITES = ['suite_seared', 'suite_rusted', 'suite_marshmallow', 'suite_pydantic']
-_DEFAULT_OUT = Path(__file__).parent / 'results.json'
+_DEFAULT_OUT = tables.RESULTS
 
 
 def _collect_cases() -> list:
@@ -63,6 +65,11 @@ def main() -> None:
         return
     args.out.write_text(Report.to_json(report, indent=2) + '\n')
     print(f'\nwrote {args.out}')
+    # The docs quote the committed artifact, so only a run recorded *there*
+    # rewrites them; a scratch ``--out`` leaves them alone.
+    if args.out.resolve() == tables.RESULTS.resolve():
+        for path in tables.update(report):
+            print(f'updated {path}')
 
 
 if __name__ == '__main__':

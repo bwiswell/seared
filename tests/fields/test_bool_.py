@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import seared as s
 
 
@@ -29,3 +31,35 @@ class TestBool:
         obj = Obj.load({'flags': [True, False, True]})
         assert obj.flags == [True, False, True]
         assert Obj.dump(obj) == {'flags': [True, False, True]}
+
+
+class TestBoolSpellings:
+    """Strict and lax read the same spellings; they differ only on the rest."""
+
+    @pytest.mark.parametrize('validate', [True, False])
+    @pytest.mark.parametrize('raw', ['true', ' Yes ', 'ON', '1'])
+    def test_true_spellings(self, validate, raw):
+        assert s.Bool().deserialize(raw, validate=validate) is True
+
+    @pytest.mark.parametrize('validate', [True, False])
+    @pytest.mark.parametrize('raw', ['false', ' No ', 'OFF', '0'])
+    def test_false_spellings(self, validate, raw):
+        assert s.Bool().deserialize(raw, validate=validate) is False
+
+    def test_strict_rejects_unrecognised_strings(self):
+        with pytest.raises(s.ValidationError, match="cannot deserialize 'maybe' as bool"):
+            s.Bool().deserialize('maybe')
+
+    @pytest.mark.parametrize(('raw', 'want'), [('maybe', True), ('', False), (2, True), (0, False), ([], False)])
+    def test_lax_falls_back_to_truthiness(self, raw, want):
+        assert s.Bool().deserialize(raw, validate=False) is want
+
+    def test_lax_class_reads_false_through_load(self):
+        # End to end, with whatever accelerator happens to be installed: a lax
+        # Bool class stays on the Python path, so the fix can't be bypassed.
+        @s.seared(validate=False)
+        class Lax(s.Seared):
+            flag: bool = s.Bool(required=True)
+
+        assert Lax.load({'flag': 'false'}).flag is False
+        assert Lax.load({'flag': 'off'}).flag is False

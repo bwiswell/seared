@@ -4,10 +4,8 @@ from dataclasses import dataclass, fields
 from typing import TYPE_CHECKING, Any
 
 from .accel import try_compile
+from .base import FieldSpec
 from .errors import ValidationError
-
-FieldSpec = tuple[str, str, Any]  # (attr_name, wire_key, Field instance)
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -123,7 +121,7 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> typ
         default = f.default
         if isinstance(default, Field):
             wire = default.data_key or f.name
-            specs.append((f.name, wire, default))
+            specs.append(FieldSpec(f.name, wire, default))
             if _is_unwrap(default):
                 unwrap_specs.append((f.name, default))
     # Multiple UNWRAP fields are allowed when their (tag_key, payload_key)

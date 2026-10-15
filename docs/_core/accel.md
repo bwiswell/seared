@@ -65,6 +65,23 @@ A class is also declined when it defines its own `__init__`, a
 attribute assignment, which would skip all three — and a plain attribute
 never reaches the spec, so nothing but `__init__` would ever set it.
 
+So, until the next `SPEC_ABI`, is a `validate=False` class with a `Bool`
+field. seared 0.3.3 fixed lax `Bool` (it skipped the spelling table, so
+`'false'` loaded as `True`; see [`../fields/bool_.md`](../fields/bool_.md)).
+Backends built against `SPEC_ABI` 1 still give the old answer, and an ABI
+number is all seared can check, so the class keeps the Python path and gets
+the same answer whatever is installed:
+
+```python
+>>> Lax.__seared_accel__
+AccelInfo(accelerated=False, backend=None,
+          reason='Lax.flag: Bool under validate=False is not accelerated until SPEC_ABI 2')
+```
+
+That is also the general rule for a backend: changing what an existing kind
+*means*, not just its spec shape, needs an ABI bump, or an older backend
+would keep the old meaning without anyone noticing.
+
 ## Introspection
 
 ```python

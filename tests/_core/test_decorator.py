@@ -75,6 +75,16 @@ class TestSearedDecorator:
         assert wire == 'x'
         assert isinstance(field, s.Int)
 
+    def test_seared_fields_entries_are_field_specs(self):
+        @s.seared
+        class Foo(s.Seared):
+            x: int = s.Int(required=True, data_key='ex')
+
+        (spec,) = Foo.__seared_fields__
+        assert isinstance(spec, s.FieldSpec)
+        assert (spec.attr, spec.wire) == ('x', 'ex')
+        assert spec.field is spec[2]
+
     def test_natural_init_replaces_field_defaults_with_missing(self):
         @s.seared
         class Foo(s.Seared):

@@ -172,3 +172,20 @@ class TestIntrospectionSurfaces:
     def test_accel_info_is_immutable(self):
         with pytest.raises((AttributeError, TypeError)):
             s.Seared.__seared_accel__.accelerated = True
+
+
+class TestFieldSpec:
+    """``FieldSpec`` names the ``(attr, wire, field)`` triple without changing it."""
+
+    def test_is_still_a_triple(self):
+        f = s.Int()
+        spec = s.FieldSpec('x', 'ex', f)
+        attr, wire, field = spec
+        assert (attr, wire, field) == ('x', 'ex', f)
+        assert spec == ('x', 'ex', f)
+        assert len(spec) == 3
+
+    def test_named_access(self):
+        f = s.Str()
+        spec = s.FieldSpec(attr='name', wire='n', field=f)
+        assert (spec.attr, spec.wire, spec.field) == ('name', 'n', f)

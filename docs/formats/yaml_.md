@@ -36,7 +36,7 @@ import seared as s
 @s.seared
 class Config(s.Seared):
     name: str    = s.Str(required=True)
-    workers: int = s.Int(missing=4)
+    workers: int = s.Int(default=4)
 
 text = """\
 name: api

@@ -26,7 +26,7 @@ for free.
 - **Mutable-default safety.** `default_factory=list` / `default_factory=dict` / `default_factory=set` build a fresh value per-instance — no shared-default footgun. (A mutable `default=[...]` is deep-copied per-instance as a fallback.)
 - **Path normalisation.** `s.Path` always serialises as POSIX strings; round-trip is cross-platform deterministic.
 - **Lossless `Decimal`.** String-by-default wire form preserves every digit; opt into JSON-number form per field with `as_number=True`.
-- **Introspection.** `Cls.__seared_fields__` exposes the field layout as a tuple of `(attr, wire_key, Field)` for runtime tooling.
+- **Introspection.** `Cls.__seared_fields__` exposes the field layout as a tuple of `s.FieldSpec(attr, wire, field)` named tuples for runtime tooling.
 
 ## Setup
 
@@ -53,7 +53,6 @@ allow-direct-references = true
 
 ```python
 from enum import Enum
-from typing import Optional
 
 import seared as s
 
@@ -66,9 +65,9 @@ class MyEnum(Enum):
 
 @s.seared
 class Inner(s.Seared):
-    a: Optional[int]   = s.Int(data_key='propertyA')
-    b: Optional[float] = s.Float(data_key='propertyB')
-    c: Optional[str]   = s.Str(data_key='propertyC')
+    a: int | None   = s.Int(data_key='propertyA', default=None)
+    b: float | None = s.Float(data_key='propertyB', default=None)
+    c: str | None   = s.Str(data_key='propertyC', default=None)
 
 
 @s.seared
@@ -135,9 +134,9 @@ reveal_type(Cfg.load({}).name)  # str  (.load() returns the concrete class)
   preferred for mutable values) to mark a field optional. These are the names
   the type checker reads to tell required from optional, so a field with
   neither — and without `required=True` — is treated as a required argument.
-- **`missing=` is deprecated** — it still works at runtime (as an alias for
-  `default=`) but emits a `DeprecationWarning` and is invisible to the type
-  checker's required/optional inference.
+- **`missing=` is deprecated, and is removed in 0.4.0** — it still works at
+  runtime (as an alias for `default=`) but emits a `DeprecationWarning` and is
+  invisible to the type checker's required/optional inference.
 - The **annotation drives the attribute's type** (the stubs return `Any`), so
   `f: list[int] = s.Int(many=True, default_factory=list)` types as `list[int]`.
   The checker does not cross-check the annotation against the field kind;
@@ -225,11 +224,16 @@ transport (Parquet / Arrow IPC) is out of scope. See
 ## Introspection
 
 Every `@s.seared` class exposes its field layout as a tuple of
-`(attr_name, wire_key, Field)`:
+`s.FieldSpec` entries, one per declared field, in order. A `FieldSpec` is a
+named tuple, so it unpacks as the `(attr, wire, field)` triple it has always
+been, and it also reads by name:
 
 ```python
 for attr, wire, field in Outer.__seared_fields__:
     ...
+
+spec = Outer.__seared_fields__[0]
+spec.attr, spec.wire, spec.field     # 'a', 'a', Int(...)
 ```
 
 ## Documentation
@@ -256,14 +260,16 @@ See [`docs/_core/errors.md`](docs/_core/errors.md) for the full hierarchy.
 ## Benchmarks
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
-a list of strings), 20k iterations on an idle machine. seared 0.3.0,
-rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5; ratios are versus
-marshmallow:
+a list of strings) on an idle machine. Recorded
+<!-- bench:run -->2026-08-31, Python 3.14.3, 20,000 iterations; seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run -->;
+ratios are versus marshmallow:
 
-| Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` v2 | `seared`+`rusted` |
-|------|---------------|-------------------|----------------|---------------|-------------------|
-| load | 8,732 ops/s   | 28,913 ops/s (~3.3×) | 30,505 ops/s (~3.5×) | 150,235 ops/s | 328,175 ops/s |
-| dump | 24,920 ops/s  | 44,776 ops/s (~1.8×) | 50,536 ops/s (~2.0×) | 180,340 ops/s | 409,039 ops/s |
+<!-- bench:ops -->
+| Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
+|------|---------------|----------------------|----------------------|---------------|-----------------|
+| load | 8,732 ops/s   | 28,913 ops/s (~3.3×) | 30,505 ops/s (~3.5×) | 150,235 ops/s | 328,175 ops/s   |
+| dump | 24,920 ops/s  | 44,776 ops/s (~1.8×) | 50,536 ops/s (~2.0×) | 180,340 ops/s | 409,039 ops/s   |
+<!-- /bench:ops -->
 
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
 same schema decorated `@s.seared(validate=False)`. Both are benched with the
@@ -300,7 +306,10 @@ implements — today that is everything except `Tuple`, `Union`, and the
 `NDArray` / DataFrame fields. Classes with a hand-written `__init__`, a
 `__post_init__`, or a plain dataclass attribute that isn't a seared field
 (`b: int = 5`) are also declined, since a compiled core builds instances
-through `__new__` and only `__init__` would ever set those.
+through `__new__` and only `__init__` would ever set those. So, for now, is a
+`validate=False` class with a `Bool` field: seared 0.3.3 fixed lax `Bool`
+(`'false'` used to load as `True`), and backends built against the current
+spec ABI still implement the old answer. That decline lifts with the next ABI.
 
 Anything unexpected — no wheel for your platform, a version mismatch, a
 field the backend doesn't know — falls back to the Python path rather than
@@ -323,12 +332,17 @@ Opt out per class with `@s.seared(accel=False)`, or globally with
 for CI that needs to assert the wheel is actually engaged. Full details in
 [`docs/_core/accel.md`](docs/_core/accel.md).
 
-## Limits (v0.3.1)
+## Limits
 
 - **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` and `NDArray` honour the hint; other fields are unaffected.
 - **No nullable-true fields** — `None` is always stripped from dumps; explicit JSON `null` is not emittable.
 - **No async variants.** seared is pure CPU-bound transformation; no async path is planned.
-- **`missing=` is deprecated** in favour of `default=` / `default_factory=` (see [Type checking](#type-checking)). It remains a runtime alias for `default=` but warns and is invisible to type checkers.
+- **`missing=` is deprecated** in favour of `default=` / `default_factory=` (see [Type checking](#type-checking)), and is removed in 0.4.0. It remains a runtime alias for `default=` but warns and is invisible to type checkers.
+- **`required` means the key is present, not that the value is non-null.** A wire `null` loads as `None`, even for a `required=True` field, and it overrides a `default=` rather than counting as absent. (0.4.0 treats `null` as absent unless a field opts into being nullable.)
+- **Construction doesn't check `required`.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises.
+- **Unknown wire keys are ignored** on `load`, by design: an older consumer can read a newer producer's payload.
+- **Strict mode still coerces.** `Int` reads numeric strings (`'42'`) and floats, truncating `3.7` to `3`; `Bool` reads `'yes'` / `'off'` and ints; `Float` reads `'nan'`. String coercion is deliberate, since it is how string-only sources such as topic-key captures decode. Float truncation goes in 0.4.0.
+- **NaN dumps as bare `NaN`**, which is Python's `json` default but not standard JSON. Pass `allow_nan=False` to `Cls.to_json` to refuse it.
 - **Mutable defaults** are per-instance: `default_factory=callable` builds a fresh value each time (preferred); a mutable `default=[...]` is deep-copied per-instance as a fallback.
 - **CSV is flat-only.** Nested fields and `many=True` / `keyed=True` collections raise `TypeError` at call time. Flatten-and-rehydrate is deferred to a future release.
 - **DataFrame fields are records-form only.** Dtype-preserving transport (Parquet / Arrow IPC) is out of scope.

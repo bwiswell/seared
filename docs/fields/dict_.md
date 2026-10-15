@@ -1,7 +1,7 @@
 # `_dict.py` — `Dict`
 
 ```python
-metadata: dict = s.Dict(missing={})
+metadata: dict = s.Dict(default_factory=dict)
 ```
 
 Pass-through `dict` field. No deep-validation — the values can be any

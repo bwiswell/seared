@@ -5,7 +5,7 @@ from ty — it is the thing under test. It must produce zero diagnostics.
 """
 
 from enum import Enum
-from typing import Any, assert_type
+from typing import assert_type
 
 import seared as s
 
@@ -65,4 +65,12 @@ assert_type(Outer.__seared_accel__, s.AccelInfo)
 assert_type(Outer.__seared_accel__.accelerated, bool)
 assert_type(Outer.__seared_accel__.backend, str | None)
 assert_type(Outer.__seared_accel__.reason, str | None)
-assert_type(Outer.__seared_fields__, tuple[tuple[str, str, Any], ...])
+assert_type(Outer.__seared_fields__, tuple[s.FieldSpec, ...])
+
+# Each entry is a FieldSpec: named and typed, and still a 3-tuple.
+spec = Outer.__seared_fields__[0]
+assert_type(spec.attr, str)
+assert_type(spec.wire, str)
+assert_type(spec.field, s.Field)
+attr, wire, field = spec
+assert_type(field, s.Field)

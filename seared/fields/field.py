@@ -41,7 +41,7 @@ class Field:
             warnings.warn(
                 'seared: `missing=` is deprecated; use `default=` (or `default_factory=` for mutable defaults).',
                 DeprecationWarning,
-                stacklevel=2,
+                stacklevel=_caller_stacklevel(self),
             )
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:
@@ -60,3 +60,26 @@ class Field:
         Optional ``format=`` kwarg parallels :meth:`serialize`.
         """
         raise NotImplementedError
+
+
+def _caller_stacklevel(field: Field) -> int:
+    """The ``stacklevel`` that pins a warning on whoever constructed ``field``.
+
+    No fixed number is right: between the caller and ``__post_init__`` sit
+    the dataclass-generated ``__init__`` plus whatever the concrete field
+    adds (``T`` / ``Tuple`` define an ``__init__``, ``Enum`` a
+    ``__post_init__``). Every one of those frames is a method of ``field``
+    itself, so skip frames whose ``self`` *is* it; the first that isn't is
+    the caller.
+    """
+    import inspect
+
+    # ``currentframe()`` is this helper; one back is ``Field.__post_init__``,
+    # the frame that calls ``warnings.warn`` and so ``stacklevel=1``.
+    frame = inspect.currentframe()
+    frame = frame.f_back if frame is not None else None
+    level = 1
+    while frame is not None and frame.f_locals.get('self') is field:
+        frame = frame.f_back
+        level += 1
+    return level

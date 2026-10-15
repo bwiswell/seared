@@ -7,6 +7,9 @@ from seared._core.errors import ValidationError
 
 from .field import Field
 
+_TRUE = frozenset({'true', '1', 'yes', 'on'})
+_FALSE = frozenset({'false', '0', 'no', 'off'})
+
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Bool(Field):
@@ -18,17 +21,22 @@ class Bool(Field):
         return bool(value)
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> bool:
-        """JSON boolean → ``bool``, coercing the usual string and int spellings."""
+        """JSON boolean → ``bool``, coercing the usual string and int spellings.
+
+        Lax mode reads the same spellings first and only then falls back to
+        truthiness, so ``'false'`` is ``False`` in both modes. Lax still never
+        raises: anything else is its truthiness (``'maybe'`` → ``True``).
+        """
         if isinstance(value, bool):
             return value
-        if not validate:
-            return bool(value)
         if isinstance(value, str):
             low = value.strip().lower()
-            if low in ('true', '1', 'yes', 'on'):
+            if low in _TRUE:
                 return True
-            if low in ('false', '0', 'no', 'off'):
+            if low in _FALSE:
                 return False
+        if not validate:
+            return bool(value)
         if isinstance(value, int):
             return bool(value)
         msg = f'cannot deserialize {value!r} as bool'
