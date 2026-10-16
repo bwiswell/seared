@@ -14,6 +14,7 @@ Three layers:
 
 from __future__ import annotations
 
+import math
 import sys
 from types import SimpleNamespace
 
@@ -430,6 +431,9 @@ CASES = [
     ('missing-required', {'items': []}),
     ('int-from-str', {**PAYLOAD, 'items': [{'x': '7', 'y': 1.0}]}),
     ('int-from-float', {**PAYLOAD, 'items': [{'x': 7.9, 'y': 1.0}]}),
+    ('int-from-integral-float', {**PAYLOAD, 'items': [{'x': 7.0, 'y': 1.0}]}),
+    ('int-from-inf', {**PAYLOAD, 'items': [{'x': math.inf, 'y': 1.0}]}),
+    ('int-from-nan', {**PAYLOAD, 'items': [{'x': math.nan, 'y': 1.0}]}),
     ('int-from-bool', {**PAYLOAD, 'items': [{'x': True, 'y': 1.0}]}),
     ('int-garbage', {**PAYLOAD, 'items': [{'x': 'nope', 'y': 1.0}]}),
     ('float-from-str', {**PAYLOAD, 'items': [{'x': 1, 'y': '2.5'}]}),
@@ -437,6 +441,8 @@ CASES = [
     ('str-wrong-type', {**PAYLOAD, 'name': 42}),
     ('bool-from-str', {**PAYLOAD, 'flag': 'yes'}),
     ('bool-garbage', {**PAYLOAD, 'flag': []}),
+    ('bool-from-zero-and-one', {**PAYLOAD, 'flag': 1}),
+    ('bool-from-other-int', {**PAYLOAD, 'flag': 2}),
     ('many-not-a-list', {**PAYLOAD, 'tags': 'alpha'}),
     ('nested-not-a-dict', {**PAYLOAD, 'items': [7]}),
     ('null-required', {**PAYLOAD, 'name': None}),
@@ -528,10 +534,18 @@ class TestDifferential:
             {**PAYLOAD, 'flag': 'maybe'},
             {**PAYLOAD, 'flag': ''},
             {**PAYLOAD, 'flag': 2},
+            # Lax int truncates a fractional float.
+            {**PAYLOAD, 'items': [{'x': 3.7, 'y': 1}]},
         ]
         for payload in lax_cases:
             assert _outcome(accelerated.load, payload)[0] == _outcome(pure.load, payload)[0]
             assert accelerated.dump(accelerated.load(payload)) == pure.dump(pure.load(payload))
+        # ``inf`` and ``nan`` still fail in lax mode, as a ``ValidationError``.
+        for x in (math.inf, math.nan):
+            payload = {**PAYLOAD, 'items': [{'x': x, 'y': 1}]}
+            got, want = _outcome(accelerated.load, payload), _outcome(pure.load, payload)
+            assert got == want
+            assert want[1] == 'ValidationError'
 
     def test_dump_skips_none_and_dump_false(self, use_backend):
         use_backend('refcore')

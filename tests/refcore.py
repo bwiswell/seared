@@ -52,10 +52,12 @@ def _de_int(v, validate, err):
         return int(v)
     if isinstance(v, int):
         return v
-    if isinstance(v, (str, float)):
+    # Strict refuses a fractional float rather than truncate it; ``nan`` and
+    # ``inf`` fail in both modes, ``inf`` as an ``OverflowError`` folded in.
+    if isinstance(v, (str, float)) and not (validate and isinstance(v, float) and not v.is_integer()):
         try:
             return int(v)
-        except (TypeError, ValueError) as e:
+        except (ValueError, OverflowError) as e:
             msg = f'cannot deserialize {v!r} as int'
             raise err(msg) from e
     msg = f'cannot deserialize {v!r} as int'
@@ -129,7 +131,7 @@ def _de_bool(v, validate, err):
             return False
     if not validate:
         return bool(v)
-    if isinstance(v, int):
+    if isinstance(v, int) and v in (0, 1):
         return bool(v)
     msg = f'cannot deserialize {v!r} as bool'
     raise err(msg)
