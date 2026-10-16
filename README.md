@@ -51,7 +51,8 @@ seared = { git = "https://github.com/bwiswell/seared", tag = "v0.3.4" }
 **The tag is the pin.** uv doesn't check a version specifier such as
 `seared>=0.3,<0.4` against a git source: it takes whatever the source points
 at, and a source without a tag points at the tip of `master`. Moving to a new
-release means moving the tag.
+release means moving the tag. What changed in each release, and what may
+break on the way, is in [`CHANGELOG.md`](CHANGELOG.md).
 
 Requires Python ≥ 3.14.
 
