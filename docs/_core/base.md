@@ -20,8 +20,15 @@ class Telemetry(s.Seared):           # subclass of Seared
 | `__seared_fields__: ClassVar[tuple[FieldSpec, ...]]` | Empty tuple on the bare base; populated by the decorator with one `FieldSpec` per declared field, in order. |
 | `dump(obj)` | Raises `NotImplementedError` until decorated. |
 | `load(data)` | Raises `NotImplementedError` until decorated. |
-| `dumps(obj)` | JSON convenience wrapper around `dump`. |
+| `dumps(obj, **kwargs)` | JSON convenience wrapper around `dump`; `**kwargs` pass through to `json.dumps`, as they do for `to_json`. |
 | `loads(data)` | JSON convenience wrapper around `load`. |
+
+`dumps` writes a `NaN` or infinite float as a bare `NaN` / `Infinity`,
+which is Python's `json` default: Python reads it back, but standard JSON
+parsers, browsers included, refuse it. Pass `allow_nan=False` for JSON
+headed anywhere but Python, and `dumps` raises `ValueError` instead. The
+default stays, because msgpack and Python consumers carry these values on
+purpose.
 
 The class is intentionally lightweight: it exists so `isinstance(obj,
 Seared)` is meaningful, and so type-checkers see a concrete base for

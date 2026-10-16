@@ -367,7 +367,7 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 - **Construction doesn't check `required`.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises.
 - **Unknown wire keys are ignored** on `load`, by design: an older consumer can read a newer producer's payload.
 - **Strict mode still coerces, without losing data.** `Int` reads numeric strings (`'42'`) and integral floats (`3.0`), but refuses `3.7`, which lax mode truncates; `Bool` reads `'yes'` / `'off'` and the ints `0` / `1`; `Float` reads `'nan'`. String coercion is deliberate, since it is how string-only sources such as topic-key captures decode.
-- **NaN dumps as bare `NaN`**, which is Python's `json` default but not standard JSON. Pass `allow_nan=False` to `Cls.to_json` to refuse it.
+- **NaN dumps as bare `NaN`**, which is Python's `json` default but not standard JSON. Pass `allow_nan=False` to `Cls.dumps` or `Cls.to_json` to refuse it, as JSON bound for a browser should.
 - **Mutable defaults** are per-instance: `default_factory=callable` builds a fresh value each time (preferred); a mutable `default=[...]` is deep-copied per-instance as a fallback.
 - **CSV is flat-only.** Nested fields and `many=True` / `keyed=True` collections raise `TypeError` at call time. Flatten-and-rehydrate is deferred to a future release.
 - **DataFrame fields are records-form only.** Dtype-preserving transport (Parquet / Arrow IPC) is out of scope.
