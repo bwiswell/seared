@@ -13,8 +13,8 @@ for free.
 ## Why seared
 
 - **Zero runtime dependencies.** Pure stdlib core. Numpy / pandas / polars / PyYAML / tomli-w live behind opt-in extras.
-- **Fast for pure Python.** ~3.5× faster `load` and ~1.8× faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
-- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run ~11× faster on `load`, ~9× on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
+- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~3.3×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~1.8×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
+- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
 - **Compact.** `@s.seared` classes are `__slots__` dataclasses by default — lower memory per instance, faster attribute access.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
 - **Typed-callable fields.** `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, plus optional `NDArray`, `PandasFrame`, `PolarsFrame`.
@@ -276,7 +276,7 @@ See [`docs/_core/errors.md`](docs/_core/errors.md) for the full hierarchy.
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
 a list of strings) on an idle machine. Recorded
-<!-- bench:run -->2026-08-31, Python 3.14.3, 20,000 iterations; seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run -->;
+<!-- bench:run -->2026-08-31, Python 3.14.3, 20,000 iterations, one run; seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run -->;
 ratios are versus marshmallow:
 
 <!-- bench:ops -->
@@ -289,23 +289,26 @@ ratios are versus marshmallow:
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
 same schema decorated `@s.seared(validate=False)`. Both are benched with the
 accelerator explicitly off, so these are the pure-Python numbers whatever
-happens to be installed. One run is one sample — the spread is a few percent
-on an idle box and much wider under load. pydantic's compiled Rust core outruns pure Python —
-that is the trade seared makes by default, and [`rusted`](#accelerator) is
-how you opt out of it without changing a line of your own code.
+happens to be installed. Every number is
+<!-- bench:runs -->from one run<!-- /bench:runs -->, and every one in this
+README is generated from the recorded results, prose included.
+pydantic's compiled Rust core outruns pure Python — that is the trade seared
+makes by default, and [`rusted`](#accelerator) is how you opt out of it
+without changing a line of your own code.
 
 The bench lives in [`bench/`](bench/)
-(`uv sync --extra bench && uv run python -m bench`) and records each run to
-[`bench/results.json`](bench/results.json); methodology and caveats in
-[`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
+(`uv sync --extra bench && uv run python -m bench --runs 3`) and records to
+[`bench/results.json`](bench/results.json); methodology, run-to-run spread
+and caveats are in [`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
 
 ## Accelerator
 
 seared is pure Python and zero-dependency, and stays that way. When the
 optional compiled core [`rusted`](https://github.com/bwiswell/rusted) is
 installed, `@s.seared` swaps its generated `load` / `dump` for compiled
-equivalents — same classes, same API, same error messages, ~11× on `load`
-and ~9× on `dump`.
+equivalents — same classes, same API, same error messages,
+<!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> on `load` and
+<!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> on `dump`.
 
 ```sh
 uv add git+https://www.github.com/bwiswell/rusted.git   # nothing in your code changes
@@ -379,7 +382,12 @@ uv run deptry .       # dependency hygiene
 uv run ty check       # type check
 ```
 
-A fifth refuses any commit on `master`.
+A fifth, `uv run python -m bench.tables --check`, runs whenever the README,
+`docs/overview/benchmarks.md` or `bench/` changes. Every benchmark number in
+those two docs is generated from `bench/results.json`, and the check fails
+when one has drifted from it; recording a run re-renders them (see
+[`docs/overview/benchmarks.md`](docs/overview/benchmarks.md#reproduction)).
+A sixth refuses any commit on `master`.
 
 **Branches and releases.**
 - **`master` holds released commits only,** and moves only by merge.
