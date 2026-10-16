@@ -88,6 +88,13 @@ lines as it lands, and the entry is dated when that version is released.
 - **The pure-Python `load` and `dump` make one fewer call per field.** Whether a field is a `Union` envelope is now
   settled once per class, when the class is decorated, rather than asked of every field on every call. Nothing
   else changes, and accelerated classes never ran that code.
+- **Breaking:** `seared.doc`'s fields table follows 0.4.0's rules, so a committed page checked with `--check` fails
+  until it is regenerated, which is one command. Three things change, and nothing else on the page:
+  - an optional field with no default shows `None` in the `default` column, the value its attribute gets, rather
+    than `null`, which such a field never loads or dumps;
+  - a nullable field's notes say `nullable: null loads as None`, which its annotation can't show; `FieldDoc` gains a
+    `nullable` flag, appended so positional construction still works;
+  - a `Union` row is marked required, with no default: a missing or `null` tag always raises.
 
 ### Fixed
 
