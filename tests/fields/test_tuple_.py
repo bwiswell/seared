@@ -57,6 +57,16 @@ class TestTuple:
         d = Obj.dump(Obj(point=None))
         assert 'point' not in d
 
+    def test_nullable_passes_through(self):
+        @s.seared
+        class Obj(s.Seared):
+            point: tuple | None = s.Tuple(s.Float(), s.Float(), nullable=True, default=(0.0, 0.0))
+
+        assert Obj.__seared_fields__[0].field.nullable is True
+        assert Obj.load({'point': None}).point is None
+        assert Obj.load({}).point == (0.0, 0.0)
+        assert Obj.dump(Obj(point=None)) == {'point': None}
+
     def test_default(self):
         @s.seared
         class Obj(s.Seared):

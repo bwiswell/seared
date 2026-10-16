@@ -57,30 +57,33 @@ class Foo(s.Seared): ...
 
 What the generated `load` does with each declared field, in order:
 
-1. **Wire key present** → the value goes through the field (via `_apply`).
-   A `null` value short-circuits to `None` before the field ever sees it,
-   whatever the field's `required` / default, so a wire `null` *overrides*
-   a default rather than counting as absent.
-2. **Absent, `required=True`** → `ValidationError`, reading
-   `Cls.wire: required key missing` (the path names the wire key; see
-   [`errors.md`](errors.md)).
-   "Required" means the key is present, not that the value is non-null.
-3. **Absent, `default_factory`** → a fresh value from the factory.
-4. **Absent, otherwise** → the static default (`None` if none was given).
+1. **Wire key present with a value** → the value goes through the field
+   (via `_apply`).
+2. **Wire key present with `null`, on a `nullable=True` field** → `None`,
+   whatever the default. A nullable required field is satisfied by it.
+3. **Absent, or `null` on a field that isn't nullable** → the two read the
+   same:
+   - **`required=True`** → `ValidationError`, reading
+     `Cls.wire: required key missing` (the path names the wire key; see
+     [`errors.md`](errors.md));
+   - **a `default_factory`** → a fresh value from the factory;
+   - **otherwise** → the static default (`None` if none was given).
 
-Then `cls(**kwargs)` builds the instance. Two more rules round it out:
+Then `cls(**kwargs)` builds the instance. Three more rules round it out:
 
 - **Unknown wire keys are ignored**, so an older consumer can read a newer
   producer's payload. The family relies on it to remove fields outright.
 - **Construction doesn't check `required`.** `Cls()` runs the dataclass
   `__init__`, which leaves an omitted required field as `None`; the type
   checker flags the call, and only `load` raises.
+- **The same in lax mode.** `validate=False` relaxes coercion, not these
+  rules.
 
-`dump` is the mirror image: it skips `dump=False` fields and `None` values,
-so `None` and "absent" are the same thing on the wire.
-
-0.4.0 changes rules 1 and 2: `null` reads as absent unless a field is
-declared nullable, so a required field rejects it.
+`dump` is the mirror image: it skips `dump=False` fields, and `None`
+values except on a nullable field, which it writes as `null`. Leaving a
+`None` out loses nothing a `null` would have kept, since `load` reads the
+two alike. The full table is in
+[`../fields/field.md`](../fields/field.md#null-on-the-wire).
 
 ## `_apply` orchestration
 

@@ -201,9 +201,7 @@ def _relocated(e, err, *segments, cls_name=None):
 
 
 def _apply(f, v, one, validate, format, err):
-    """Mirrors ``seared._core.decorator._apply`` — keyed / many orchestration."""
-    if v is None:
-        return None
+    """Mirrors ``seared._core.decorator._apply`` — keyed / many orchestration; ``v`` is never ``None``."""
     if f['keyed']:
         if validate and not isinstance(v, dict):
             msg = f'expected dict for keyed field, got {type(v).__name__}'
@@ -232,11 +230,15 @@ def _apply(f, v, one, validate, format, err):
 def _load_value(f, data, name, validate, format, err):
     """One field's value on load — mirrors the decorator's resolution order."""
     wire = f['wire']
-    if wire in data:
+    v = data.get(wire)
+    if v is not None:
         try:
-            return _apply(f, data[wire], f['de_one'], validate, format, err)
+            return _apply(f, v, f['de_one'], validate, format, err)
         except err as e:
             raise _relocated(e, err, wire, cls_name=name) from None
+    # A ``null`` is a value only on a nullable field; elsewhere it reads as absent.
+    if f['nullable'] and wire in data:
+        return None
     if f['required']:
         msg = 'required key missing'
         raise err(msg, path=(wire,), cls_name=name)
@@ -245,10 +247,18 @@ def _load_value(f, data, name, validate, format, err):
     return f['default']
 
 
-def _dump_value(f, v, name, validate, format, err):
-    """One field's wire value on dump; a failure's path names the attribute."""
+def _dump_into(out, f, v, name, validate, format, err):
+    """One field's wire value on dump; a failure's path names the attribute.
+
+    ``None`` is written as ``null`` only on a nullable field, and left out
+    everywhere else.
+    """
+    if v is None:
+        if f['nullable']:
+            out[f['wire']] = None
+        return
     try:
-        return _apply(f, v, f['ser_one'], validate, format, err)
+        out[f['wire']] = _apply(f, v, f['ser_one'], validate, format, err)
     except err as e:
         raise _relocated(e, err, f['attr'], cls_name=name) from None
 
@@ -288,12 +298,8 @@ def compile_spec(spec: dict[str, Any]) -> tuple[Any, Any] | None:
     def dump(obj, format='json'):
         out = {}
         for f in fields:
-            if not f['dump']:
-                continue
-            v = getattr(obj, f['attr'], None)
-            if v is None:
-                continue
-            out[f['wire']] = _dump_value(f, v, name, validate, format, err)
+            if f['dump']:
+                _dump_into(out, f, getattr(obj, f['attr'], None), name, validate, format, err)
         return out
 
     return load, dump

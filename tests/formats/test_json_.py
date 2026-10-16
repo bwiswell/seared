@@ -62,3 +62,27 @@ class TestErrors:
     def test_missing_required_field_raises_validation(self):
         with pytest.raises(s.ValidationError):
             Telemetry.from_json('{"id": 1}')  # missing x, y
+
+
+@s.seared
+class Reading(s.Seared):
+    sensor: str = s.Str(required=True)
+    value: float | None = s.Float(nullable=True, required=True)
+    unit: str = s.Str(default='C')
+
+
+class TestNull:
+    """Pin: a JSON ``null`` is a value only on a nullable field; elsewhere it reads as absent."""
+
+    def test_a_null_on_a_nullable_field_is_kept(self):
+        got = Reading.from_json('{"sensor": "t1", "value": null, "unit": null}')
+        assert (got.value, got.unit) == (None, 'C')
+
+    def test_a_null_on_a_required_field_is_missing(self):
+        with pytest.raises(s.ValidationError, match=r'^Reading\.sensor: required key missing$'):
+            Reading.from_json('{"sensor": null, "value": 1.5}')
+
+    def test_a_nullable_none_round_trips(self):
+        text = Reading.to_json(Reading(sensor='t1', value=None))
+        assert json.loads(text) == {'sensor': 't1', 'value': None, 'unit': 'C'}
+        assert Reading.from_json(text) == Reading(sensor='t1', value=None)

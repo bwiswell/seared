@@ -28,6 +28,7 @@ class TestFieldDefaults:
         assert f.keyed is False
         assert f.many is False
         assert f.required is False
+        assert f.nullable is False
         assert f.dump is True
         assert f.default is None
         assert f.default_factory is None
@@ -38,12 +39,14 @@ class TestFieldDefaults:
             keyed=True,
             many=False,
             required=True,
+            nullable=True,
             dump=False,
             default=42,
         )
         assert f.data_key == 'wire'
         assert f.keyed is True
         assert f.required is True
+        assert f.nullable is True
         assert f.dump is False
         assert f.default == 42
 

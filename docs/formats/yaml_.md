@@ -18,6 +18,10 @@ field order from the seared declaration. `from_yaml` uses
 `from_yaml` accepts a path-like or a string of YAML content (see
 [`_common.md`](_common.md)). Top-level value must be a YAML mapping.
 
+YAML's `~` (or `null`) is JSON's `null`: a value on a nullable field, an
+absent key on any other (see
+[`../fields/field.md`](../fields/field.md#null-on-the-wire)).
+
 ## Missing-extra behaviour
 
 Both methods raise a clear `ImportError` at call time when PyYAML

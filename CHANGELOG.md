@@ -11,7 +11,7 @@ lines as it lands, and the entry is dated when that version is released.
 
 ## 0.4.0 — unreleased
 
-**Errors that say where they happened, `SPEC_ABI` 2, and the changelog in the repository.**
+**Errors that say where they happened, `null` read as absent, `SPEC_ABI` 2, and the changelog in the repository.**
 
 ### Added
 
@@ -32,6 +32,10 @@ lines as it lands, and the entry is dated when that version is released.
   a `load` or `dump` adds them.
 - **`from_csv` and `to_csv` name the bad record** by its 0-based index among the data rows, header not counted:
   `Row[2].id`.
+- **`nullable=True`**, a field option that makes `None` a value: `load` keeps a wire `null` as `None`, even over a
+  default, and `dump` writes `None` as `null`. It is independent of `required`, as in JSON Schema, so a nullable
+  required field must be present but may be `null`. Annotate it `X | None`. Every field takes it except `Union`,
+  which refuses it with a `TypeError`, since its envelope has no one key to carry a `null`.
 
 ### Changed
 
@@ -61,6 +65,16 @@ lines as it lands, and the entry is dated when that version is released.
   `default=` is the value an absent key gets; read that way, `Union(default=Unknown)` would have filled an omitted
   attribute with the class `Unknown` itself. So `default=` (anything but `None`) and `default_factory=` now raise
   `TypeError` pointing at `fallback=`, rather than change meaning silently. `default=None` is still accepted.
+- **Breaking:** a wire `null` on a field that isn't nullable reads as an absent key. A required field raises
+  `required key missing`, and a defaulted one gets its default, where before the `null` satisfied `required` and
+  replaced the default with `None`. `dump` already left `None` out, so seared-to-seared traffic is unchanged; the
+  change is for `null`s from elsewhere. The same goes in lax mode, for YAML's `~`, and for the cells `from_csv`
+  finds missing in a short row. A `null` element inside a `many` or `keyed` collection is still an error.
+- A `null` under a `Union`'s `payload_key` is an absent payload, so the variant loads from its defaults rather than
+  raising `expected dict, got NoneType`.
+- **`to_toml` leaves out `None`-valued keys**, at any depth, since TOML has no null; they read back as absent. A
+  `Dict` value of `None` had made `tomli-w` raise.
+- **`SPEC_ABI` 2's spec carries `nullable`** for each field.
 
 ### Removed
 

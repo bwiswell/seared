@@ -13,6 +13,11 @@ class Field:
     keyed: bool = False
     many: bool = False
     required: bool = False
+    # Whether ``None`` is a value. On a nullable field a wire ``null`` loads as
+    # ``None`` (even over a default) and ``dump`` writes ``None`` as ``null``;
+    # on any other, a ``null`` reads as an absent key and ``dump`` leaves
+    # ``None`` out. Independent of ``required``, as in JSON Schema.
+    nullable: bool = False
     dump: bool = True
     # Human-facing field description — units, semantics, provenance. Never
     # serialized (wire-invisible metadata, like ``data_key``); surfaced by

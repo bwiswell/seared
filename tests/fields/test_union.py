@@ -304,6 +304,38 @@ class TestDefaultIsRefused:
         assert Cmd().action is None
 
 
+class TestNull:
+    """Pin: a Union can't be nullable, and a ``null`` payload is an absent one."""
+
+    def test_nullable_is_refused(self):
+        with pytest.raises(TypeError, match=r'nullable= is not supported'):
+            s.Union(variants={'start': Start}, nullable=True)
+
+    def test_a_null_payload_loads_the_variant_from_its_defaults(self):
+        @s.seared
+        class Control(s.Seared):
+            action: object = s.Union(variants={'stop': Stop, 'start': Start}, tag_key='action', payload_key='args')
+
+        assert isinstance(Control.load({'action': 'stop', 'args': None}).action, Stop)
+
+    def test_a_null_payload_still_needs_the_variants_required_keys(self):
+        @s.seared
+        class Control(s.Seared):
+            action: object = s.Union(variants={'start': Start}, tag_key='action', payload_key='args')
+
+        with pytest.raises(s.ValidationError) as info:
+            Control.load({'action': 'start', 'args': None})
+        assert str(info.value) == 'Control.args.speed: required key missing'
+
+    def test_a_null_tag_is_still_missing(self):
+        @s.seared
+        class Event(s.Seared):
+            data: object = s.Union(variants={'start': Start})
+
+        with pytest.raises(s.ValidationError, match=r"missing tag 'type'"):
+            Event.load({'type': None, 'speed': 1.0})
+
+
 # ---------------------------------------------------------------------------
 # The carrier hint crosses the variant boundary (0.3.1).
 # ---------------------------------------------------------------------------

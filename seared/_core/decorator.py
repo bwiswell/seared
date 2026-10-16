@@ -295,6 +295,10 @@ def _make_dump(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callab
                 continue
             v = getattr(obj, attr, None)
             if v is None:
+                # ``null`` only where it's a value; anywhere else ``None`` is
+                # left out, which a ``load`` reads back the same way.
+                if f.nullable:
+                    out[wire] = None
                 continue
             try:
                 if _is_unwrap(f):
@@ -314,7 +318,7 @@ def _make_dump(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callab
     return dump
 
 
-def _make_load(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
+def _make_load(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callable:  # noqa: C901 — one flat loop: a helper would cost a call per key
     cls_name = cls.__name__
 
     # Each failure gains its location as it passes back up through here: a
@@ -328,19 +332,27 @@ def _make_load(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callab
         for attr, wire, f in specs:
             if _is_unwrap(f):
                 kwargs[attr] = _load_envelope(f, data, validate, format, cls_name)
-            elif wire in data:
-                try:
-                    kwargs[attr] = _apply(f, data[wire], 'deserialize', validate, format=format)
-                except ValidationError as e:
-                    add_location(e, wire, cls_name=cls_name)
-                    raise
-            elif f.required:
+                continue
+            if wire in data:
+                v = data[wire]
+                if v is not None:
+                    try:
+                        kwargs[attr] = _apply(f, v, 'deserialize', validate, format=format)
+                    except ValidationError as e:
+                        add_location(e, wire, cls_name=cls_name)
+                        raise
+                    continue
+                if f.nullable:
+                    kwargs[attr] = None
+                    continue
+            # Absent, or a ``null`` on a field that isn't nullable, which reads
+            # the same: it can't satisfy ``required`` or displace a default.
+            # Absent keys are the common case (``dump`` strips ``None``), so
+            # they pay no ``null`` check.
+            if f.required:
                 msg = 'required key missing'
                 raise ValidationError(msg, path=(wire,), cls_name=cls_name)
-            elif f.default_factory is not None:
-                kwargs[attr] = f.default_factory()
-            else:
-                kwargs[attr] = f.default
+            kwargs[attr] = f.default if f.default_factory is None else f.default_factory()
         try:
             return cls(**kwargs)
         except ValidationError as e:
@@ -367,9 +379,8 @@ def _load_envelope(f: Any, data: dict[str, Any], validate: bool, format: str, cl
 
 
 def _apply(f: Any, v: Any, op: str, validate: bool, *, format: str = 'json') -> Any:
+    # ``v`` is never ``None``: ``load`` and ``dump`` settle a ``None`` first.
     method = getattr(f, op)
-    if v is None:
-        return None
     if f.keyed:
         if validate and not isinstance(v, dict):
             msg = f'expected dict for keyed field, got {type(v).__name__}'

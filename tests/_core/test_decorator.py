@@ -787,3 +787,137 @@ class TestErrorPaths:
     def test_a_field_raising_on_its_own_stays_bare(self):
         e = _failure(s.Int().deserialize, 'x')
         assert (str(e), e.path, e.cls_name) == ("cannot deserialize 'x' as int", (), None)
+
+
+# ---------------------------------------------------------------------------
+# Null on the wire — a ``null`` is a value only on a ``nullable`` field.
+# ---------------------------------------------------------------------------
+
+
+def _null_table(validate=True):
+    """One field per column of the null table: a required field, a defaulted one, and so on."""
+
+    @s.seared(validate=validate)
+    class Row(s.Seared):
+        req: int = s.Int(required=True)
+        dflt: int = s.Int(default=5)
+        bare: int | None = s.Int()
+        n_dflt: int | None = s.Int(nullable=True, default=5)
+        n_req: int | None = s.Int(nullable=True, required=True)
+
+    return Row
+
+
+#: The wire states, each turned into a payload for one column: absent, ``null`` or a value.
+_ABSENT, _NULL = object(), None
+_BASE = {'req': 1, 'n_req': 2}
+_ERROR = 'required key missing'
+
+#: (column, absent, null, value) — what ``load`` gives for each wire state.
+_TABLE = [
+    ('req', _ERROR, _ERROR, 7),
+    ('dflt', 5, 5, 7),
+    ('bare', None, None, 7),
+    ('n_dflt', 5, None, 7),
+    ('n_req', _ERROR, None, 7),
+]
+
+
+def _loaded(cls, column, wire):
+    data = {k: v for k, v in _BASE.items() if k != column}
+    if wire is not _ABSENT:
+        data[column] = wire
+    try:
+        return getattr(cls.load(data), column)
+    except s.ValidationError as e:
+        return e.reason
+
+
+class TestNullOnTheWire:
+    """Pin: a ``null`` on a field that isn't nullable reads as an absent key."""
+
+    @pytest.mark.parametrize('validate', [True, False], ids=['strict', 'lax'])
+    @pytest.mark.parametrize(('column', 'absent', 'null', 'value'), _TABLE, ids=[r[0] for r in _TABLE])
+    def test_the_null_table(self, validate, column, absent, null, value):
+        cls = _null_table(validate)
+        assert _loaded(cls, column, _ABSENT) == absent
+        assert _loaded(cls, column, _NULL) == null
+        assert _loaded(cls, column, 7) == value
+
+    def test_a_null_on_a_required_field_names_its_wire_key(self):
+        @s.seared
+        class Port(s.Seared):
+            port: int = s.Int(required=True, data_key='p')
+
+        e = _failure(Port.load, {'p': None})
+        assert (str(e), e.path) == ('Port.p: required key missing', ('p',))
+
+    def test_a_null_takes_the_default_factory(self):
+        @s.seared
+        class Tagged(s.Seared):
+            tags: list[str] = s.Str(many=True, default_factory=list)
+
+        assert Tagged.load({'tags': None}).tags == []
+
+    def test_a_null_nested_object_is_absent(self):
+        e = _failure(_PathRoot.load, {'items': None})
+        assert str(e) == '_PathRoot.items: required key missing'
+        assert _PathRoot.load({'items': [], 'readers': None}).readers == {}
+
+    def test_a_null_inside_a_nested_object_follows_its_own_field(self):
+        e = _failure(_PathRoot.load, {'items': [{'n': None}]})
+        assert str(e) == '_PathRoot.items[0].n: required key missing'
+
+    def test_a_nullable_collection_can_be_null(self):
+        @s.seared
+        class Readings(s.Seared):
+            values: list[int] | None = s.Int(many=True, nullable=True, default_factory=list)
+            named: dict[str, int] | None = s.Int(keyed=True, nullable=True)
+
+        got = Readings.load({'values': None, 'named': None})
+        assert (got.values, got.named) == (None, None)
+        assert Readings.load({}).values == []
+
+    def test_a_null_element_is_still_an_error(self):
+        @s.seared
+        class Readings(s.Seared):
+            values: list[int] | None = s.Int(many=True, nullable=True)
+
+        e = _failure(Readings.load, {'values': [1, None]})
+        assert e.path == ('values', 1)
+
+    def test_a_nullable_nested_object_can_be_null(self):
+        @s.seared
+        class Holder(s.Seared):
+            port: _PathPort | None = s.T(_PathPort, nullable=True, required=True)
+
+        assert Holder.load({'port': None}).port is None
+        assert str(_failure(Holder.load, {})) == 'Holder.port: required key missing'
+
+
+class TestNullOnDump:
+    """Pin: ``dump`` writes ``null`` only for a nullable field; ``load`` reads either back the same."""
+
+    def test_only_a_nullable_none_is_written(self):
+        cls = _null_table()
+        row = cls(req=1, n_req=None, n_dflt=None)
+        assert cls.dump(row) == {'req': 1, 'dflt': 5, 'n_dflt': None, 'n_req': None}
+
+    def test_a_nullable_none_survives_a_round_trip_over_its_default(self):
+        cls = _null_table()
+        row = cls(req=1, n_req=None, n_dflt=None)
+        back = cls.load(json.loads(json.dumps(cls.dump(row))))
+        assert back == row
+
+    def test_a_non_nullable_none_round_trips_as_its_default(self):
+        cls = _null_table()
+        row = cls(req=1, n_req=2, dflt=None)
+        assert 'dflt' not in cls.dump(row)
+        assert cls.load(cls.dump(row)).dflt == 5
+
+    def test_dump_false_wins_over_nullable(self):
+        @s.seared
+        class Hidden(s.Seared):
+            secret: str | None = s.Str(nullable=True, dump=False)
+
+        assert Hidden.dump(Hidden()) == {}

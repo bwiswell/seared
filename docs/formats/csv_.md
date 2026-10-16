@@ -61,3 +61,7 @@ Row.from_csv('name,score\nalice,90\nbob,85\ncarol,lots\n')
 ```
 
 `to_csv` does the same with the index into the records you passed.
+
+A short row's missing cells read as absent keys, so they take their
+field's default, or raise `required key missing`. An empty cell is not
+missing: it's the string `''`, and goes through the field like any other.

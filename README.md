@@ -23,6 +23,7 @@ for free.
 - **File-format codecs out of the box.** `Cls.to_json` / `Cls.from_json` / `Cls.to_toml` / `Cls.from_toml` / `Cls.to_yaml` / `Cls.from_yaml` / `Cls.to_csv` / `Cls.from_csv` are auto-attached at decorator time. JSON / TOML-read / CSV are stdlib; YAML / TOML-write / DataFrame fields are optional extras.
 - **`format=` carrier hint.** `Cls.dump(obj, format='msgpack')` threads the hint into each field; `Bytes` and `NDArray` switch to native binary, dropping the ~33% base64 overhead.
 - **Typed & type-checker-friendly.** `@s.seared` is a PEP 681 `@dataclass_transform`, so `x: str = s.Str(...)` type-checks under `ty` / `pyright` / `mypy` — no `invalid-assignment`, and `.load()` results carry their annotated attribute types. See [Type checking](#type-checking).
+- **`null` is absent unless you say otherwise.** A wire `null` can't satisfy `required=True` or displace a default; `nullable=True` makes `None` a real value that `load` keeps and `dump` writes. See [`docs/fields/field.md`](docs/fields/field.md#null-on-the-wire).
 - **Mutable-default safety.** `default_factory=list` / `default_factory=dict` / `default_factory=set` build a fresh value per-instance — no shared-default footgun. (A mutable `default=[...]` is deep-copied per-instance as a fallback.)
 - **Path normalisation.** `s.Path` always serialises as POSIX strings; round-trip is cross-platform deterministic.
 - **Lossless `Decimal`.** String-by-default wire form preserves every digit; opt into JSON-number form per field with `as_number=True`.
@@ -154,6 +155,9 @@ reveal_type(Cfg.load({}).name)  # str  (.load() returns the concrete class)
   `f: list[int] = s.Int(many=True, default_factory=list)` types as `list[int]`.
   The checker does not cross-check the annotation against the field kind;
   runtime validation still does.
+- A **nullable** field is annotated `X | None`. `nullable` is independent of
+  `required`, so `x: int | None = s.Int(nullable=True, required=True)` must
+  be passed, but `None` is a legal value for it.
 
 Because `seared` ships `py.typed`, downstream projects that previously excluded
 their `@seared` modules from `ty` can drop those excludes.
@@ -358,9 +362,8 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 ## Limits
 
 - **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` and `NDArray` honour the hint; other fields are unaffected.
-- **No nullable-true fields** — `None` is always stripped from dumps; explicit JSON `null` is not emittable.
 - **No async variants.** seared is pure CPU-bound transformation; no async path is planned.
-- **`required` means the key is present, not that the value is non-null.** A wire `null` loads as `None`, even for a `required=True` field, and it overrides a `default=` rather than counting as absent. (0.4.0 treats `null` as absent unless a field opts into being nullable.)
+- **`nullable` is about a field's own value.** A `null` *element* inside a `many` / `keyed` collection is still an error, and a `Union` can't be nullable. TOML has no null, so `to_toml` leaves a nullable `None` out and it reads back as absent.
 - **Construction doesn't check `required`.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises.
 - **Unknown wire keys are ignored** on `load`, by design: an older consumer can read a newer producer's payload.
 - **Strict mode still coerces.** `Int` reads numeric strings (`'42'`) and floats, truncating `3.7` to `3`; `Bool` reads `'yes'` / `'off'` and ints; `Float` reads `'nan'`. String coercion is deliberate, since it is how string-only sources such as topic-key captures decode. Float truncation goes in 0.4.0.

@@ -14,7 +14,7 @@ Both exceptions are re-exported at the package root: `s.SearedError`,
 `ValidationError` is the only concrete error seared raises today.
 Sources:
 
-- **`load`** — required field absent; type mismatch on a wire value;
+- **`load`** — required field absent (or `null`, unless nullable); type mismatch on a wire value;
   unknown `Union` tag without a `fallback=` variant; CSV/Pandas/Polars
   shape mismatches.
 - **`dump`** — strict `validate=True` produces a `ValidationError`
@@ -55,7 +55,9 @@ cases worth knowing:
 
 - **A missing required key** ends the path at the key that is absent:
   `Outer.items[0].n: required key missing`. Looking that one up raises
-  `KeyError`, which is the point.
+  `KeyError`, which is the point. A `null` on a required field that isn't
+  nullable reads as absent, so it gets the same error, though there the
+  lookup finds the `None`.
 - **A non-dict** names the class alone: `Outer: expected dict, got list`.
 - **A `Union`'s** tag errors point at the tag key. A nested envelope's
   payload errors sit under its `payload_key`; a flat envelope's are at the

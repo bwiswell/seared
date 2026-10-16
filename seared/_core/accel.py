@@ -235,6 +235,7 @@ def _field_spec(owner: str, attr: str, wire: str, f: Field) -> dict[str, Any]:
         'wire': wire,
         'kind': kind,
         'required': f.required,
+        'nullable': f.nullable,
         'many': f.many,
         'keyed': f.keyed,
         'dump': f.dump,
