@@ -157,3 +157,16 @@ class TestErrorPaths:
             Row.to_csv(rows)
         assert info.value.path == (1, 'id')
         assert str(info.value) == 'Row[1].id: expected int, got str'
+
+
+class TestShortRows:
+    """Pin: a short row's missing cells (``None`` from ``DictReader``) read as absent keys."""
+
+    def test_a_missing_cell_takes_the_default(self):
+        (row,) = Row.from_csv('id,name,score\n1,a\n')
+        assert row.score == 0.0
+
+    def test_a_missing_required_cell_is_missing(self):
+        with pytest.raises(s.ValidationError) as info:
+            Row.from_csv('id,name,score\n1\n')
+        assert str(info.value) == 'Row[0].name: required key missing'

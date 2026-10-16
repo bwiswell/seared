@@ -73,6 +73,12 @@ class Union(Field):
                     f'to fall back to a variant on an unknown tag, use fallback=<VariantCls>'
                 )
                 raise TypeError(msg)
+        # A Union's envelope spans its parent's keys (the tag, and the payload
+        # key or the variant's own fields), so there is no one key a ``null``
+        # could sit on.
+        if self.nullable:
+            msg = 'Union: nullable= is not supported, since a Union has no single wire key to carry a null'
+            raise TypeError(msg)
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> dict:
         """Variant instance → the ``{tag, payload}`` envelope (flat or nested)."""
@@ -121,7 +127,11 @@ class Union(Field):
             # dict, so its errors already carry the right path.
             payload = {k: v for k, v in value.items() if k != self.tag_key}
             return variant_cls.load(payload, kwargs.get('format', 'json'))
-        payload = value.get(self.payload_key, {})
+        # A ``null`` payload is an absent one, as a ``null`` is for any key that
+        # isn't nullable: the variant loads from its defaults.
+        payload = value.get(self.payload_key)
+        if payload is None:
+            payload = {}
         try:
             return variant_cls.load(payload, kwargs.get('format', 'json'))
         except ValidationError as e:

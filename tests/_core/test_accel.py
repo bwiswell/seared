@@ -400,6 +400,18 @@ class TestSpecEmission:
         assert by_attr['keyed']['keyed'] is True
         assert by_attr['hidden']['dump'] is False
 
+    def test_nullable_is_carried(self, use_backend):
+        use_backend('refcore')
+
+        @s.seared
+        class Nulls(s.Seared):
+            plain: int | None = s.Int()
+            maybe: int | None = s.Int(nullable=True, default=5)
+
+        by_attr = {f['attr']: f for f in Nulls.__seared_spec__['fields']}
+        assert by_attr['plain']['nullable'] is False
+        assert by_attr['maybe']['nullable'] is True
+
     def test_lax_class_carries_its_own_validate(self, use_backend):
         use_backend('refcore')
         _inner, outer = _tier1(validate=False)
@@ -427,7 +439,12 @@ CASES = [
     ('bool-garbage', {**PAYLOAD, 'flag': []}),
     ('many-not-a-list', {**PAYLOAD, 'tags': 'alpha'}),
     ('nested-not-a-dict', {**PAYLOAD, 'items': [7]}),
-    ('null-value', {**PAYLOAD, 'name': None}),
+    ('null-required', {**PAYLOAD, 'name': None}),
+    ('null-defaulted', {**PAYLOAD, 'flag': None}),
+    ('null-factory', {**PAYLOAD, 'tags': None}),
+    ('null-nested-required', {**PAYLOAD, 'items': None}),
+    ('null-inside-nested', {**PAYLOAD, 'items': [{'x': None, 'y': 1.0}]}),
+    ('null-element', {**PAYLOAD, 'tags': ['a', None]}),
     ('unknown-keys', {**PAYLOAD, 'surprise': 1}),
     ('defaults-omitted', {'name': 'd', 'items': []}),
     ('top-level-not-a-dict', ['not', 'a', 'dict']),
@@ -527,6 +544,50 @@ class TestDifferential:
         assert Partial.__seared_accel__.accelerated is True
         assert Partial.dump(Partial.load({'shown': 'a', 'hidden': 'b'})) == {'shown': 'a'}
         assert Partial.dump(Partial.load({})) == {}
+
+    @pytest.mark.parametrize('validate', [True, False], ids=['strict', 'lax'])
+    def test_the_null_table_matches(self, use_backend, validate):
+        use_backend('refcore')
+
+        def build(**kwargs):
+            @s.seared(validate=validate, **kwargs)
+            class Leaf(s.Seared):
+                n: int = s.Int(required=True)
+
+            @s.seared(validate=validate, **kwargs)
+            class Row(s.Seared):
+                req: int = s.Int(required=True)
+                dflt: int = s.Int(default=5)
+                bare: int | None = s.Int()
+                n_dflt: int | None = s.Int(nullable=True, default=5)
+                n_req: int | None = s.Int(nullable=True, required=True)
+                n_many: list[int] | None = s.Int(many=True, nullable=True, default_factory=list)
+                n_leaf: Leaf | None = s.T(Leaf, nullable=True)
+
+            return Row
+
+        accelerated, pure = build(), build(accel=False)
+        assert accelerated.__seared_accel__.accelerated is True
+        base = {'req': 1, 'n_req': 2}
+        for column in ('req', 'dflt', 'bare', 'n_dflt', 'n_req', 'n_many', 'n_leaf'):
+            for payload in ({k: v for k, v in base.items() if k != column}, {**base, column: None}):
+                got, want = _outcome(accelerated.load, payload), _outcome(pure.load, payload)
+                if want[0] == 'raised':
+                    assert got == want, (column, payload)
+                else:
+                    assert accelerated.dump(got[1]) == pure.dump(want[1]), (column, payload)
+        everything_null = accelerated(req=1, n_req=None, n_dflt=None, n_many=None, n_leaf=None)
+        assert accelerated.dump(everything_null) == {
+            'req': 1,
+            'dflt': 5,
+            'n_dflt': None,
+            'n_req': None,
+            'n_many': None,
+            'n_leaf': None,
+        }
+        assert accelerated.dump(everything_null) == pure.dump(
+            pure(req=1, n_req=None, n_dflt=None, n_many=None, n_leaf=None)
+        )
 
     def test_keyed_round_trip(self, use_backend):
         use_backend('refcore')

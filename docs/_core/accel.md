@@ -44,7 +44,7 @@ from being seared's problem.
 | 2 | `UUID`, `Date`, `DateTime`, `Time`, `TimeDelta`, `Decimal`, `Bytes`, `Enum`, `Path`, `Dict` | supported |
 | 3 | `Tuple`, `Union`, `NDArray`, `PandasFrame`, `PolarsFrame` | deferred |
 
-The field *flags* — `many`, `keyed`, `required`, `default`,
+The field *flags* — `many`, `keyed`, `required`, `nullable`, `default`,
 `default_factory`, `data_key`, `dump=False` — are all carried in Tier 1.
 
 Tier 2 does not run as fast as Tier 1, and can't: those kinds spend their
@@ -79,6 +79,12 @@ spelling table, so `'false'` loaded as `True`; see
 [`../fields/bool_.md`](../fields/bool_.md)) but could only keep ABI 1
 backends away from it by declining every `validate=False` class with a
 `Bool`. ABI 2 carries the fix, so those classes accelerate again.
+
+The null rule is another. A `null` on a field that isn't nullable now reads
+as an absent key, where an ABI 1 backend loads it as `None`. Each field's
+spec gains a `nullable` flag: when it's set, `load` keeps a `null` as `None`
+and `dump` writes `None` as `null`. Everywhere else `dump` still leaves
+`None` out.
 
 ## Introspection
 

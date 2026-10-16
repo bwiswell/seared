@@ -64,7 +64,9 @@ The base `Field` dataclass holds:
 - `data_key: Optional[str]` — wire key override (defaults to attr name).
 - `keyed: bool` — wraps as `dict[str, V]`.
 - `many: bool` — wraps as `list[V]`.
-- `required: bool` — `load` raises if absent.
+- `required: bool` — `load` raises if absent (a `null` reads as absent).
+- `nullable: bool` — `None` is a value: `load` keeps a `null`, `dump`
+  writes one.
 - `dump: bool` — set `False` to suppress on `dump` (e.g. computed fields).
 - `default: Any` — value when the wire form omits the key.
 - `default_factory: Callable | None` — called per instance instead, for a

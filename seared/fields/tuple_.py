@@ -22,6 +22,7 @@ class Tuple(Field):
         keyed: bool = False,
         many: bool = False,
         required: bool = False,
+        nullable: bool = False,
         dump: bool = True,
         doc: str | None = None,
     ) -> None:
@@ -31,6 +32,7 @@ class Tuple(Field):
             keyed=keyed,
             many=many,
             required=required,
+            nullable=nullable,
             dump=dump,
             default=default,
             default_factory=default_factory,

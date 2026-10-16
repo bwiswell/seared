@@ -7,6 +7,7 @@ def Dict(
     keyed: bool = ...,
     many: bool = ...,
     required: bool = ...,
+    nullable: bool = ...,
     dump: bool = ...,
     doc: str | None = ...,
     default: Any = ...,

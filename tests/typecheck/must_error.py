@@ -41,3 +41,15 @@ class Holder(s.Seared):
 @s.seared
 class Legacy(s.Seared):
     x: int = s.Int(missing=3)
+
+
+@s.seared
+class _Start(s.Seared):
+    speed: float = s.Float(default=0.0)
+
+
+# ERROR[unknown-argument]: a `Union` can't be nullable (its envelope spans the
+# parent's keys, so no one key carries the `null`); it raises at runtime too.
+@s.seared
+class Envelope(s.Seared):
+    action: object = s.Union(variants={'start': _Start}, nullable=True)

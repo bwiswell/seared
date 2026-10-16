@@ -44,6 +44,16 @@ omitted one in a constructor call is `None`. So `default=`, and
 `default_factory=`, raise `TypeError` pointing at `fallback=`, rather
 than quietly change meaning. `default=None` is still accepted.
 
+## Null
+
+A `null` tag is a missing one, and raises. A `null` payload under
+`payload_key` is an absent one: the variant loads from its own defaults,
+as it would with no payload key at all.
+
+`nullable=True` raises `TypeError`. A `Union`'s envelope spans its
+parent's keys (the tag, and the payload key or the variant's own fields),
+so there is no one key a `null` could sit on.
+
 ## Multiple Unions per class
 
 A class may declare multiple `Union` fields when each Union's wire
