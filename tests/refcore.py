@@ -33,8 +33,8 @@ from __future__ import annotations
 
 from typing import Any
 
-SPEC_ABI = 1
-SUPPORTS_SEARED = '>=0.2.8,<0.4'
+SPEC_ABI = 2
+SUPPORTS_SEARED = '>=0.4,<0.5'
 __version__ = '0.0.0'
 
 
@@ -115,20 +115,20 @@ _FALSE = ('false', '0', 'no', 'off')
 
 
 def _de_bool(v, validate, err):
-    # The lax branch is the SPEC_ABI 1 answer — bare truthiness, so ``'false'``
-    # is ``True`` — which seared 0.3.3 fixed in ``fields/bool_.py``. Kept as
-    # an ABI-1 backend implements it; seared no longer hands this core a lax
-    # ``Bool`` (``accel._field_spec`` declines it), so the branch is unreached.
+    # ``fields/bool_.py``: both modes read the spelling table first, and only
+    # then does lax fall back to truthiness (``'maybe'`` is ``True``). The
+    # SPEC_ABI 1 answer skipped the table in lax mode, so ``'false'`` was
+    # ``True``; seared declined lax ``Bool`` until ABI 2 carried the fix.
     if isinstance(v, bool):
         return v
-    if not validate:
-        return bool(v)
     if isinstance(v, str):
         low = v.strip().lower()
         if low in _TRUE:
             return True
         if low in _FALSE:
             return False
+    if not validate:
+        return bool(v)
     if isinstance(v, int):
         return bool(v)
     msg = f'cannot deserialize {v!r} as bool'
