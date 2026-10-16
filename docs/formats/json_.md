@@ -12,6 +12,12 @@ Cls.from_json(source) -> Cls
 `to_json` passes `**kwargs` straight to `json.dumps` — useful for
 `sort_keys=True`, `separators=...`, `default=...`, etc. The `indent`
 kwarg is split out only because callers reach for it most often.
+`Cls.dumps(obj, **kwargs)` passes them the same way.
+
+`allow_nan=False` refuses a `NaN` or infinite float with `ValueError`.
+Without it they're written as bare `NaN` / `Infinity`, which Python reads
+back but standard JSON parsers, browsers included, don't; set it for JSON
+headed anywhere but Python.
 
 `from_json` accepts a path-like or a string of JSON content (see
 [`_common.md`](_common.md) for the detection rule). The top-level

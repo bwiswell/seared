@@ -36,6 +36,9 @@ lines as it lands, and the entry is dated when that version is released.
   default, and `dump` writes `None` as `null`. It is independent of `required`, as in JSON Schema, so a nullable
   required field must be present but may be `null`. Annotate it `X | None`. Every field takes it except `Union`,
   which refuses it with a `TypeError`, since its envelope has no one key to carry a `null`.
+- **`Seared.dumps(obj, **kwargs)`** passes keyword arguments through to `json.dumps`, as `to_json` already did. Pass
+  `allow_nan=False` for JSON bound for a browser: by default a `NaN` or infinite float is written as a bare `NaN` or
+  `Infinity`, which Python reads back and standard JSON parsers refuse. The default is unchanged.
 
 ### Changed
 

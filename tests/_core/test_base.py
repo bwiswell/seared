@@ -8,6 +8,8 @@ seared dataclasses. Without the ``@seared`` decorator the class has
 from __future__ import annotations
 
 import inspect
+import json
+import math
 
 import pytest
 
@@ -64,6 +66,42 @@ class TestDecoratedSearedBase:
         assert d == {'x': 1}
         loaded = Foo.load(d)
         assert loaded.x == 1
+
+
+@s.seared
+class _Reading(s.Seared):
+    sensor: str = s.Str(required=True)
+    value: float = s.Float(required=True)
+
+
+class TestDumpsPassesKwargsToJson:
+    """Pin: ``dumps`` takes ``json.dumps``'s keyword arguments, as ``to_json`` does."""
+
+    def test_formatting_options_reach_json(self):
+        reading = _Reading(sensor='t1', value=1.5)
+        assert _Reading.dumps(reading, sort_keys=True, separators=(',', ':')) == '{"sensor":"t1","value":1.5}'
+        assert _Reading.dumps(reading, indent=2) == _Reading.to_json(reading, indent=2)
+
+    @pytest.mark.parametrize(('value', 'token'), [(math.nan, 'NaN'), (math.inf, 'Infinity')])
+    def test_non_finite_floats_are_written_bare_by_default(self, value, token):
+        # Python's ``json`` default, kept: Python reads it back, and msgpack
+        # and Python consumers carry these values on purpose.
+        text = _Reading.dumps(_Reading(sensor='t1', value=value))
+        assert f'"value": {token}' in text
+        back = _Reading.loads(text).value
+        assert math.isnan(back) if math.isnan(value) else back == value
+
+    @pytest.mark.parametrize('value', [math.nan, math.inf])
+    def test_allow_nan_false_refuses_them(self, value):
+        reading = _Reading(sensor='t1', value=value)
+        with pytest.raises(ValueError, match='not JSON compliant'):
+            _Reading.dumps(reading, allow_nan=False)
+        with pytest.raises(ValueError, match='not JSON compliant'):
+            _Reading.to_json(reading, allow_nan=False)
+
+    def test_no_kwargs_is_unchanged(self):
+        reading = _Reading(sensor='t1', value=1.5)
+        assert _Reading.dumps(reading) == json.dumps({'sensor': 't1', 'value': 1.5})
 
 
 # ---------------------------------------------------------------------------
