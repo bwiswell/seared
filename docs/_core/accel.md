@@ -86,6 +86,11 @@ spec gains a `nullable` flag: when it's set, `load` keeps a `null` as `None`
 and `dump` writes `None` as `null`. Everywhere else `dump` still leaves
 `None` out.
 
+Strict coercion is a third. Strict `Int` refuses a fractional float where ABI 1
+truncated it, strict `Bool` takes only the ints `0` and `1`, and `inf` into
+an `Int` raises `ValidationError` in both modes, where ABI 1 let the
+`OverflowError` out. An int-valued `Enum` follows `Int`.
+
 ## Introspection
 
 ```python

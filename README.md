@@ -366,7 +366,7 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 - **`nullable` is about a field's own value.** A `null` *element* inside a `many` / `keyed` collection is still an error, and a `Union` can't be nullable. TOML has no null, so `to_toml` leaves a nullable `None` out and it reads back as absent.
 - **Construction doesn't check `required`.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises.
 - **Unknown wire keys are ignored** on `load`, by design: an older consumer can read a newer producer's payload.
-- **Strict mode still coerces.** `Int` reads numeric strings (`'42'`) and floats, truncating `3.7` to `3`; `Bool` reads `'yes'` / `'off'` and ints; `Float` reads `'nan'`. String coercion is deliberate, since it is how string-only sources such as topic-key captures decode. Float truncation goes in 0.4.0.
+- **Strict mode still coerces, without losing data.** `Int` reads numeric strings (`'42'`) and integral floats (`3.0`), but refuses `3.7`, which lax mode truncates; `Bool` reads `'yes'` / `'off'` and the ints `0` / `1`; `Float` reads `'nan'`. String coercion is deliberate, since it is how string-only sources such as topic-key captures decode.
 - **NaN dumps as bare `NaN`**, which is Python's `json` default but not standard JSON. Pass `allow_nan=False` to `Cls.to_json` to refuse it.
 - **Mutable defaults** are per-instance: `default_factory=callable` builds a fresh value each time (preferred); a mutable `default=[...]` is deep-copied per-instance as a fallback.
 - **CSV is flat-only.** Nested fields and `many=True` / `keyed=True` collections raise `TypeError` at call time. Flatten-and-rehydrate is deferred to a future release.

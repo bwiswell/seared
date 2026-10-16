@@ -75,9 +75,21 @@ lines as it lands, and the entry is dated when that version is released.
 - **`to_toml` leaves out `None`-valued keys**, at any depth, since TOML has no null; they read back as absent. A
   `Dict` value of `None` had made `tomli-w` raise.
 - **`SPEC_ABI` 2's spec carries `nullable`** for each field.
+- **Breaking:** strict coercion no longer loses data.
+  - Strict `Int` refuses a float with a fractional part (`3.7`), which it used to truncate. Integral floats (`3.0`)
+    and numeric strings (`'42'`) still load, and lax mode still truncates.
+  - Strict `Bool` takes only the ints `0` and `1`, as its string table takes `'0'` and `'1'`; `2` used to load as
+    `True`. Lax mode is unchanged.
+  - A strict int-valued `Enum` follows strict `Int`: `2.9` and `True` are refused, where they used to load as the
+    members for `2` and `1`.
 - **The pure-Python `load` and `dump` make one fewer call per field.** Whether a field is a `Union` envelope is now
   settled once per class, when the class is decorated, rather than asked of every field on every call. Nothing
   else changes, and accelerated classes never ran that code.
+
+### Fixed
+
+- **`inf` into an `Int` or an int-valued `Enum` raises `ValidationError`,** in both modes. It raised a bare
+  `OverflowError`, which `except s.ValidationError` didn't catch.
 
 ### Removed
 

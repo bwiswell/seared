@@ -14,8 +14,13 @@ Deserialize reads the usual spellings in both modes, after `strip()` /
 | Input | `validate=True` | `validate=False` |
 |-------|-----------------|------------------|
 | any other string | raises `ValidationError` | truthiness (`'maybe'` → `True`, `''` → `False`) |
-| an `int` | truthiness | truthiness |
+| `0` / `1` | `False` / `True` | `False` / `True` |
+| any other `int` | raises `ValidationError` | truthiness (`2` → `True`) |
 | anything else | raises `ValidationError` | truthiness |
+
+Strict mode takes the ints `0` and `1` only, as its string table takes
+`'0'` and `'1'` but not `'2'`; until 0.4.0 it read any int as its
+truthiness.
 
 Before 0.3.3, lax mode skipped the spellings and went straight to
 truthiness, so `'false'` loaded as `True`. Accelerator backends built against
