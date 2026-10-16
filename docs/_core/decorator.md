@@ -110,3 +110,7 @@ A field whose class has `UNWRAP = True` (only `Union` today) is
 serialised inline at the parent's top-level wire dict rather than
 nested under a single wire key. See [`../fields/union.md`](../fields/union.md)
 for the envelope shapes.
+
+Whether a field is `UNWRAP` is settled once per class, when `dump` and
+`load` are generated, and carried in the tuples their loops walk. Asking
+per field on every call cost a function call each time.
