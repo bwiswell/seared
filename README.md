@@ -30,13 +30,28 @@ for free.
 
 ## Setup
 
-```sh
-# pip
-pip install git+https://www.github.com/bwiswell/seared.git
+Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`).
+Install one by its tag:
 
+```sh
 # uv
-uv add git+https://www.github.com/bwiswell/seared.git
+uv add git+https://github.com/bwiswell/seared --tag v0.3.4
+
+# pip
+pip install git+https://github.com/bwiswell/seared.git@v0.3.4
 ```
+
+`uv add` records the tag as the dependency's source:
+
+```toml
+[tool.uv.sources]
+seared = { git = "https://github.com/bwiswell/seared", tag = "v0.3.4" }
+```
+
+**The tag is the pin.** uv doesn't check a version specifier such as
+`seared>=0.3,<0.4` against a git source: it takes whatever the source points
+at, and a source without a tag points at the tip of `master`. Moving to a new
+release means moving the tag.
 
 Requires Python ≥ 3.14.
 
@@ -353,6 +368,32 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 uv sync
 uv run pytest tests/
 ```
+
+Hooks run through `prek`; install them once per clone with
+`uv run prek install`. Four check every commit that touches Python:
+
+```sh
+uv run ruff check     # lint
+uv run ruff format    # format
+uv run deptry .       # dependency hygiene
+uv run ty check       # type check
+```
+
+A fifth refuses any commit on `master`.
+
+**Branches and releases.**
+- **`master` holds released commits only,** and moves only by merge.
+- **A release is a `version/x.y.z` branch** off `master`.
+- **Work on it happens in `feat/…` and `fix/…` branches,** each a pull
+  request squash-merged into the version branch.
+- **Once those are all in, a `chore/version-bump-and-benches` branch** makes
+  two commits:
+  1. it bumps the version, in `pyproject.toml` and `seared/__init__.py`
+     together (a test checks that they agree);
+  2. it re-records the benchmarks.
+- **The version branch then merges into `master`.** There, the `Release Tag`
+  workflow (`.github/workflows/release-tag.yml`) tags it `v<version>` and
+  publishes a GitHub release.
 
 Tests mirror the source layout exactly — one `test_*.py` per source file,
 including subdir structure (`tests/_core/`, `tests/fields/`, `tests/formats/`).
