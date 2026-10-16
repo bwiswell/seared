@@ -69,29 +69,6 @@ def _tier1(**kwargs):
     return Inner, Outer
 
 
-def _lax_tier1(**kwargs):
-    """The bench schema minus its ``Bool``, decorated lax.
-
-    Lax ``Bool`` keeps the Python path until the next ``SPEC_ABI`` (see
-    ``test_lax_bool_declines_until_the_next_abi``), so the lax-mode parity
-    tests need a schema the backend will actually take.
-    """
-
-    @s.seared(validate=False, **kwargs)
-    class Inner(s.Seared):
-        x: int = s.Int(required=True)
-        y: float = s.Float(required=True)
-        label: str | None = s.Str(default=None)
-
-    @s.seared(validate=False, **kwargs)
-    class Outer(s.Seared):
-        name: str = s.Str(required=True)
-        items: list[Inner] = s.T(Inner, many=True, required=True)
-        tags: list[str] = s.Str(many=True, default_factory=list)
-
-    return Inner, Outer
-
-
 PAYLOAD = {
     'name': 'demo',
     'flag': True,
@@ -143,6 +120,23 @@ class TestBackendResolution:
         status = accel.accel_status()
         assert status['available'] is False
         assert 'SPEC_ABI 999' in status['reason']
+
+    def test_an_abi_1_backend_declines_every_class(self, use_backend, monkeypatch):
+        # rusted 0.3.x declares ABI 1. It implements the meanings 0.4.0
+        # changed the old way, so it must not take any class.
+        monkeypatch.setitem(
+            sys.modules,
+            'fake_abi1',
+            SimpleNamespace(SPEC_ABI=1, compile_spec=lambda spec: pytest.fail('compiled on ABI 1')),
+        )
+        use_backend('fake_abi1')
+        assert accel.SPEC_ABI == 2
+        status = accel.accel_status()
+        assert status['available'] is False
+        assert 'declares SPEC_ABI 1; this seared emits 2' in status['reason']
+        _inner, outer = _tier1()
+        assert outer.__seared_accel__.accelerated is False
+        assert outer.dump(outer.load(PAYLOAD))['name'] == 'demo'
 
     def test_missing_compile_spec_declines(self, use_backend, monkeypatch):
         monkeypatch.setitem(
@@ -318,18 +312,17 @@ class TestClassDecisions:
         assert 'Branch.leaf →' in reason
         assert 'Leaf.pair' in reason
 
-    def test_lax_bool_declines_until_the_next_abi(self, use_backend):
-        # An ABI-1 backend still loads lax ``'false'`` as ``True``; seared
-        # 0.3.3 fixed that, and keeps such classes off the backend so the
-        # answer can't depend on which wheel is installed.
+    def test_lax_bool_accelerates_with_the_fixed_answer(self, use_backend):
+        # 0.3.3 fixed lax ``Bool`` (``'false'`` had loaded as ``True``) but
+        # declined it from the accelerator until an ABI that carried the fix.
+        # ABI 2 does, so the class accelerates and gives the same answer.
         use_backend('refcore')
         _inner, outer = _tier1(validate=False)
-        assert outer.__seared_accel__.reason == (
-            'Outer.flag: Bool under validate=False is not accelerated until SPEC_ABI 2'
-        )
+        assert outer.__seared_accel__.accelerated is True
         assert outer.load({**PAYLOAD, 'flag': 'false'}).flag is False
+        assert outer.load({**PAYLOAD, 'flag': 'maybe'}).flag is True
 
-    def test_lax_bool_poisons_a_strict_parent(self, use_backend):
+    def test_a_strict_parent_of_a_lax_bool_class_accelerates(self, use_backend):
         use_backend('refcore')
 
         @s.seared(validate=False)
@@ -340,9 +333,8 @@ class TestClassDecisions:
         class StrictBranch(s.Seared):
             leaf: LaxLeaf = s.T(LaxLeaf, required=True)
 
-        reason = StrictBranch.__seared_accel__.reason
-        assert 'StrictBranch.leaf →' in reason
-        assert 'LaxLeaf.on: Bool under validate=False' in reason
+        assert StrictBranch.__seared_accel__.accelerated is True
+        assert StrictBranch.load({'leaf': {'on': 'off'}}).leaf.on is False
 
     def test_strict_bool_still_accelerates(self, use_backend):
         use_backend('refcore')
@@ -410,7 +402,7 @@ class TestSpecEmission:
 
     def test_lax_class_carries_its_own_validate(self, use_backend):
         use_backend('refcore')
-        _inner, outer = _lax_tier1()
+        _inner, outer = _tier1(validate=False)
         by_attr = {f['attr']: f for f in outer.__seared_spec__['fields']}
         assert outer.__seared_spec__['validate'] is False
         assert by_attr['items']['schema']['validate'] is False
@@ -499,13 +491,19 @@ class TestDifferential:
 
     def test_lax_mode_matches(self, use_backend):
         use_backend('refcore')
-        _i, accelerated = _lax_tier1()
-        _i, pure = _lax_tier1(accel=False)
+        _i, accelerated = _tier1(validate=False)
+        _i, pure = _tier1(validate=False, accel=False)
         assert accelerated.__seared_accel__.accelerated is True
         lax_cases = [
             {**PAYLOAD, 'name': 42},
             {**PAYLOAD, 'items': [{'x': True, 'y': 1}]},
             {**PAYLOAD, 'items': [{'x': '7', 'y': '2.5'}]},
+            # Lax bool: the spelling table first, then truthiness.
+            {**PAYLOAD, 'flag': 'false'},
+            {**PAYLOAD, 'flag': ' OFF '},
+            {**PAYLOAD, 'flag': 'maybe'},
+            {**PAYLOAD, 'flag': ''},
+            {**PAYLOAD, 'flag': 2},
         ]
         for payload in lax_cases:
             assert _outcome(accelerated.load, payload)[0] == _outcome(pure.load, payload)[0]

@@ -11,12 +11,27 @@ lines as it lands, and the entry is dated when that version is released.
 
 ## 0.4.0 — unreleased
 
-**The changelog ships with the repository.**
+**`SPEC_ABI` 2, and the changelog in the repository.**
 
 ### Added
 
 - **`CHANGELOG.md`**, this file: every release from 0.1.0 on, newest first. It is kept in the repository and grows
   with each change as it merges, where it had been reconstructed after each release.
+
+### Changed
+
+- **Fewer classes accelerate:** every class, while `rusted` 0.3.x is the installed backend. seared now emits
+  `SPEC_ABI` 2, because 0.4.0 changes what some field kinds mean, and a backend built against 1 would keep the old
+  meanings without anyone noticing. So seared declines it, and every class keeps the pure-Python path, which gives
+  the new answers. `accel_status()` and `__seared_accel__` say why: the backend
+  `declares SPEC_ABI 1; this seared emits 2`. `rusted` 0.4.0 is the matching release.
+- **Breaking:** under `SEARED_ACCEL=require`, decorating a class now raises `SearedError` while `rusted` 0.3.x is
+  installed, since no backend that matches `SPEC_ABI` 2 loaded. Install `rusted` 0.4.0.
+- **Lax `Bool` accelerates again** with a `SPEC_ABI` 2 backend. 0.3.3 fixed lax `Bool` in Python (`'false'` had
+  loaded as `True`) and kept every `validate=False` class with a `Bool` off the accelerator until a backend carried
+  the fix; ABI 2 does.
+- The README installs `rusted` by its `v0.4.0` tag and explains the `SPEC_ABI` handshake, and
+  `docs/_core/accel.md` gains a `SPEC_ABI` 2 section.
 
 ## 0.3.4 — 2026-10-16
 

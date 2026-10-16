@@ -312,12 +312,17 @@ equivalents — same classes, same API, same error messages,
 <!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> on `dump`.
 
 ```sh
-uv add git+https://www.github.com/bwiswell/rusted.git   # nothing in your code changes
+uv add git+https://github.com/bwiswell/rusted --tag v0.4.0   # nothing in your code changes
 ```
 
 (It isn't on a package index yet, so that git form builds from source and
 needs a Rust toolchain. A prebuilt wheel is the intent; until then the
 accelerator is developer-only.)
+
+seared and its backend agree through one integer, `SPEC_ABI`, which is 2 from
+seared 0.4.0. `rusted` 0.4.0 is the matching release. An older `rusted` still
+loads, but it declares `SPEC_ABI` 1, so every class declines it and keeps the
+Python path: correct, just not accelerated.
 
 Acceleration is **per class, all or nothing**: a class qualifies only if
 every field, recursively through `T`, is a seared-native type the backend
@@ -325,10 +330,7 @@ implements — today that is everything except `Tuple`, `Union`, and the
 `NDArray` / DataFrame fields. Classes with a hand-written `__init__`, a
 `__post_init__`, or a plain dataclass attribute that isn't a seared field
 (`b: int = 5`) are also declined, since a compiled core builds instances
-through `__new__` and only `__init__` would ever set those. So, for now, is a
-`validate=False` class with a `Bool` field: seared 0.3.3 fixed lax `Bool`
-(`'false'` used to load as `True`), and backends built against the current
-spec ABI still implement the old answer. That decline lifts with the next ABI.
+through `__new__` and only `__init__` would ever set those.
 
 Anything unexpected — no wheel for your platform, a version mismatch, a
 field the backend doesn't know — falls back to the Python path rather than
@@ -336,7 +338,7 @@ failing. So ask, rather than assume:
 
 ```python
 >>> s.accel_status()          # did a backend load at all?
-{'mode': 'auto', 'spec_abi': 1, 'available': True, 'backend': 'rusted', ...}
+{'mode': 'auto', 'spec_abi': 2, 'available': True, 'backend': 'rusted', ...}
 
 >>> Telemetry.__seared_accel__   # and did *this* class qualify?
 AccelInfo(accelerated=True, backend='rusted', reason=None)

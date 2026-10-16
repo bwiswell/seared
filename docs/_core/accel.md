@@ -65,22 +65,20 @@ A class is also declined when it defines its own `__init__`, a
 attribute assignment, which would skip all three — and a plain attribute
 never reaches the spec, so nothing but `__init__` would ever set it.
 
-So, until the next `SPEC_ABI`, is a `validate=False` class with a `Bool`
-field. seared 0.3.3 fixed lax `Bool` (it skipped the spelling table, so
-`'false'` loaded as `True`; see [`../fields/bool_.md`](../fields/bool_.md)).
-Backends built against `SPEC_ABI` 1 still give the old answer, and an ABI
-number is all seared can check, so the class keeps the Python path and gets
-the same answer whatever is installed:
+## `SPEC_ABI` 2
 
-```python
->>> Lax.__seared_accel__
-AccelInfo(accelerated=False, backend=None,
-          reason='Lax.flag: Bool under validate=False is not accelerated until SPEC_ABI 2')
-```
+The general rule for a backend: changing what an existing kind *means*, not
+just its spec shape, needs an ABI bump, or an older backend would keep the
+old meaning without anyone noticing. seared 0.4.0 changes several meanings,
+so it emits `SPEC_ABI` 2, and a backend built against 1 (`rusted` 0.3.x)
+declines every class: the Python path gives the new answers, at Python
+speed. `rusted` 0.4.0 is the matching release.
 
-That is also the general rule for a backend: changing what an existing kind
-*means*, not just its spec shape, needs an ABI bump, or an older backend
-would keep the old meaning without anyone noticing.
+Lax `Bool` is the first of them. seared 0.3.3 fixed it (lax mode skipped the
+spelling table, so `'false'` loaded as `True`; see
+[`../fields/bool_.md`](../fields/bool_.md)) but could only keep ABI 1
+backends away from it by declining every `validate=False` class with a
+`Bool`. ABI 2 carries the fix, so those classes accelerate again.
 
 ## Introspection
 
@@ -93,8 +91,8 @@ AccelInfo(accelerated=False, backend=None,
           reason='HasTuple.pair: Tuple is not an accelerated field type')
 
 >>> s.accel_status()
-{'mode': 'auto', 'spec_abi': 1, 'available': True, 'backend': 'rusted',
- 'backend_version': '0.2.1', 'supports_seared': '>=0.3.1,<0.4', 'reason': None}
+{'mode': 'auto', 'spec_abi': 2, 'available': True, 'backend': 'rusted',
+ 'backend_version': '0.4.0', 'supports_seared': '>=0.4,<0.5', 'reason': None}
 ```
 
 `__seared_accel__` sits alongside `__seared_fields__` on every decorated
