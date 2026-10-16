@@ -13,8 +13,8 @@ for free.
 ## Why seared
 
 - **Zero runtime dependencies.** Pure stdlib core. Numpy / pandas / polars / PyYAML / tomli-w live behind opt-in extras.
-- **Fast for pure Python.** ~3.5× faster `load` and ~1.8× faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
-- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run ~11× faster on `load`, ~9× on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
+- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~3.6×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~1.9×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
+- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
 - **Compact.** `@s.seared` classes are `__slots__` dataclasses by default — lower memory per instance, faster attribute access.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
 - **Typed-callable fields.** `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, plus optional `NDArray`, `PandasFrame`, `PolarsFrame`.
@@ -30,13 +30,28 @@ for free.
 
 ## Setup
 
-```sh
-# pip
-pip install git+https://www.github.com/bwiswell/seared.git
+Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`).
+Install one by its tag:
 
+```sh
 # uv
-uv add git+https://www.github.com/bwiswell/seared.git
+uv add git+https://github.com/bwiswell/seared --tag v0.3.4
+
+# pip
+pip install git+https://github.com/bwiswell/seared.git@v0.3.4
 ```
+
+`uv add` records the tag as the dependency's source:
+
+```toml
+[tool.uv.sources]
+seared = { git = "https://github.com/bwiswell/seared", tag = "v0.3.4" }
+```
+
+**The tag is the pin.** uv doesn't check a version specifier such as
+`seared>=0.3,<0.4` against a git source: it takes whatever the source points
+at, and a source without a tag points at the tip of `master`. Moving to a new
+release means moving the tag.
 
 Requires Python ≥ 3.14.
 
@@ -261,36 +276,39 @@ See [`docs/_core/errors.md`](docs/_core/errors.md) for the full hierarchy.
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
 a list of strings) on an idle machine. Recorded
-<!-- bench:run -->2026-08-31, Python 3.14.3, 20,000 iterations; seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run -->;
+<!-- bench:run -->2026-10-16, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.3.4, rusted 0.3.1, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run -->;
 ratios are versus marshmallow:
 
 <!-- bench:ops -->
 | Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
 |------|---------------|----------------------|----------------------|---------------|-----------------|
-| load | 8,732 ops/s   | 28,913 ops/s (~3.3×) | 30,505 ops/s (~3.5×) | 150,235 ops/s | 328,175 ops/s   |
-| dump | 24,920 ops/s  | 44,776 ops/s (~1.8×) | 50,536 ops/s (~2.0×) | 180,340 ops/s | 409,039 ops/s   |
+| load | 8,550 ops/s   | 30,842 ops/s (~3.6×) | 30,164 ops/s (~3.5×) | 147,706 ops/s | 337,158 ops/s   |
+| dump | 23,603 ops/s  | 44,066 ops/s (~1.9×) | 48,832 ops/s (~2.1×) | 170,499 ops/s | 408,068 ops/s   |
 <!-- /bench:ops -->
 
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
 same schema decorated `@s.seared(validate=False)`. Both are benched with the
 accelerator explicitly off, so these are the pure-Python numbers whatever
-happens to be installed. One run is one sample — the spread is a few percent
-on an idle box and much wider under load. pydantic's compiled Rust core outruns pure Python —
-that is the trade seared makes by default, and [`rusted`](#accelerator) is
-how you opt out of it without changing a line of your own code.
+happens to be installed. Every number is
+<!-- bench:runs -->the median of three runs<!-- /bench:runs -->, and every one in this
+README is generated from the recorded results, prose included.
+pydantic's compiled Rust core outruns pure Python — that is the trade seared
+makes by default, and [`rusted`](#accelerator) is how you opt out of it
+without changing a line of your own code.
 
 The bench lives in [`bench/`](bench/)
-(`uv sync --extra bench && uv run python -m bench`) and records each run to
-[`bench/results.json`](bench/results.json); methodology and caveats in
-[`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
+(`uv sync --extra bench && uv run python -m bench --runs 3`) and records to
+[`bench/results.json`](bench/results.json); methodology, run-to-run spread
+and caveats are in [`docs/overview/benchmarks.md`](docs/overview/benchmarks.md).
 
 ## Accelerator
 
 seared is pure Python and zero-dependency, and stays that way. When the
 optional compiled core [`rusted`](https://github.com/bwiswell/rusted) is
 installed, `@s.seared` swaps its generated `load` / `dump` for compiled
-equivalents — same classes, same API, same error messages, ~11× on `load`
-and ~9× on `dump`.
+equivalents — same classes, same API, same error messages,
+<!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> on `load` and
+<!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> on `dump`.
 
 ```sh
 uv add git+https://www.github.com/bwiswell/rusted.git   # nothing in your code changes
@@ -353,6 +371,37 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 uv sync
 uv run pytest tests/
 ```
+
+Hooks run through `prek`; install them once per clone with
+`uv run prek install`. Four check every commit that touches Python:
+
+```sh
+uv run ruff check     # lint
+uv run ruff format    # format
+uv run deptry .       # dependency hygiene
+uv run ty check       # type check
+```
+
+A fifth, `uv run python -m bench.tables --check`, runs whenever the README,
+`docs/overview/benchmarks.md` or `bench/` changes. Every benchmark number in
+those two docs is generated from `bench/results.json`, and the check fails
+when one has drifted from it; recording a run re-renders them (see
+[`docs/overview/benchmarks.md`](docs/overview/benchmarks.md#reproduction)).
+A sixth refuses any commit on `master`.
+
+**Branches and releases.**
+- **`master` holds released commits only,** and moves only by merge.
+- **A release is a `version/x.y.z` branch** off `master`.
+- **Work on it happens in `feat/…` and `fix/…` branches,** each a pull
+  request squash-merged into the version branch.
+- **Once those are all in, a `chore/version-bump-and-benches` branch** makes
+  two commits:
+  1. it bumps the version, in `pyproject.toml` and `seared/__init__.py`
+     together (a test checks that they agree);
+  2. it re-records the benchmarks.
+- **The version branch then merges into `master`.** There, the `Release Tag`
+  workflow (`.github/workflows/release-tag.yml`) tags it `v<version>` and
+  publishes a GitHub release.
 
 Tests mirror the source layout exactly — one `test_*.py` per source file,
 including subdir structure (`tests/_core/`, `tests/fields/`, `tests/formats/`).
