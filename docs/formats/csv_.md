@@ -29,6 +29,33 @@ problem deferred to a future release.
 round-trip via their existing string serialisation in `dump` / `load`
 — CSV gets the JSON-safe string form for free.
 
+## Columns
+
+`to_csv` writes one column per field that `dump` writes, headed by its wire
+key: a field's `data_key` where it has one, its attribute name otherwise.
+That's the name `from_csv` reads the column back by. A `dump=False` field
+gets no column, since `dump` never writes it.
+
+## Null: the empty cell
+
+CSV has no null, so the empty cell stands in for one:
+
+- **`to_csv`** writes every `None` as an empty cell: a field `dump` leaves
+  out, and a nullable field's `None`.
+- **`from_csv`** reads an empty cell as null, and so is a short row's
+  missing cell. 0.4.0's null rule then applies (see
+  [`../fields/field.md`](../fields/field.md#null-on-the-wire)): the field
+  takes its default, a nullable one keeps `None`, and a required one raises
+  `required key missing`.
+
+So a `None` round-trips through CSV for every flat field kind. The one
+value that can't is the empty string: it shares the empty cell with `None`,
+so `''` comes back as the field's default.
+
+Before 0.4.0 the header named attributes, so any `data_key` field made
+`to_csv` fail, and an empty cell reached the field as `''`. A `Str` loaded
+it as `''`, and every other kind refused it.
+
 ## Quick example
 
 ```python
@@ -61,7 +88,3 @@ Row.from_csv('name,score\nalice,90\nbob,85\ncarol,lots\n')
 ```
 
 `to_csv` does the same with the index into the records you passed.
-
-A short row's missing cells read as absent keys, so they take their
-field's default, or raise `required key missing`. An empty cell is not
-missing: it's the string `''`, and goes through the field like any other.
