@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import seared as s
 from doc.models import Band, Demo, Inner, StartCmd
-from seared.doc import introspect, is_seared_class
+from seared.doc import document, introspect, is_seared_class
 
 
 def _field(schema, attr):
@@ -79,3 +80,19 @@ class TestIsSearedClass:
         assert not is_seared_class(Band)
         assert not is_seared_class(int)
         assert not is_seared_class(is_seared_class)
+
+
+class TestUnionFallback:
+    """Pin: a ``Union``'s fallback variant is read from ``fallback=`` (its name since 0.4.0) and rendered."""
+
+    def test_the_fallback_reaches_the_doc_model_and_the_page(self):
+        @s.seared
+        class Catchall(s.Seared):
+            raw: str | None = s.Str(default=None)
+
+        @s.seared
+        class Cmd(s.Seared):
+            action: object = s.Union(variants={'start': StartCmd}, fallback=Catchall)
+
+        assert _field(introspect(Cmd), 'action').fallback is Catchall
+        assert 'Unknown tags fall back to `Catchall`.' in document(Cmd)

@@ -57,6 +57,10 @@ lines as it lands, and the entry is dated when that version is released.
   A field's `deserialize` called on its own still raises the bare reason.
 - **`SPEC_ABI` 2's error contract:** a backend constructs the error class the spec carries as
   `error(reason, path=…, cls_name=…)`, and must end with the same three parts as the Python path.
+- **Breaking:** a `Union`'s fallback variant is now named with `fallback=`, not `default=`. On every other field,
+  `default=` is the value an absent key gets; read that way, `Union(default=Unknown)` would have filled an omitted
+  attribute with the class `Unknown` itself. So `default=` (anything but `None`) and `default_factory=` now raise
+  `TypeError` pointing at `fallback=`, rather than change meaning silently. `default=None` is still accepted.
 
 ## 0.3.4 — 2026-10-16
 

@@ -29,8 +29,8 @@ class Union(Field):
     it under a wire key. Only one ``UNWRAP`` field is allowed per class.
 
     Unknown tags on load raise ``ValidationError`` by default. Pass
-    ``default=<VariantCls>`` to enable graceful schema-evolution
-    fallback: unknown tags coerce to the named default variant rather
+    ``fallback=<VariantCls>`` to enable graceful schema-evolution
+    fallback: unknown tags coerce to the named variant rather
     than raising. Useful when older consumers may receive newer
     schemas — they decode what they can recognise and route the rest
     to a generic / sentinel variant.
@@ -42,7 +42,7 @@ class Union(Field):
     variants: dict[str, type[Seared]]
     tag_key: str = 'type'
     payload_key: str | None = None
-    default: type[Seared] | None = None
+    fallback: type[Seared] | None = None
 
     UNWRAP: ClassVar[bool] = True
 
@@ -58,9 +58,21 @@ class Union(Field):
             if not isinstance(cls, type):
                 msg = f'Union: variant for tag {tag!r} must be a class, got {cls!r}'
                 raise TypeError(msg)
-        if self.default is not None and not isinstance(self.default, type):
-            msg = f'Union: default must be a class, got {self.default!r}'
+        if self.fallback is not None and not isinstance(self.fallback, type):
+            msg = f'Union: fallback must be a class, got {self.fallback!r}'
             raise TypeError(msg)
+        # Until 0.4.0, ``default=`` named the fallback variant. It now means
+        # what it means on every other field, the value an absent key gets,
+        # which a Union doesn't have: its envelope is always populated on load,
+        # and absent from a constructor call it's ``None``. Refused by name, so
+        # an old ``default=Variant`` can't quietly change meaning.
+        for option in ('default', 'default_factory', 'missing'):
+            if getattr(self, option) is not None:
+                msg = (
+                    f'Union: {option}= is not supported, since a Union has no default value; '
+                    f'to fall back to a variant on an unknown tag, use fallback=<VariantCls>'
+                )
+                raise TypeError(msg)
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> dict:
         """Variant instance → the ``{tag, payload}`` envelope (flat or nested)."""
@@ -97,10 +109,10 @@ class Union(Field):
             raise ValidationError(msg, path=(self.tag_key,))
         variant_cls = self.variants.get(tag)
         if variant_cls is None:
-            if self.default is not None:
+            if self.fallback is not None:
                 # Graceful schema evolution — unknown tag falls through
-                # to the configured default variant.
-                variant_cls = self.default
+                # to the configured fallback variant.
+                variant_cls = self.fallback
             else:
                 msg = f'Union: unknown tag {tag!r}; expected one of {sorted(self.variants)}'
                 raise ValidationError(msg, path=(self.tag_key,))

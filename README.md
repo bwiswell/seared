@@ -19,7 +19,7 @@ for free.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
 - **Typed-callable fields.** `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, plus optional `NDArray`, `PandasFrame`, `PolarsFrame`.
 - **Tagged unions.** `s.Union(variants=…)` decodes `{tag, payload}` envelopes to typed variant instances; pattern-match at the dispatch site. Multiple Unions per class as long as their wire keys are disjoint.
-- **Schema-evolution fallback.** `s.Union(default=Variant)` coerces unknown tags to a sentinel variant rather than raising — useful for older consumers receiving newer schemas.
+- **Schema-evolution fallback.** `s.Union(fallback=Variant)` coerces unknown tags to a sentinel variant rather than raising — useful for older consumers receiving newer schemas.
 - **File-format codecs out of the box.** `Cls.to_json` / `Cls.from_json` / `Cls.to_toml` / `Cls.from_toml` / `Cls.to_yaml` / `Cls.from_yaml` / `Cls.to_csv` / `Cls.from_csv` are auto-attached at decorator time. JSON / TOML-read / CSV are stdlib; YAML / TOML-write / DataFrame fields are optional extras.
 - **`format=` carrier hint.** `Cls.dump(obj, format='msgpack')` threads the hint into each field; `Bytes` and `NDArray` switch to native binary, dropping the ~33% base64 overhead.
 - **Typed & type-checker-friendly.** `@s.seared` is a PEP 681 `@dataclass_transform`, so `x: str = s.Str(...)` type-checks under `ty` / `pyright` / `mypy` — no `invalid-assignment`, and `.load()` results carry their annotated attribute types. See [Type checking](#type-checking).
@@ -165,7 +165,7 @@ their `@seared` modules from `ty` can drop those excludes.
 
 `s.Union` encodes `{tag, payload}`-style envelopes and decodes to a typed
 variant instance. Multiple `Union` fields per class are allowed as long as
-their `tag_key` / `payload_key` strings don't collide. Set `default=Variant`
+their `tag_key` / `payload_key` strings don't collide. Set `fallback=Variant`
 to coerce unknown tags to a sentinel variant rather than raising. Full
 details — flat vs. nested envelopes, schema-evolution fallback,
 disjoint-key validation — in [`docs/fields/union.md`](docs/fields/union.md).
@@ -268,7 +268,7 @@ namespace dirs in `docs/`, and each source file gets one `.md`.
 
 | Exception | Raised when |
 |-----------|-------------|
-| `s.ValidationError` | Wire value fails type checks; required field missing; bad enum member; unknown `Union` tag without `default=`; CSV/Pandas/Polars shape mismatch. |
+| `s.ValidationError` | Wire value fails type checks; required field missing; bad enum member; unknown `Union` tag without `fallback=`; CSV/Pandas/Polars shape mismatch. |
 | `s.SearedError`     | Base; `ValidationError` extends this. Also extends `ValueError` for downstream compatibility (`except ValueError:` catches seared errors). |
 
 A `ValidationError` says where it happened. Its message reads
