@@ -160,7 +160,7 @@ class TestErrorPaths:
 
 
 class TestShortRows:
-    """Pin: a short row's missing cells (``None`` from ``DictReader``) read as absent keys."""
+    """Pin: a short row's missing cells (``None`` from ``DictReader``) are null, as an empty cell is."""
 
     def test_a_missing_cell_takes_the_default(self):
         (row,) = Row.from_csv('id,name,score\n1,a\n')
@@ -170,3 +170,78 @@ class TestShortRows:
         with pytest.raises(s.ValidationError) as info:
             Row.from_csv('id,name,score\n1\n')
         assert str(info.value) == 'Row[0].name: required key missing'
+
+    def test_a_missing_cell_on_a_nullable_field_is_none(self):
+        (row,) = _Nulls.from_csv('id,scale\n1\n')
+        assert row.scale is None
+
+
+@s.seared
+class _Wired(s.Seared):
+    port: int = s.Int(required=True, data_key='Port')
+    host: str = s.Str(default='localhost', data_key='Host')
+    secret: str | None = s.Str(default=None, dump=False)
+
+
+class TestHeader:
+    """Pin: each column is headed by the wire key ``dump`` writes, and ``from_csv`` reads it back by."""
+
+    def test_a_data_key_names_its_column(self):
+        text = _Wired.to_csv([_Wired(port=7447)])
+        assert text.splitlines()[0] == 'Port,Host'
+        assert _Wired.from_csv(text) == [_Wired(port=7447)]
+
+    def test_a_dump_false_field_gets_no_column(self):
+        # ``dump`` never writes it, so its column could only ever be empty.
+        text = _Wired.to_csv([_Wired(port=1, secret='s')])
+        assert 'secret' not in text.splitlines()[0]
+
+    def test_a_file_headed_by_wire_keys_loads(self):
+        (row,) = _Wired.from_csv('Port,Host\n8080,example\n')
+        assert (row.port, row.host) == (8080, 'example')
+
+
+@s.seared
+class _Nulls(s.Seared):
+    id: int = s.Int(required=True)
+    count: int | None = s.Int()
+    ratio: float = s.Float(default=0.5)
+    flag: bool | None = s.Bool()
+    when: date | None = s.Date()
+    amount: D | None = s.Decimal()
+    note: str | None = s.Str()
+    scale: float | None = s.Float(nullable=True, default=1.0)
+    label: str = s.Str(default='none')
+
+
+class TestEmptyCells:
+    """Pin: an empty cell is CSV's null, read through 0.4.0's null rule.
+
+    ``to_csv`` writes every ``None`` as an empty cell, so reading one back as
+    null is what lets a ``None`` round-trip. The cost: an empty *string* can't,
+    since it shares the one empty value with ``None``.
+    """
+
+    def test_an_empty_cell_takes_the_default(self):
+        (row,) = _Nulls.from_csv('id,count,ratio,label\n1,,,\n')
+        assert (row.count, row.ratio, row.label) == (None, 0.5, 'none')
+
+    def test_an_empty_cell_on_a_nullable_field_is_none(self):
+        (row,) = _Nulls.from_csv('id,scale\n1,\n')
+        assert row.scale is None
+
+    def test_an_empty_required_cell_is_missing(self):
+        with pytest.raises(s.ValidationError) as info:
+            _Nulls.from_csv('id,count\n,3\n')
+        assert str(info.value) == '_Nulls[0].id: required key missing'
+
+    def test_none_round_trips_for_every_kind(self):
+        rows = [
+            _Nulls(id=1, scale=None),
+            _Nulls(id=2, count=3, ratio=2.5, flag=False, when=date(2026, 1, 2), amount=D('1.25'), note='hi', scale=3.0),
+        ]
+        assert _Nulls.from_csv(_Nulls.to_csv(rows)) == rows
+
+    def test_an_empty_string_does_not_survive(self):
+        (back,) = _Nulls.from_csv(_Nulls.to_csv([_Nulls(id=1, note='', label='')]))
+        assert (back.note, back.label) == (None, 'none')

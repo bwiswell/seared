@@ -57,8 +57,10 @@ nullable to keep it.
   so there is no one key to carry a `null`.
 - **Codecs:** YAML's `~` and msgpack's `nil` read as JSON's `null` does.
   TOML has no null, so `to_toml` leaves a nullable `None` out, and it reads
-  back as absent; that's the one round trip TOML can't make. CSV cells are
-  strings, but a short row's missing cells read as absent.
+  back as absent; that's the one round trip TOML can't make. CSV has no
+  null either: `to_csv` writes `None` as an empty cell, and `from_csv` reads
+  an empty or missing cell as null (see
+  [`../formats/csv_.md`](../formats/csv_.md#null-the-empty-cell)).
 
 ## `serialize(value, validate=True, **kwargs)`
 

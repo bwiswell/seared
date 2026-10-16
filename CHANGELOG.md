@@ -96,6 +96,13 @@ lines as it lands, and the entry is dated when that version is released.
     `nullable` flag, appended so positional construction still works;
   - a `Union` row is marked required, with no default: a missing or `null` tag always raises.
 
+- **Breaking:** CSV's empty cell is its null. `from_csv` reads an empty cell, like a short row's missing one, as
+  `null`, so the field takes its default, a nullable one keeps `None`, and a required one raises
+  `required key missing`. It had reached the field as `''`: a `Str` loaded it as `''` and every other kind refused
+  it, so an optional `None` couldn't round-trip through CSV. Now one does, for every flat field kind; an empty
+  string can't, since it shares the cell with `None`. And `to_csv` gives a `dump=False` field no column, where it
+  had written one that was always empty.
+
 ### Fixed
 
 - **`inf` into an `Int` or an int-valued `Enum` raises `ValidationError`,** in both modes. It raised a bare
@@ -103,6 +110,8 @@ lines as it lands, and the entry is dated when that version is released.
 - **The `format=` carrier hint reaches `Tuple` slots,** as it reaches a nested class since 0.3.1. Under
   `format='msgpack'` a `Bytes` slot stayed base64 while a top-level `Bytes` went native; it now carries raw bytes
   too, which changes what msgpack writes. Payloads written before still load, since `Bytes` reads either form.
+- **`to_csv` names each column by its wire key,** the name `dump` writes and `from_csv` reads. It used attribute
+  names, so a class with any `data_key` field failed with a bare `ValueError` from the `csv` module.
 
 ### Removed
 
