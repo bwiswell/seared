@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, fields
 from typing import TYPE_CHECKING, Any
 
@@ -105,6 +106,14 @@ else:
         return decorate(cls)
 
 
+#: One field as the per-object paths (``load``, ``dump``, construction)
+#: iterate it: ``(attr, wire, field)`` as an exact tuple. ``FieldSpec`` is a
+#: ``NamedTuple``, and CPython only specialises ``for attr, wire, f in specs``
+#: for exact tuples; unpacking the named tuples on every call cost about 5% of
+#: both ``load`` and ``dump``. ``__seared_fields__`` keeps the ``FieldSpec``s.
+type _HotSpec = tuple[str, str, Any]
+
+
 def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> type:
     from seared.fields.field import Field  # local import avoids core<->field cycle
 
@@ -145,8 +154,9 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> typ
                 seen[key] = attr
     specs_t: tuple[FieldSpec, ...] = tuple(specs)
     cls.__seared_fields__ = specs_t
+    hot: tuple[_HotSpec, ...] = tuple((spec.attr, spec.wire, spec.field) for spec in specs_t)
 
-    _wrap_init_replaces_field_defaults(cls, specs_t)
+    _wrap_init_replaces_field_defaults(cls, hot)
 
     # Optional compiled core. Returns None — and records why on
     # ``cls.__seared_accel__`` — whenever the class stays on the Python path,
@@ -159,8 +169,8 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> typ
         custom_init=custom_init,
     )
     if compiled is None:
-        dump_fn = _make_dump(specs_t, validate)
-        load_fn = _make_load(cls, specs_t, validate)
+        dump_fn = _make_dump(hot, validate)
+        load_fn = _make_load(cls, hot, validate)
     else:
         load_fn, dump_fn = compiled
     # Parameter names are API: they must match ``Seared.dump`` / ``Seared.load``
@@ -187,7 +197,7 @@ def _is_unwrap(f: Any) -> bool:
 _MUTABLE_DEFAULT_TYPES = (list, dict, set, frozenset)
 
 
-def _wrap_init_replaces_field_defaults(cls: type, specs: tuple[FieldSpec, ...]) -> None:
+def _wrap_init_replaces_field_defaults(cls: type, specs: tuple[_HotSpec, ...]) -> None:
     """Replace Field-instance defaults with the field's resolved value.
 
     Wraps ``cls.__init__`` so the substitution happens on natural
@@ -211,11 +221,29 @@ def _wrap_init_replaces_field_defaults(cls: type, specs: tuple[FieldSpec, ...]) 
     omitted field before constructing, hands it the real default. Wrapped,
     the hook sees the same values on both paths.
     """
+    # Resolved here, once per class: an import inside the fill would run on
+    # every construction, and so on every ``load``, nested objects included.
+    # Local, as in ``_build``, to avoid the core<->fields import cycle.
+    from seared.fields.field import Field
+
     original_init = cls.__init__
 
     def __init__(self: Any, *args: Any, **kwargs: Any) -> None:  # noqa: N807
         original_init(self, *args, **kwargs)
-        _fill_defaults(self, specs)
+        # ``_fill_defaults``, inlined: ``load`` constructs through here once
+        # per object, and the extra call cost about 5% of ``load``. Keep the
+        # two in step; the mutable-default and ``__post_init__`` tests cover
+        # each copy.
+        for attr, _, f in specs:
+            v = getattr(self, attr, None)
+            if isinstance(v, Field):
+                if f.default_factory is not None:
+                    missing = f.default_factory()
+                else:
+                    missing = f.missing
+                    if isinstance(missing, _MUTABLE_DEFAULT_TYPES):
+                        missing = copy.deepcopy(missing)
+                object.__setattr__(self, attr, missing)
 
     __init__.__qualname__ = f'{cls.__qualname__}.__init__'
     cls.__init__ = __init__  # ty: ignore[invalid-assignment]
@@ -229,32 +257,33 @@ def _wrap_init_replaces_field_defaults(cls: type, specs: tuple[FieldSpec, ...]) 
         return
 
     def __post_init__(self: Any, *args: Any) -> None:  # noqa: N807
-        _fill_defaults(self, specs)
+        _fill_defaults(self, specs, Field)
         original_post_init(self, *args)  # ``*args`` carries any ``InitVar``s
 
     __post_init__.__qualname__ = f'{cls.__qualname__}.__post_init__'
     cls.__post_init__ = __post_init__  # ty: ignore[unresolved-attribute]
 
 
-def _fill_defaults(obj: Any, specs: tuple[FieldSpec, ...]) -> None:
-    """Replace each attribute still holding its ``Field`` with the resolved default."""
-    import copy as _copy
+def _fill_defaults(obj: Any, specs: tuple[_HotSpec, ...], field_class: type[_Field]) -> None:
+    """Replace each attribute still holding its ``Field`` with the resolved default.
 
-    from seared.fields.field import Field
-
+    The ``__post_init__`` wrapper's fill; the ``__init__`` wrapper inlines the
+    same loop. It imports nothing, since it runs per construction: the caller
+    passes the ``Field`` class in, resolved once per class.
+    """
     for attr, _, f in specs:
         v = getattr(obj, attr, None)
-        if isinstance(v, Field):
+        if isinstance(v, field_class):
             if f.default_factory is not None:
                 missing = f.default_factory()
             else:
                 missing = f.missing
                 if isinstance(missing, _MUTABLE_DEFAULT_TYPES):
-                    missing = _copy.deepcopy(missing)
+                    missing = copy.deepcopy(missing)
             object.__setattr__(obj, attr, missing)
 
 
-def _make_dump(specs: tuple[FieldSpec, ...], validate: bool) -> Callable:
+def _make_dump(specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
     def dump(obj: Any, format: str = 'json') -> dict[str, Any]:
         out: dict[str, Any] = {}
         for attr, wire, f in specs:
@@ -276,7 +305,7 @@ def _make_dump(specs: tuple[FieldSpec, ...], validate: bool) -> Callable:
     return dump
 
 
-def _make_load(cls: type, specs: tuple[FieldSpec, ...], validate: bool) -> Callable:
+def _make_load(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
     cls_name = cls.__name__
 
     def load(data: Any, format: str = 'json') -> Any:

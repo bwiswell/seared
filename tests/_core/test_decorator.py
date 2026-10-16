@@ -14,6 +14,7 @@ decorator's responsibilities:
 
 from __future__ import annotations
 
+import builtins
 import json
 from dataclasses import InitVar  # noqa: TC003 — dataclass() resolves the string annotation at runtime
 
@@ -633,3 +634,56 @@ class TestFormatPassesThroughOtherFields:
         msgpack_dump = M.dump(m, format='msgpack')
         # Non-binary fields produce identical output for both carriers.
         assert json_dump == msgpack_dump == {'name': 'alice'}
+
+
+# ---------------------------------------------------------------------------
+# The per-object paths import nothing
+# ---------------------------------------------------------------------------
+
+
+@s.seared(accel=False)
+class _Leaf(s.Seared):
+    x: int = s.Int(required=True)
+    tags: list[str] = s.Str(many=True, default_factory=list)
+
+
+@s.seared(accel=False)
+class _Hooked(s.Seared):
+    x: int = s.Int(required=True)
+    note: str = s.Str(default='')
+
+    def __post_init__(self) -> None:
+        """Exist, so construction takes the wrapped ``__post_init__`` path too."""
+
+
+@s.seared(accel=False)
+class _Tree(s.Seared):
+    leaves: list[_Leaf] = s.T(_Leaf, many=True, required=True)
+    hooked: _Hooked | None = s.T(_Hooked, default=None)
+    tags: list[str] = s.Str(many=True, default_factory=list)
+
+
+class TestPerObjectPathsImportNothing:
+    """Pin: ``load``, construction and ``dump`` run no ``import`` statement.
+
+    Each runs once per object, nested ones included, so an import inside them
+    is paid on every call even when the module is cached. Two such imports in
+    the default-filling path took about 11% off the pure-Python ``load`` of
+    the benchmark schema, and no test noticed; this one would.
+    """
+
+    def test_no_import_runs(self, monkeypatch):
+        imported: list[str] = []
+        real_import = builtins.__import__
+
+        def recording_import(name, *args, **kwargs):
+            imported.append(name)
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, '__import__', recording_import)
+
+        tree = _Tree.load({'leaves': [{'x': 1}, {'x': 2, 'tags': ['a']}], 'hooked': {'x': 3}})
+        _Tree(leaves=[_Leaf(x=4)], hooked=_Hooked(x=5))
+        _Tree.dump(tree)
+
+        assert imported == []
