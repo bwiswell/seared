@@ -100,6 +100,9 @@ lines as it lands, and the entry is dated when that version is released.
 
 - **`inf` into an `Int` or an int-valued `Enum` raises `ValidationError`,** in both modes. It raised a bare
   `OverflowError`, which `except s.ValidationError` didn't catch.
+- **The `format=` carrier hint reaches `Tuple` slots,** as it reaches a nested class since 0.3.1. Under
+  `format='msgpack'` a `Bytes` slot stayed base64 while a top-level `Bytes` went native; it now carries raw bytes
+  too, which changes what msgpack writes. Payloads written before still load, since `Bytes` reads either form.
 
 ### Removed
 

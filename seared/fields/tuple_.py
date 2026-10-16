@@ -48,7 +48,7 @@ class Tuple(Field):
         if validate and len(value) != len(self.tuple_fields):
             msg = f'tuple length mismatch: expected {len(self.tuple_fields)}, got {len(value)}'
             raise ValidationError(msg)
-        return self._each(value, 'serialize', validate)
+        return self._each(value, 'serialize', validate, kwargs)
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> tuple:
         """List/tuple → tuple, each slot through its own field."""
@@ -58,14 +58,19 @@ class Tuple(Field):
         if validate and len(value) != len(self.tuple_fields):
             msg = f'tuple length mismatch: expected {len(self.tuple_fields)}, got {len(value)}'
             raise ValidationError(msg)
-        return self._each(value, 'deserialize', validate)
+        return self._each(value, 'deserialize', validate, kwargs)
 
-    def _each(self, value: Any, op: str, validate: bool) -> tuple:
-        """Each slot through its own field; a failure gains the slot's index."""
+    def _each(self, value: Any, op: str, validate: bool, hints: dict[str, Any]) -> tuple:
+        """Each slot through its own field; a failure gains the slot's index.
+
+        The codec hints (``format=``) go to every slot, as ``T`` passes them to
+        its nested class: without them a ``Bytes`` slot stayed base64 under
+        ``format='msgpack'`` while a top-level one went native.
+        """
         out = []
         for i, (f, v) in enumerate(zip(self.tuple_fields, value, strict=False)):
             try:
-                out.append(getattr(f, op)(v, validate))
+                out.append(getattr(f, op)(v, validate, **hints))
             except ValidationError as e:
                 add_location(e, i)
                 raise
