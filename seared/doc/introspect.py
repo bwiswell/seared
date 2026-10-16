@@ -45,7 +45,7 @@ class FieldDoc:
     nested: type[Seared] | None = None  # T(schema) target
     variants: tuple[VariantDoc, ...] | None = None
     envelope: str | None = None  # Union envelope description
-    fallback: type[Seared] | None = None  # Union default variant
+    fallback: type[Seared] | None = None  # Union fallback variant
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,7 +121,7 @@ def _field_doc(attr: str, wire: str, f: Any, type_str: str) -> FieldDoc:
     elif hasattr(f, 'variants'):
         variants = tuple(VariantDoc(tag=t, cls=c) for t, c in f.variants.items())
         envelope = 'flat' if getattr(f, 'payload_key', None) is None else f'nested under `{f.payload_key}`'
-        fallback = getattr(f, 'default', None)
+        fallback = getattr(f, 'fallback', None)
     elif hasattr(f, 'schema'):
         nested = f.schema
     return FieldDoc(

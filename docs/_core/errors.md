@@ -15,7 +15,7 @@ Both exceptions are re-exported at the package root: `s.SearedError`,
 Sources:
 
 - **`load`** — required field absent; type mismatch on a wire value;
-  unknown `Union` tag without a `default=` fallback; CSV/Pandas/Polars
+  unknown `Union` tag without a `fallback=` variant; CSV/Pandas/Polars
   shape mismatches.
 - **`dump`** — strict `validate=True` produces a `ValidationError`
   when an instance attribute doesn't match the declared field type.

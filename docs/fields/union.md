@@ -32,10 +32,17 @@ payload sits under `payload_key` for a nested envelope
 (`Control.args.speed`), and at the parent's own keys for a flat one
 (`Control.speed`), since that's where the payload's fields are.
 
-`Union(variants={...}, default=Unknown)` opts into graceful fallback
-— unknown tags coerce to the supplied default class. Useful for
-schema evolution: old consumers receive new variants as a generic
-fallback variant rather than crashing.
+`Union(variants={...}, fallback=Unknown)` opts into graceful fallback
+— unknown tags coerce to the supplied class. Useful for schema
+evolution: old consumers receive new variants as a generic fallback
+variant rather than crashing.
+
+Before 0.4.0 this option was spelled `default=`. From 0.4.0 `default=`
+means what it means on every other field, the value an absent key gets, and
+a `Union` has none: its envelope is always populated on load, and an
+omitted one in a constructor call is `None`. So `default=`, and
+`default_factory=`, raise `TypeError` pointing at `fallback=`, rather
+than quietly change meaning. `default=None` is still accepted.
 
 ## Multiple Unions per class
 

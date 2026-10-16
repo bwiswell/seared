@@ -1,6 +1,6 @@
 """Tests for ``seared.fields.union`` — the tagged-union ``UNWRAP`` field.
 
-Folds in the ``default=<VariantCls>`` schema-evolution fallback suite
+Folds in the ``fallback=<VariantCls>`` schema-evolution fallback suite
 (was ``tests/test_union_fallback.py``).
 """
 
@@ -188,7 +188,7 @@ class TestMultipleUnwrapDisjointKeys:
 
 
 # ---------------------------------------------------------------------------
-# Schema-evolution fallback — ``default=<VariantCls>`` (was
+# Schema-evolution fallback — ``fallback=<VariantCls>`` (was
 # tests/test_union_fallback.py).
 # ---------------------------------------------------------------------------
 
@@ -225,14 +225,14 @@ class TestNoFallback:
 
 
 class TestWithFallback:
-    """``default=<Variant>`` opts into graceful fallback."""
+    """``fallback=<Variant>`` opts into graceful fallback."""
 
-    def test_unknown_tag_coerces_to_default(self):
+    def test_unknown_tag_coerces_to_fallback(self):
         @s.seared
         class Cmd(s.Seared):
             action: object = s.Union(
                 variants={'start': _StartInt, 'stop': _StopReason},
-                default=Unknown,
+                fallback=Unknown,
             )
 
         loaded = Cmd.load({'type': 'reboot', 'raw_tag': 'reboot'})
@@ -243,7 +243,7 @@ class TestWithFallback:
         class Cmd(s.Seared):
             action: object = s.Union(
                 variants={'start': _StartInt, 'stop': _StopReason},
-                default=Unknown,
+                fallback=Unknown,
             )
 
         s_loaded = Cmd.load({'type': 'start', 'speed': 10})
@@ -254,23 +254,54 @@ class TestWithFallback:
         assert isinstance(x_loaded.action, _StopReason)
         assert x_loaded.action.reason == 'test'
 
-    def test_default_must_be_a_class(self):
-        with pytest.raises(TypeError, match='default must be a class'):
+    def test_fallback_must_be_a_class(self):
+        with pytest.raises(TypeError, match='fallback must be a class'):
             s.Union(
                 variants={'start': _StartInt},
-                default='not-a-class',  # type: ignore[arg-type]
+                fallback='not-a-class',  # type: ignore[arg-type]
             )
 
-    def test_default_none_preserves_strict_behavior(self):
+    def test_fallback_none_preserves_strict_behavior(self):
         @s.seared
         class Cmd(s.Seared):
             action: object = s.Union(
                 variants={'start': _StartInt},
-                default=None,
+                fallback=None,
             )
 
         with pytest.raises(s.ValidationError, match='unknown tag'):
             Cmd.load({'type': 'reboot'})
+
+
+class TestDefaultIsRefused:
+    """Pin: ``default=`` no longer names the fallback, and is refused rather than silently reinterpreted.
+
+    Until 0.4.0 it did. Read as a field default, ``default=Unknown`` would fill
+    an omitted attribute with the *class* ``Unknown``.
+    """
+
+    @pytest.mark.parametrize('option', ['default', 'default_factory'])
+    def test_a_default_option_raises_and_points_at_fallback(self, option):
+        value = Unknown if option == 'default' else list
+        with pytest.raises(TypeError, match=r'fallback=<VariantCls>'):
+            s.Union(variants={'start': _StartInt}, **{option: value})
+
+    def test_default_none_is_still_accepted(self):
+        # ``None`` is "no default", and keeps the field optional to a type
+        # checker, so existing ``default=None`` declarations stay valid.
+        @s.seared
+        class Cmd(s.Seared):
+            action: object = s.Union(variants={'start': _StartInt}, default=None)
+
+        with pytest.raises(s.ValidationError, match='unknown tag'):
+            Cmd.load({'type': 'reboot'})
+
+    def test_an_omitted_union_constructs_as_none_not_a_class(self):
+        @s.seared
+        class Cmd(s.Seared):
+            action: object = s.Union(variants={'start': _StartInt}, fallback=Unknown)
+
+        assert Cmd().action is None
 
 
 # ---------------------------------------------------------------------------
