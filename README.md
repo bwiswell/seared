@@ -13,7 +13,7 @@ for free.
 ## Why seared
 
 - **Zero runtime dependencies.** Pure stdlib core. Numpy / pandas / polars / PyYAML / tomli-w live behind opt-in extras.
-- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~3.3×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~1.8×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
+- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~3.6×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~1.9×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
 - **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
 - **Compact.** `@s.seared` classes are `__slots__` dataclasses by default — lower memory per instance, faster attribute access.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
@@ -276,21 +276,21 @@ See [`docs/_core/errors.md`](docs/_core/errors.md) for the full hierarchy.
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
 a list of strings) on an idle machine. Recorded
-<!-- bench:run -->2026-08-31, Python 3.14.3, 20,000 iterations, one run; seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run -->;
+<!-- bench:run -->2026-10-16, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.3.4, rusted 0.3.1, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run -->;
 ratios are versus marshmallow:
 
 <!-- bench:ops -->
 | Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
 |------|---------------|----------------------|----------------------|---------------|-----------------|
-| load | 8,732 ops/s   | 28,913 ops/s (~3.3×) | 30,505 ops/s (~3.5×) | 150,235 ops/s | 328,175 ops/s   |
-| dump | 24,920 ops/s  | 44,776 ops/s (~1.8×) | 50,536 ops/s (~2.0×) | 180,340 ops/s | 409,039 ops/s   |
+| load | 8,550 ops/s   | 30,842 ops/s (~3.6×) | 30,164 ops/s (~3.5×) | 147,706 ops/s | 337,158 ops/s   |
+| dump | 23,603 ops/s  | 44,066 ops/s (~1.9×) | 48,832 ops/s (~2.1×) | 170,499 ops/s | 408,068 ops/s   |
 <!-- /bench:ops -->
 
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
 same schema decorated `@s.seared(validate=False)`. Both are benched with the
 accelerator explicitly off, so these are the pure-Python numbers whatever
 happens to be installed. Every number is
-<!-- bench:runs -->from one run<!-- /bench:runs -->, and every one in this
+<!-- bench:runs -->the median of three runs<!-- /bench:runs -->, and every one in this
 README is generated from the recorded results, prose included.
 pydantic's compiled Rust core outruns pure Python — that is the trade seared
 makes by default, and [`rusted`](#accelerator) is how you opt out of it
