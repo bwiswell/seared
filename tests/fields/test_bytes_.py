@@ -65,10 +65,10 @@ class TestBytes:
         d = Obj.dump(Obj(data=None))
         assert 'data' not in d
 
-    def test_missing_default(self):
+    def test_default(self):
         @s.seared
         class Obj(s.Seared):
-            data: bytes = s.Bytes(missing=b'default')
+            data: bytes = s.Bytes(default=b'default')
 
         obj = Obj.load({})
         assert obj.data == b'default'

@@ -35,7 +35,8 @@ class Foo(s.Seared): ...
    constraint; relaxed to per-key-disjoint.
 4. **Wrap `__init__`** — natural construction (`Foo()`) leaves `Field`
    metadata sitting on instance attributes. The wrapper substitutes
-   each `Field` instance with its `missing` value. Mutable `missing`
+   each `Field` instance with its default (a `default_factory` call, or
+   the static `default`). Mutable `default`
    values (`list`, `dict`, `set`, `frozenset`) are deep-copied
    per-instance to avoid the classic Python shared-default footgun.
    A `__post_init__` is wrapped to substitute *first*: the dataclass

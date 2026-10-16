@@ -47,3 +47,10 @@ def test_must_error_is_flagged(diagnostic: str) -> None:
     result = _run_ty('must_error.py')
     assert result.returncode != 0, 'expected ty to report errors, but it passed'
     assert diagnostic in result.stdout, f'expected {diagnostic!r} in ty output:\n{result.stdout}'
+
+
+def test_the_removed_missing_keyword_is_flagged() -> None:
+    # ``unknown-argument`` also fires for ``z`` above; this pins that it fires
+    # for ``missing=`` specifically, now that the stubs no longer accept it.
+    result = _run_ty('must_error.py')
+    assert 'Argument `missing` does not match any known parameter' in result.stdout, result.stdout

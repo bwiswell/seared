@@ -62,6 +62,13 @@ lines as it lands, and the entry is dated when that version is released.
   attribute with the class `Unknown` itself. So `default=` (anything but `None`) and `default_factory=` now raise
   `TypeError` pointing at `fallback=`, rather than change meaning silently. `default=None` is still accepted.
 
+### Removed
+
+- **Breaking:** `missing=`, the alias for `default=`, deprecated since 0.2.1. Passing it raises Python's own
+  `TypeError` (an unexpected keyword argument); use `default=`, or `default_factory=` for a mutable default. The
+  `Field.missing` attribute goes with it: a field's default is `f.default`, held as given, which is what
+  construction, `load`, `seared.doc` and the accelerator spec now read.
+
 ## 0.3.4 — 2026-10-16
 
 **Tagged releases, benchmark numbers generated from their results, and the pure-Python path back to full speed.** A

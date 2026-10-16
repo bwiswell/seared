@@ -5,7 +5,7 @@ Folds in three feature suites that hammer different parts of the
 decorator's responsibilities:
 
 - ``test_mutable_defaults`` — deep-copy semantics for mutable
-  ``missing`` defaults (the decorator wraps ``__init__``).
+  ``default`` values (the decorator wraps ``__init__``).
 - ``test_multi_union`` — multi-``Union`` collision-detection that
   ``_build`` performs at class-creation time.
 - ``test_binary_format`` — ``format=`` kwarg threading through
@@ -88,12 +88,12 @@ class TestSearedDecorator:
         assert (spec.attr, spec.wire) == ('x', 'ex')
         assert spec.field is spec[2]
 
-    def test_natural_init_replaces_field_defaults_with_missing(self):
+    def test_natural_init_replaces_field_defaults(self):
         @s.seared
         class Foo(s.Seared):
             x: int = s.Int(required=True)
             y: int | None = s.Int()
-            z: int = s.Int(missing=42)
+            z: int = s.Int(default=42)
 
         f = Foo(x=1)
         assert f.y is None
@@ -139,13 +139,13 @@ class TestMixedClass:
 
         @s.seared
         class B(s.Seared):
-            a: int = s.Int(missing=5)
-            b: float = s.Float(missing=3.14)
-            c: str = s.Str(missing='hello')
+            a: int = s.Int(default=5)
+            b: float = s.Float(default=3.14)
+            c: str = s.Str(default='hello')
             d: A = s.T(A, required=True)
-            e: Color = s.Enum(enum=Color, missing=Color.GREEN)
-            f: list = s.Int(many=True, missing=[])
-            g: dict = s.Float(keyed=True, missing={})
+            e: Color = s.Enum(enum=Color, default=Color.GREEN)
+            f: list = s.Int(many=True, default=[])
+            g: dict = s.Float(keyed=True, default={})
 
         data = {
             'a': 3,
@@ -193,16 +193,16 @@ class TestMixedClass:
 
 
 # ---------------------------------------------------------------------------
-# Mutable ``missing`` defaults — deep-copied per instance (was
+# Mutable ``default`` values — deep-copied per instance (was
 # tests/test_mutable_defaults.py).
 # ---------------------------------------------------------------------------
 
 
-class TestListMissing:
+class TestListDefault:
     def test_two_instances_have_distinct_lists(self):
         @s.seared
         class Bag(s.Seared):
-            tags: list = s.Str(many=True, missing=[])
+            tags: list = s.Str(many=True, default=[])
 
         a = Bag()
         b = Bag()
@@ -214,7 +214,7 @@ class TestListMissing:
     def test_explicit_value_unaffected(self):
         @s.seared
         class Bag(s.Seared):
-            tags: list = s.Str(many=True, missing=[])
+            tags: list = s.Str(many=True, default=[])
 
         explicit = ['a', 'b']
         a = Bag(tags=explicit)
@@ -224,11 +224,11 @@ class TestListMissing:
         assert a.tags == ['a', 'b', 'c']  # documented passthrough
 
 
-class TestDictMissing:
+class TestDictDefault:
     def test_two_instances_have_distinct_dicts(self):
         @s.seared
         class Doc(s.Seared):
-            meta: dict = s.Str(keyed=True, missing={})
+            meta: dict = s.Str(keyed=True, default={})
 
         a = Doc()
         b = Doc()
@@ -236,13 +236,13 @@ class TestDictMissing:
         assert b.meta == {}, 'dict missing-default sharing regressed'
 
     def test_nested_mutable_isolated_via_deepcopy(self):
-        """Pin deepcopy semantics: ``missing={'tags': ['default']}``
+        """Pin deepcopy semantics: ``default={'tags': ['default']}``
         gives each instance its own OUTER dict AND its own INNER list.
         With shallow copy, the inner list would be shared."""
 
         @s.seared
         class Doc(s.Seared):
-            meta: dict = s.Dict(missing={'tags': ['default']})
+            meta: dict = s.Dict(default={'tags': ['default']})
 
         a = Doc()
         b = Doc()
@@ -252,14 +252,14 @@ class TestDictMissing:
         )
 
 
-class TestSetMissing:
+class TestSetDefault:
     def test_two_instances_have_distinct_sets(self):
         # No ``Set`` field type in seared; use ``Str(many=True)`` plus
-        # a ``set`` missing — the decorator's wrapper deepcopies the
-        # raw missing object regardless of the field's wire shape.
+        # a ``set`` default — the decorator's wrapper deepcopies the
+        # raw default object regardless of the field's wire shape.
         @s.seared
         class Tags(s.Seared):
-            members: set = s.Str(many=True, missing=set())
+            members: set = s.Str(many=True, default=set())
 
         a = Tags()
         b = Tags()
@@ -267,11 +267,11 @@ class TestSetMissing:
         assert b.members == set()
 
 
-class TestFrozensetMissing:
-    def test_frozenset_missing_deep_copied(self):
+class TestFrozensetDefault:
+    def test_frozenset_default_deep_copied(self):
         @s.seared
         class Tags(s.Seared):
-            members: frozenset = s.Str(many=True, missing=frozenset())
+            members: frozenset = s.Str(many=True, default=frozenset())
 
         a = Tags()
         b = Tags()
@@ -279,30 +279,30 @@ class TestFrozensetMissing:
         assert a.members == b.members == frozenset()
 
 
-class TestImmutableMissing:
-    def test_string_missing_passthrough(self):
+class TestImmutableDefault:
+    def test_string_default_passthrough(self):
         @s.seared
         class Doc(s.Seared):
-            tag: str = s.Str(missing='default')
+            tag: str = s.Str(default='default')
 
         a = Doc()
         b = Doc()
         # Strings are immutable; both share the same object — fine.
         assert a.tag == b.tag == 'default'
 
-    def test_int_missing_passthrough(self):
+    def test_int_default_passthrough(self):
         @s.seared
         class Counter(s.Seared):
-            n: int = s.Int(missing=0)
+            n: int = s.Int(default=0)
 
         a = Counter()
         b = Counter()
         assert a.n == b.n == 0
 
-    def test_none_missing_passthrough(self):
+    def test_none_default_passthrough(self):
         @s.seared
         class Maybe(s.Seared):
-            value: object = s.Str(missing=None)
+            value: object = s.Str(default=None)
 
         a = Maybe()
         assert a.value is None
@@ -437,12 +437,12 @@ class _Up(s.Seared):
 
 @s.seared
 class _Down(s.Seared):
-    reason: str = s.Str(missing='')
+    reason: str = s.Str(default='')
 
 
 @s.seared
 class _Read(s.Seared):
-    keys: list = s.Str(many=True, missing=[])
+    keys: list = s.Str(many=True, default=[])
 
 
 @s.seared
@@ -571,7 +571,7 @@ class _Blob(s.Seared):
 
 @s.seared
 class _Many(s.Seared):
-    chunks: list = s.Bytes(many=True, missing=[])
+    chunks: list = s.Bytes(many=True, default=[])
 
 
 class TestJSONDefault:

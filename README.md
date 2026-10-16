@@ -150,9 +150,6 @@ reveal_type(Cfg.load({}).name)  # str  (.load() returns the concrete class)
   preferred for mutable values) to mark a field optional. These are the names
   the type checker reads to tell required from optional, so a field with
   neither — and without `required=True` — is treated as a required argument.
-- **`missing=` is deprecated, and is removed in 0.4.0** — it still works at
-  runtime (as an alias for `default=`) but emits a `DeprecationWarning` and is
-  invisible to the type checker's required/optional inference.
 - The **annotation drives the attribute's type** (the stubs return `Any`), so
   `f: list[int] = s.Int(many=True, default_factory=list)` types as `list[int]`.
   The checker does not cross-check the annotation against the field kind;
@@ -363,7 +360,6 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 - **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` and `NDArray` honour the hint; other fields are unaffected.
 - **No nullable-true fields** — `None` is always stripped from dumps; explicit JSON `null` is not emittable.
 - **No async variants.** seared is pure CPU-bound transformation; no async path is planned.
-- **`missing=` is deprecated** in favour of `default=` / `default_factory=` (see [Type checking](#type-checking)), and is removed in 0.4.0. It remains a runtime alias for `default=` but warns and is invisible to type checkers.
 - **`required` means the key is present, not that the value is non-null.** A wire `null` loads as `None`, even for a `required=True` field, and it overrides a `default=` rather than counting as absent. (0.4.0 treats `null` as absent unless a field opts into being nullable.)
 - **Construction doesn't check `required`.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises.
 - **Unknown wire keys are ignored** on `load`, by design: an older consumer can read a newer producer's payload.

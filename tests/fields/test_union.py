@@ -200,14 +200,14 @@ class _StartInt(s.Seared):
 
 @s.seared
 class _StopReason(s.Seared):
-    reason: str = s.Str(missing='')
+    reason: str = s.Str(default='')
 
 
 @s.seared
 class Unknown(s.Seared):
     """Generic catch-all for variants the consumer doesn't yet know about."""
 
-    raw_tag: str = s.Str(missing='')
+    raw_tag: str = s.Str(default='')
 
 
 class TestNoFallback:

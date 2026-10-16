@@ -371,7 +371,7 @@ class TestSpecEmission:
         assert by_attr['name']['kind'] == 'str'
         assert by_attr['name']['required'] is True
         assert by_attr['flag']['kind'] == 'bool'
-        # ``default=`` is already folded into ``missing`` by Field.__post_init__.
+        # The spec carries ``Field.default`` as-is.
         assert by_attr['flag']['default'] is False
         assert by_attr['tags']['many'] is True
         assert by_attr['tags']['default_factory'] is list

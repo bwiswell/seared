@@ -8,7 +8,6 @@ def T(
     *,
     default: Any = ...,
     default_factory: Callable[[], Any] = ...,
-    missing: Any = ...,
     data_key: str | None = ...,
     keyed: bool = ...,
     many: bool = ...,

@@ -15,16 +15,18 @@ common per-field knobs. Subclasses override `serialize` / `deserialize`.
 | `default` | `None` | Static value used when the wire key is absent |
 | `default_factory` | `None` | Zero-arg callable invoked per instance instead; the home for mutable defaults |
 | `doc` | `None` | Human-facing description; never serialized, surfaced by `seared.doc` |
-| `missing` | `None` | **Deprecated** alias for `default`; warns, and is removed in 0.4.0 |
 
 `required` is checked before any default, so a required field's default
 never applies: give a field one or the other.
 
-`default=` folds into the `missing` attribute at construction, which is
-where the decorator reads the resolved value; `default_factory` stays
-deferred and is called once per instance. A mutable static default (`list`,
+`default` is held as given, and read directly by construction, `load` and
+the accelerator spec; `default_factory` stays deferred and is called once
+per instance, winning if both are set. A mutable static default (`list`,
 `dict`, `set`, `frozenset`) is deep-copied per instance as a fallback, but
 `default_factory` is the better spelling.
+
+`missing=`, the old alias for `default=`, was removed in 0.4.0. Passing it
+now raises `TypeError` (an unexpected keyword argument).
 
 ## `serialize(value, validate=True, **kwargs)`
 

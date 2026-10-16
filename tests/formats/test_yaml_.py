@@ -14,7 +14,7 @@ import seared as s
 @s.seared
 class Cfg(s.Seared):
     name: str = s.Str(required=True)
-    items: list = s.Str(many=True, missing=[])
+    items: list = s.Str(many=True, default=[])
 
 
 class TestRoundTrip:

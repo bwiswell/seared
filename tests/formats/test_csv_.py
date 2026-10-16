@@ -15,7 +15,7 @@ import seared as s
 class Row(s.Seared):
     id: int = s.Int(required=True)
     name: str = s.Str(required=True)
-    score: float = s.Float(missing=0.0)
+    score: float = s.Float(default=0.0)
 
 
 class TestFlatRoundTrip:
@@ -84,7 +84,7 @@ class TestRejectsNested:
         @s.seared
         class Bag(s.Seared):
             id: int = s.Int(required=True)
-            tags: list = s.Str(many=True, missing=[])
+            tags: list = s.Str(many=True, default=[])
 
         with pytest.raises(TypeError, match='keyed/many'):
             Bag.to_csv([Bag(id=1, tags=['x'])])
@@ -93,7 +93,7 @@ class TestRejectsNested:
         @s.seared
         class Doc(s.Seared):
             id: int = s.Int(required=True)
-            meta: dict = s.Str(keyed=True, missing={})
+            meta: dict = s.Str(keyed=True, default={})
 
         with pytest.raises(TypeError, match='keyed/many'):
             Doc.to_csv([Doc(id=1)])
@@ -105,7 +105,7 @@ class TestRejectsNested:
 
         @s.seared
         class B(s.Seared):
-            r: str = s.Str(missing='')
+            r: str = s.Str(default='')
 
         @s.seared
         class WithUnion(s.Seared):

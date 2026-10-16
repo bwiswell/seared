@@ -148,7 +148,7 @@ def _default_repr(f: Any) -> str:
     factory = getattr(f, 'default_factory', None)
     if factory is not None:
         return f'`<factory: {getattr(factory, "__name__", "callable")}>`'
-    value = f.missing  # resolved default (default= folds into missing)
+    value = f.default
     if value is None:
         return '`null`'
     if isinstance(value, _enum.Enum):

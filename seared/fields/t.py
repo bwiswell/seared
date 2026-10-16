@@ -21,7 +21,6 @@ class T(Field):
         *,
         default: Any = None,
         default_factory: Callable[[], Any] | None = None,
-        missing: Any = None,
         data_key: str | None = None,
         keyed: bool = False,
         many: bool = False,
@@ -38,7 +37,6 @@ class T(Field):
             dump=dump,
             default=default,
             default_factory=default_factory,
-            missing=missing,
             doc=doc,
         )
         object.__setattr__(self, 'schema', schema)
