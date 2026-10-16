@@ -435,9 +435,16 @@ CASES = [
 
 
 def _outcome(fn, arg):
-    """``('ok', value)`` or ``('raised', ExcType, message)`` — comparable."""
+    """``('ok', value)`` or ``('raised', ExcType, message, …parts)`` — comparable.
+
+    A ``ValidationError`` also carries its parts. Comparing the message alone
+    would miss a path that renders the same but holds different types (an
+    index ``1`` against a key ``'1'``).
+    """
     try:
         return ('ok', fn(arg))
+    except s.ValidationError as exc:
+        return ('raised', type(exc).__name__, str(exc), exc.reason, exc.path, exc.cls_name)
     except Exception as exc:  # noqa: BLE001 — comparing failures is the point
         return ('raised', type(exc).__name__, str(exc))
 

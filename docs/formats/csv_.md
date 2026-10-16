@@ -51,3 +51,13 @@ loaded == rows                # → True
 
 `from_csv` accepts a path-like or a string of CSV content (see
 [`_common.md`](_common.md)).
+
+A bad record names its index among the data rows, 0-based with the header
+not counted, so `Row[2].score` is the third data row, line 4 of the file:
+
+```python
+Row.from_csv('name,score\nalice,90\nbob,85\ncarol,lots\n')
+# ValidationError: Row[2].score: cannot deserialize 'lots' as int
+```
+
+`to_csv` does the same with the index into the records you passed.

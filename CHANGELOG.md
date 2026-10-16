@@ -11,12 +11,27 @@ lines as it lands, and the entry is dated when that version is released.
 
 ## 0.4.0 — unreleased
 
-**`SPEC_ABI` 2, and the changelog in the repository.**
+**Errors that say where they happened, `SPEC_ABI` 2, and the changelog in the repository.**
 
 ### Added
 
 - **`CHANGELOG.md`**, this file: every release from 0.1.0 on, newest first. It is kept in the repository and grows
   with each change as it merges, where it had been reconstructed after each release.
+- **Errors say where they happened.** A `ValidationError` carries `.reason`, `.path` and `.cls_name`, and its
+  message reads `Outer.items[1].n: cannot deserialize 'x' as int`. On `load` the path holds wire keys, list indices
+  and keyed-dict keys, so `functools.reduce(operator.getitem, err.path, data)` retrieves the offending value; on
+  `dump` it holds attribute names.
+  - A missing required key ends the path at the absent key: `Outer.items[0].n: required key missing`.
+  - A `Union`'s tag errors point at the tag key, and a nested envelope's payload errors sit under its `payload_key`.
+  - A `Tuple` slot adds its index.
+  - A `ValidationError` raised in a `__post_init__` names the object it belongs to; any other exception passes
+    through untouched.
+  - Pickling keeps all three parts.
+
+  A `load` still stops at the first error, and `ValidationError('reason')` still works, with no path or class until
+  a `load` or `dump` adds them.
+- **`from_csv` and `to_csv` name the bad record** by its 0-based index among the data rows, header not counted:
+  `Row[2].id`.
 
 ### Changed
 
@@ -32,6 +47,16 @@ lines as it lands, and the entry is dated when that version is released.
   the fix; ABI 2 does.
 - The README installs `rusted` by its `v0.4.0` tag and explains the `SPEC_ABI` handshake, and
   `docs/_core/accel.md` gains a `SPEC_ABI` 2 section.
+- **Breaking:** error messages gain their location as a prefix, `Cls.path: reason`. `.reason` keeps each field's
+  text word for word, so a pattern written against the old message can match `err.reason` instead. Two messages
+  that named their own location are reworded:
+  - `Outer.n is required` reads `Outer.n: required key missing`, and names the field by its wire key, its
+    `data_key` where it has one, rather than its attribute;
+  - `Outer.load expected dict, got list` reads `Outer: expected dict, got list`.
+
+  A field's `deserialize` called on its own still raises the bare reason.
+- **`SPEC_ABI` 2's error contract:** a backend constructs the error class the spec carries as
+  `error(reason, path=…, cls_name=…)`, and must end with the same three parts as the Python path.
 
 ## 0.3.4 — 2026-10-16
 

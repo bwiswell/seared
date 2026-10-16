@@ -60,7 +60,9 @@ What the generated `load` does with each declared field, in order:
    A `null` value short-circuits to `None` before the field ever sees it,
    whatever the field's `required` / default, so a wire `null` *overrides*
    a default rather than counting as absent.
-2. **Absent, `required=True`** → `ValidationError('Cls.attr is required')`.
+2. **Absent, `required=True`** → `ValidationError`, reading
+   `Cls.wire: required key missing` (the path names the wire key; see
+   [`errors.md`](errors.md)).
    "Required" means the key is present, not that the value is non-null.
 3. **Absent, `default_factory`** → a fresh value from the factory.
 4. **Absent, otherwise** → the static default (`None` if none was given).

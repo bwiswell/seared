@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 import csv as _csv
 import io
 
+from seared._core.errors import ValidationError, add_location
+
 from ._common import read_source
 
 # Field type names that don't fit in a CSV cell. We check by the type's
@@ -62,8 +64,13 @@ def to(cls: type[Seared], items: Iterable[Seared]) -> str:
     out = io.StringIO()
     writer = _csv.DictWriter(out, fieldnames=columns)
     writer.writeheader()
-    for item in items:
-        writer.writerow(cls.dump(item))
+    for i, item in enumerate(items):
+        try:
+            writer.writerow(cls.dump(item))
+        except ValidationError as e:
+            # The path addresses what the caller passed: a sequence of records.
+            add_location(e, i)
+            raise
     return out.getvalue()
 
 
@@ -72,4 +79,13 @@ def from_(cls: type[Seared], source: str | os.PathLike) -> list[Seared]:
     _validate_flat(cls)
     text = read_source(source)
     reader = _csv.DictReader(io.StringIO(text))
-    return [cls.load(row) for row in reader]
+    records = []
+    for i, row in enumerate(reader):
+        try:
+            records.append(cls.load(row))
+        except ValidationError as e:
+            # The record's 0-based index among the data rows, header not
+            # counted: ``Cls[41].port`` is ``rows[41]['port']``.
+            add_location(e, i)
+            raise
+    return records

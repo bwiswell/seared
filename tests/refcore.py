@@ -188,6 +188,18 @@ def _prepare(fspec: dict[str, Any], validate: bool, err) -> dict[str, Any]:
     return {**fspec, 'de_one': de_one, 'ser_one': ser_one, 'validate': validate}
 
 
+def _relocated(e, err, *segments, cls_name=None):
+    """``e`` rebuilt with ``segments`` prepended to its path, and ``cls_name`` set.
+
+    The ABI 2 error contract: a backend raises ``err(reason, path=…,
+    cls_name=…)`` and must end with the same three parts, and so the same
+    message, as the Python path. It may build them any way it likes. This
+    oracle rebuilds through the public constructor at each level, as a
+    compiled core would; seared's own path mutates in place instead.
+    """
+    return err(e.reason, path=(*segments, *e.path), cls_name=e.cls_name if cls_name is None else cls_name)
+
+
 def _apply(f, v, one, validate, format, err):
     """Mirrors ``seared._core.decorator._apply`` — keyed / many orchestration."""
     if v is None:
@@ -196,12 +208,24 @@ def _apply(f, v, one, validate, format, err):
         if validate and not isinstance(v, dict):
             msg = f'expected dict for keyed field, got {type(v).__name__}'
             raise err(msg)
-        return {k: one(x, validate, format) for k, x in v.items()}
+        out = {}
+        for k, x in v.items():
+            try:
+                out[k] = one(x, validate, format)
+            except err as e:
+                raise _relocated(e, err, k) from None
+        return out
     if f['many']:
         if validate and not isinstance(v, (list, tuple)):
             msg = f'expected list for many field, got {type(v).__name__}'
             raise err(msg)
-        return [one(x, validate, format) for x in v]
+        items = []
+        for i, x in enumerate(v):
+            try:
+                items.append(one(x, validate, format))
+            except err as e:
+                raise _relocated(e, err, i) from None
+        return items
     return one(v, validate, format)
 
 
@@ -209,13 +233,24 @@ def _load_value(f, data, name, validate, format, err):
     """One field's value on load — mirrors the decorator's resolution order."""
     wire = f['wire']
     if wire in data:
-        return _apply(f, data[wire], f['de_one'], validate, format, err)
+        try:
+            return _apply(f, data[wire], f['de_one'], validate, format, err)
+        except err as e:
+            raise _relocated(e, err, wire, cls_name=name) from None
     if f['required']:
-        msg = f'{name}.{f["attr"]} is required'
-        raise err(msg)
+        msg = 'required key missing'
+        raise err(msg, path=(wire,), cls_name=name)
     if f['default_factory'] is not None:
         return f['default_factory']()
     return f['default']
+
+
+def _dump_value(f, v, name, validate, format, err):
+    """One field's wire value on dump; a failure's path names the attribute."""
+    try:
+        return _apply(f, v, f['ser_one'], validate, format, err)
+    except err as e:
+        raise _relocated(e, err, f['attr'], cls_name=name) from None
 
 
 def compile_spec(spec: dict[str, Any]) -> tuple[Any, Any] | None:
@@ -240,8 +275,8 @@ def compile_spec(spec: dict[str, Any]) -> tuple[Any, Any] | None:
 
     def load(data, format='json'):
         if not isinstance(data, dict):
-            msg = f'{name}.load expected dict, got {type(data).__name__}'
-            raise err(msg)
+            msg = f'expected dict, got {type(data).__name__}'
+            raise err(msg, cls_name=name)
         # ``__new__`` + setattr, bypassing __init__ — the construction path a
         # compiled core uses. The accel seam declines any class where that is
         # observable (custom __init__ / __post_init__).
@@ -258,7 +293,7 @@ def compile_spec(spec: dict[str, Any]) -> tuple[Any, Any] | None:
             v = getattr(obj, f['attr'], None)
             if v is None:
                 continue
-            out[f['wire']] = _apply(f, v, f['ser_one'], validate, format, err)
+            out[f['wire']] = _dump_value(f, v, name, validate, format, err)
         return out
 
     return load, dump

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from seared._core.errors import ValidationError
+from seared._core.errors import ValidationError, add_location
 
 from .field import Field
 
@@ -48,7 +48,7 @@ class Tuple(Field):
         if validate and len(value) != len(self.tuple_fields):
             msg = f'tuple length mismatch: expected {len(self.tuple_fields)}, got {len(value)}'
             raise ValidationError(msg)
-        return tuple(f.serialize(v, validate) for f, v in zip(self.tuple_fields, value, strict=False))
+        return self._each(value, 'serialize', validate)
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> tuple:
         """List/tuple → tuple, each slot through its own field."""
@@ -58,4 +58,15 @@ class Tuple(Field):
         if validate and len(value) != len(self.tuple_fields):
             msg = f'tuple length mismatch: expected {len(self.tuple_fields)}, got {len(value)}'
             raise ValidationError(msg)
-        return tuple(f.deserialize(v, validate) for f, v in zip(self.tuple_fields, value, strict=False))
+        return self._each(value, 'deserialize', validate)
+
+    def _each(self, value: Any, op: str, validate: bool) -> tuple:
+        """Each slot through its own field; a failure gains the slot's index."""
+        out = []
+        for i, (f, v) in enumerate(zip(self.tuple_fields, value, strict=False)):
+            try:
+                out.append(getattr(f, op)(v, validate))
+            except ValidationError as e:
+                add_location(e, i)
+                raise
+        return tuple(out)

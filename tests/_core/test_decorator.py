@@ -15,7 +15,9 @@ decorator's responsibilities:
 from __future__ import annotations
 
 import builtins
+import functools
 import json
+import operator
 from dataclasses import InitVar  # noqa: TC003 — dataclass() resolves the string annotation at runtime
 
 import pytest
@@ -687,3 +689,101 @@ class TestPerObjectPathsImportNothing:
         _Tree.dump(tree)
 
         assert imported == []
+
+
+# ---------------------------------------------------------------------------
+# Error paths
+# ---------------------------------------------------------------------------
+
+
+@s.seared
+class _PathLeaf(s.Seared):
+    n: int = s.Int(required=True)
+
+
+@s.seared
+class _PathPort(s.Seared):
+    port: int = s.Int(required=True, data_key='p')
+
+
+@s.seared
+class _PathRoot(s.Seared):
+    items: list[_PathLeaf] = s.T(_PathLeaf, many=True, required=True)
+    readers: dict = s.T(_PathPort, keyed=True, default_factory=dict)
+
+
+def _failure(fn, *args) -> s.ValidationError:
+    with pytest.raises(s.ValidationError) as info:
+        fn(*args)
+    return info.value
+
+
+class TestErrorPaths:
+    """Pin: an error says where it happened, as a path into what the caller passed."""
+
+    def test_a_load_path_retrieves_the_offending_value(self):
+        data = {'items': [{'n': 1}, {'n': 2}, {'n': 'x'}]}
+        e = _failure(_PathRoot.load, data)
+        assert str(e) == "_PathRoot.items[2].n: cannot deserialize 'x' as int"
+        assert functools.reduce(operator.getitem, e.path, data) == 'x'
+
+    def test_keyed_keys_render_in_brackets_unless_identifiers(self):
+        data = {'items': [], 'readers': {'r-1': {'p': 'bad'}}}
+        e = _failure(_PathRoot.load, data)
+        assert str(e) == "_PathRoot.readers['r-1'].p: cannot deserialize 'bad' as int"
+        assert functools.reduce(operator.getitem, e.path, data) == 'bad'
+
+    def test_a_missing_required_key_ends_the_path_at_the_absent_key(self):
+        e = _failure(_PathRoot.load, {'items': [{}]})
+        assert str(e) == '_PathRoot.items[0].n: required key missing'
+        assert e.reason == 'required key missing'
+
+    def test_a_required_key_is_named_by_its_wire_key(self):
+        e = _failure(_PathPort.load, {})
+        assert (e.path, str(e)) == (('p',), '_PathPort.p: required key missing')
+
+    def test_a_non_dict_names_the_class_alone(self):
+        e = _failure(_PathRoot.load, [])
+        assert (str(e), e.path) == ('_PathRoot: expected dict, got list', ())
+
+    def test_a_dump_path_names_attributes(self):
+        obj = _PathRoot(items=[], readers={'r-1': _PathPort(port='bad')})
+        e = _failure(_PathRoot.dump, obj)
+        assert e.path == ('readers', 'r-1', 'port')
+        assert str(e) == "_PathRoot.readers['r-1'].port: expected int, got str"
+
+    def test_a_post_init_validation_error_names_the_object(self):
+        @s.seared
+        class Window(s.Seared):
+            lo: int = s.Int(required=True)
+            hi: int = s.Int(required=True)
+
+            def __post_init__(self):
+                if self.hi < self.lo:
+                    msg = 'window ends before it starts'
+                    raise s.ValidationError(msg)
+
+        @s.seared
+        class Plan(s.Seared):
+            windows: list[Window] = s.T(Window, many=True, required=True)
+
+        assert str(_failure(Window.load, {'lo': 5, 'hi': 1})) == 'Window: window ends before it starts'
+        e = _failure(Plan.load, {'windows': [{'lo': 1, 'hi': 2}, {'lo': 5, 'hi': 1}]})
+        assert str(e) == 'Plan.windows[1]: window ends before it starts'
+
+    def test_other_exceptions_pass_through_untouched(self):
+        @s.seared
+        class Picky(s.Seared):
+            v: int = s.Int(required=True)
+
+            def __post_init__(self):
+                msg = 'not a seared error'
+                raise ValueError(msg)
+
+        with pytest.raises(ValueError, match=r'^not a seared error$') as info:
+            Picky.load({'v': 1})
+        assert not isinstance(info.value, s.ValidationError)
+
+    def test_a_field_raising_on_its_own_stays_bare(self):
+        e = _failure(s.Int().deserialize, 'x')
+        assert (str(e), e.path, e.cls_name) == ("cannot deserialize 'x' as int", (), None)

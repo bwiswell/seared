@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import seared as s
 
 
@@ -89,3 +91,21 @@ class TestTuple:
         d = Obj.dump(obj)
         assert 'coords' in d
         assert 'point' not in d
+
+
+class TestErrorPaths:
+    """Pin: a failing slot adds its index to the path."""
+
+    def test_a_slot_error_on_its_own(self):
+        with pytest.raises(s.ValidationError) as info:
+            s.Tuple(s.Int(), s.Str()).deserialize([1, 2])
+        assert (info.value.path, str(info.value)) == ((1,), '[1]: expected str, got int')
+
+    def test_a_slot_error_inside_a_class(self):
+        @s.seared
+        class Obj(s.Seared):
+            pair: tuple = s.Tuple(s.Int(), s.Str(), required=True)
+
+        with pytest.raises(s.ValidationError) as info:
+            Obj.load({'pair': ['x', 'y']})
+        assert str(info.value) == "Obj.pair[0]: cannot deserialize 'x' as int"
