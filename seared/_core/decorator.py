@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any
 
 from .accel import try_compile
 from .base import FieldSpec
-from .errors import ValidationError
+from .errors import ValidationError, add_location
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     # PEP 681 view. ``@dataclass_transform`` teaches type checkers (ty, pyright,
     # mypy) that ``@seared`` synthesises a dataclass, and ``field_specifiers``
@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from seared.fields.tuple_ import Tuple as _Tuple
     from seared.fields.union import Union
     from seared.fields.uuid_ import UUID
+
+    from .errors import PathSegment
 
     @overload
     def seared[ClsT](cls: type[ClsT], /) -> type[ClsT]: ...
@@ -169,7 +171,7 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> typ
         custom_init=custom_init,
     )
     if compiled is None:
-        dump_fn = _make_dump(hot, validate)
+        dump_fn = _make_dump(cls, hot, validate)
         load_fn = _make_load(cls, hot, validate)
     else:
         load_fn, dump_fn = compiled
@@ -283,7 +285,9 @@ def _fill_defaults(obj: Any, specs: tuple[_HotSpec, ...], field_class: type[_Fie
             object.__setattr__(obj, attr, missing)
 
 
-def _make_dump(specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
+def _make_dump(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
+    cls_name = cls.__name__
+
     def dump(obj: Any, format: str = 'json') -> dict[str, Any]:
         out: dict[str, Any] = {}
         for attr, wire, f in specs:
@@ -292,14 +296,19 @@ def _make_dump(specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
             v = getattr(obj, attr, None)
             if v is None:
                 continue
-            if _is_unwrap(f):
-                # UNWRAP field serializes to a dict that's merged at the top
-                # level of the parent's wire form (rather than nested under
-                # ``wire``). This is what makes {tag, payload} envelopes land
-                # as flat keys on the parent class's dump.
-                out.update(f.serialize(v, validate, format=format))
-            else:
-                out[wire] = _apply(f, v, 'serialize', validate, format=format)
+            try:
+                if _is_unwrap(f):
+                    # UNWRAP field serializes to a dict that's merged at the top
+                    # level of the parent's wire form (rather than nested under
+                    # ``wire``). This is what makes {tag, payload} envelopes land
+                    # as flat keys on the parent class's dump.
+                    out.update(f.serialize(v, validate, format=format))
+                else:
+                    out[wire] = _apply(f, v, 'serialize', validate, format=format)
+            except ValidationError as e:
+                # A ``dump`` path names attributes: its input is the object.
+                add_location(e, attr, cls_name=cls_name)
+                raise
         return out
 
     return dump
@@ -308,35 +317,53 @@ def _make_dump(specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
 def _make_load(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
     cls_name = cls.__name__
 
+    # Each failure gains its location as it passes back up through here: a
+    # ``load`` path names wire keys, so it addresses the input the caller
+    # holds. The ``try`` blocks cost nothing until something raises.
     def load(data: Any, format: str = 'json') -> Any:
         if not isinstance(data, dict):
-            msg = f'{cls_name}.load expected dict, got {type(data).__name__}'
-            raise ValidationError(msg)
+            msg = f'expected dict, got {type(data).__name__}'
+            raise ValidationError(msg, cls_name=cls_name)
         kwargs: dict[str, Any] = {}
         for attr, wire, f in specs:
             if _is_unwrap(f):
-                # UNWRAP field consumes whatever wire keys it recognises from
-                # the parent's payload — we pass the whole dict.
-                kwargs[attr] = f.deserialize(data, validate, format=format)
-                continue
-            if wire in data:
-                kwargs[attr] = _apply(
-                    f,
-                    data[wire],
-                    'deserialize',
-                    validate,
-                    format=format,
-                )
+                kwargs[attr] = _load_envelope(f, data, validate, format, cls_name)
+            elif wire in data:
+                try:
+                    kwargs[attr] = _apply(f, data[wire], 'deserialize', validate, format=format)
+                except ValidationError as e:
+                    add_location(e, wire, cls_name=cls_name)
+                    raise
             elif f.required:
-                msg = f'{cls_name}.{attr} is required'
-                raise ValidationError(msg)
+                msg = 'required key missing'
+                raise ValidationError(msg, path=(wire,), cls_name=cls_name)
             elif f.default_factory is not None:
                 kwargs[attr] = f.default_factory()
             else:
                 kwargs[attr] = f.missing
-        return cls(**kwargs)
+        try:
+            return cls(**kwargs)
+        except ValidationError as e:
+            # Raised by a ``__post_init__``: it is about the object as a whole.
+            add_location(e, cls_name=cls_name)
+            raise
 
     return load
+
+
+def _load_envelope(f: Any, data: dict[str, Any], validate: bool, format: str, cls_name: str) -> Any:
+    """Load an UNWRAP field (a ``Union`` envelope) from the parent's own wire dict.
+
+    It consumes whatever keys it recognises, which are the parent's, so a
+    failure gains the class but no segment here; a nested envelope adds its
+    ``payload_key`` itself. Out of ``load``'s loop because only classes with a
+    ``Union`` pay for the call.
+    """
+    try:
+        return f.deserialize(data, validate, format=format)
+    except ValidationError as e:
+        add_location(e, cls_name=cls_name)
+        raise
 
 
 def _apply(f: Any, v: Any, op: str, validate: bool, *, format: str = 'json') -> Any:
@@ -347,10 +374,40 @@ def _apply(f: Any, v: Any, op: str, validate: bool, *, format: str = 'json') -> 
         if validate and not isinstance(v, dict):
             msg = f'expected dict for keyed field, got {type(v).__name__}'
             raise ValidationError(msg)
-        return {k: method(x, validate, format=format) for k, x in v.items()}
+        try:
+            return {k: method(x, validate, format=format) for k, x in v.items()}
+        except ValidationError as e:
+            add_location(e, *_first_failure(v.items(), method, validate, format))
+            raise
     if f.many:
         if validate and not isinstance(v, (list, tuple)):
             msg = f'expected list for many field, got {type(v).__name__}'
             raise ValidationError(msg)
-        return [method(x, validate, format=format) for x in v]
+        try:
+            return [method(x, validate, format=format) for x in v]
+        except ValidationError as e:
+            add_location(e, *_first_failure(enumerate(v), method, validate, format))
+            raise
     return method(v, validate, format=format)
+
+
+def _first_failure(
+    items: Iterable[tuple[PathSegment, Any]],
+    method: Callable[..., Any],
+    validate: bool,
+    format: str,
+) -> tuple[PathSegment, ...]:
+    """The key or index of the first item ``method`` rejects, found once something has failed.
+
+    The comprehensions in ``_apply`` stay plain because a ``try`` around each
+    item would cost every call that succeeds; the location is only worth
+    working out after one hasn't. Running ``method`` again is safe: seared's
+    fields have no side effects (a nested class's ``__post_init__`` runs again,
+    and must not have them either). ``()`` if nothing fails the second time.
+    """
+    for key, x in items:
+        try:
+            method(x, validate, format=format)
+        except ValidationError:
+            return (key,)
+    return ()

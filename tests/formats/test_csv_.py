@@ -139,3 +139,21 @@ class TestDateDecimalRoundTrip:
         rows = [Money(id=1, amount=D('1234.56789'))]
         loaded = Money.from_csv(Money.to_csv(rows))
         assert loaded[0].amount == D('1234.56789')
+
+
+class TestErrorPaths:
+    """Pin: a bad record names its 0-based index among the data rows, header not counted."""
+
+    def test_from_csv_names_the_record(self):
+        text = 'id,name,score\n1,a,1.0\n2,b,2.0\nthree,c,3.0\n'
+        with pytest.raises(s.ValidationError) as info:
+            Row.from_csv(text)
+        assert info.value.path == (2, 'id')
+        assert str(info.value) == "Row[2].id: cannot deserialize 'three' as int"
+
+    def test_to_csv_names_the_record(self):
+        rows = [Row(id=1, name='a'), Row(id='x', name='b')]
+        with pytest.raises(s.ValidationError) as info:
+            Row.to_csv(rows)
+        assert info.value.path == (1, 'id')
+        assert str(info.value) == 'Row[1].id: expected int, got str'

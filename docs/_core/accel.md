@@ -131,6 +131,22 @@ own closures. `SUPPORTS_SEARED` and `__version__` are optional and purely
 diagnostic — `SPEC_ABI` is the whole compatibility gate, because seared is
 zero-dependency and has no PEP 440 specifier parser to hand.
 
+**Errors (from `SPEC_ABI` 2).** The class to raise rides in the spec as
+`spec['error']`, so a backend never imports seared. Construct it as
+`error(reason, path=…, cls_name=…)`, and end with the same three parts the
+Python path would, which gives the same message:
+
+- `reason`: the field-level text, word for word, plus the two the decorator
+  builds itself: `required key missing` and `expected dict, got <type>`;
+- `path`: wire keys, list indices and keyed-dict keys on `load`; attribute
+  names on `dump`;
+- `cls_name`: the outermost class the error passed through.
+
+How a backend builds them is its own business. seared's Python path
+prepends in place as the error unwinds; `refcore` rebuilds through the
+constructor at each level, which needs nothing but the public parts and costs
+nothing until something fails.
+
 `tests/refcore.py` is a complete pure-Python implementation of this
 protocol. It's the differential-test oracle: seared's entire suite runs
 against it with

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     from seared._core.base import Seared
 
-from seared._core.errors import ValidationError
+from seared._core.errors import ValidationError, add_location
 
 from .field import Field
 
@@ -94,7 +94,7 @@ class Union(Field):
         tag = value.get(self.tag_key)
         if tag is None:
             msg = f'Union: missing tag {self.tag_key!r} in envelope'
-            raise ValidationError(msg)
+            raise ValidationError(msg, path=(self.tag_key,))
         variant_cls = self.variants.get(tag)
         if variant_cls is None:
             if self.default is not None:
@@ -103,9 +103,15 @@ class Union(Field):
                 variant_cls = self.default
             else:
                 msg = f'Union: unknown tag {tag!r}; expected one of {sorted(self.variants)}'
-                raise ValidationError(msg)
+                raise ValidationError(msg, path=(self.tag_key,))
         if self.payload_key is None:
+            # Flat: the variant's keys sit beside the tag in the parent's own
+            # dict, so its errors already carry the right path.
             payload = {k: v for k, v in value.items() if k != self.tag_key}
-        else:
-            payload = value.get(self.payload_key, {})
-        return variant_cls.load(payload, kwargs.get('format', 'json'))
+            return variant_cls.load(payload, kwargs.get('format', 'json'))
+        payload = value.get(self.payload_key, {})
+        try:
+            return variant_cls.load(payload, kwargs.get('format', 'json'))
+        except ValidationError as e:
+            add_location(e, self.payload_key)
+            raise

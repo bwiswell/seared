@@ -26,7 +26,11 @@ when `tag_key` collides with a variant field name.
 ## Unknown tags
 
 Default behaviour: `load` raises `ValidationError` on a tag not in
-`variants`.
+`variants`. A missing or unknown tag's error points at the tag key
+(`Control.action: Union: unknown tag 'halt'; …`). An error inside the
+payload sits under `payload_key` for a nested envelope
+(`Control.args.speed`), and at the parent's own keys for a flat one
+(`Control.speed`), since that's where the payload's fields are.
 
 `Union(variants={...}, default=Unknown)` opts into graceful fallback
 — unknown tags coerce to the supplied default class. Useful for

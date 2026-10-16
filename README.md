@@ -271,7 +271,12 @@ namespace dirs in `docs/`, and each source file gets one `.md`.
 | `s.ValidationError` | Wire value fails type checks; required field missing; bad enum member; unknown `Union` tag without `default=`; CSV/Pandas/Polars shape mismatch. |
 | `s.SearedError`     | Base; `ValidationError` extends this. Also extends `ValueError` for downstream compatibility (`except ValueError:` catches seared errors). |
 
-See [`docs/_core/errors.md`](docs/_core/errors.md) for the full hierarchy.
+A `ValidationError` says where it happened. Its message reads
+`Outer.items[1].n: cannot deserialize 'x' as int`, and the parts are
+attributes: `.reason`, `.path` (on `load`, wire keys and indices into the
+input you passed, so it retrieves the offending value) and `.cls_name`. See
+[`docs/_core/errors.md`](docs/_core/errors.md) for the full hierarchy and the
+path rules.
 
 ## Benchmarks
 

@@ -304,3 +304,50 @@ class TestFormatHint:
         d = FlatFrame.dump(FlatFrame(body=Chunk(data=b'\x01')), format='msgpack')
         assert d == {'type': 'chunk', 'data': b'\x01'}
         assert FlatFrame.load(d, format='msgpack').body.data == b'\x01'
+
+
+# ---------------------------------------------------------------------------
+# Error paths
+# ---------------------------------------------------------------------------
+
+
+@s.seared
+class _NestedControl(s.Seared):
+    action: object = s.Union(
+        variants={'start': Start, 'configure': Configure},
+        tag_key='action',
+        payload_key='args',
+    )
+
+
+@s.seared
+class _FlatControl(s.Seared):
+    action: object = s.Union(variants={'start': Start, 'configure': Configure}, tag_key='type')
+
+
+class TestErrorPaths:
+    """Pin: tag errors point at the tag; payload errors at the payload's own keys."""
+
+    def test_an_unknown_tag_points_at_the_tag(self):
+        with pytest.raises(s.ValidationError) as info:
+            _NestedControl.load({'action': 'halt'})
+        assert info.value.path == ('action',)
+        assert str(info.value).startswith("_NestedControl.action: Union: unknown tag 'halt'")
+
+    def test_a_missing_tag_points_at_the_tag(self):
+        with pytest.raises(s.ValidationError) as info:
+            _FlatControl.load({'speed': 1.0})
+        assert info.value.path == ('type',)
+        assert str(info.value) == "_FlatControl.type: Union: missing tag 'type' in envelope"
+
+    def test_a_nested_payload_error_is_under_the_payload_key(self):
+        with pytest.raises(s.ValidationError) as info:
+            _NestedControl.load({'action': 'start', 'args': {'speed': 'fast'}})
+        assert info.value.path == ('args', 'speed')
+        assert str(info.value) == "_NestedControl.args.speed: cannot deserialize 'fast' as float"
+
+    def test_a_flat_payload_error_is_at_the_parents_own_key(self):
+        with pytest.raises(s.ValidationError) as info:
+            _FlatControl.load({'type': 'start', 'speed': 'fast'})
+        assert info.value.path == ('speed',)
+        assert str(info.value) == "_FlatControl.speed: cannot deserialize 'fast' as float"
