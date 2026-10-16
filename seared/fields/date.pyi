@@ -12,5 +12,4 @@ def Date(
     doc: str | None = ...,
     default: Any = ...,
     default_factory: Callable[[], Any] = ...,
-    missing: Any = ...,
 ) -> Any: ...

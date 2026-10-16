@@ -42,10 +42,10 @@ class TestUUID:
         d = Obj.dump(Obj(uid=None))
         assert 'uid' not in d
 
-    def test_missing_default(self):
+    def test_default(self):
         @s.seared
         class Obj(s.Seared):
-            uid: uuid.UUID = s.UUID(missing=_UUID_A)
+            uid: uuid.UUID = s.UUID(default=_UUID_A)
 
         obj = Obj.load({})
         assert obj.uid == _UUID_A

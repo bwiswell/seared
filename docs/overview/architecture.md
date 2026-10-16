@@ -29,7 +29,8 @@ When `@s.seared` runs:
    disjoint."
 4. **Wrap `__init__`** — natural construction (`Telemetry()`) leaves
    `Field` metadata sitting on the instance attributes; the wrapper
-   replaces each `Field` with its `missing` value. Mutable `missing`
+   replaces each `Field` with its default (a `default_factory` call, or
+   the static `default`). Mutable `default`
    values (`list` / `dict` / `set` / `frozenset`) are deep-copied per
    instance to avoid the classic Python shared-default footgun. A
    `__post_init__` is wrapped to substitute first, since the dataclass
@@ -65,7 +66,9 @@ The base `Field` dataclass holds:
 - `many: bool` — wraps as `list[V]`.
 - `required: bool` — `load` raises if absent.
 - `dump: bool` — set `False` to suppress on `dump` (e.g. computed fields).
-- `missing: Any` — value when the wire form omits the key.
+- `default: Any` — value when the wire form omits the key.
+- `default_factory: Callable | None` — called per instance instead, for a
+  mutable default.
 
 The decorator's `_apply` helper handles `keyed` / `many` orchestration
 once for every field, so subclasses only implement scalar

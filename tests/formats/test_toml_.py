@@ -15,7 +15,7 @@ import seared as s
 class Cfg(s.Seared):
     name: str = s.Str(required=True)
     port: int = s.Int(required=True)
-    debug: bool = s.Bool(missing=False)
+    debug: bool = s.Bool(default=False)
 
 
 class TestRoundTrip:

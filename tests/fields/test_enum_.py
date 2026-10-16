@@ -12,7 +12,7 @@ class TestEnum:
         @s.seared
         class Obj(s.Seared):
             color: Color = s.Enum(enum=Color, required=True)
-            optional_color: Color | None = s.Enum(enum=Color, missing=Color.RED)
+            optional_color: Color | None = s.Enum(enum=Color, default=Color.RED)
 
         return Obj
 
@@ -29,7 +29,7 @@ class TestEnum:
         assert d['color'] == 2
         assert d['optional_color'] == 1
 
-    def test_missing_default(self, cls):
+    def test_default(self, cls):
         obj = cls.load({'color': 0})
         assert obj.optional_color == Color.RED
 
@@ -100,10 +100,10 @@ class TestEnum:
         d = Obj.dump(Obj(status=Status.PENDING))
         assert d == {'status': 'pending'}
 
-    def test_str_enum_missing_default(self):
+    def test_str_enum_default(self):
         @s.seared
         class Obj(s.Seared):
-            status: Status | None = s.Enum(enum=Status, missing=Status.INACTIVE)
+            status: Status | None = s.Enum(enum=Status, default=Status.INACTIVE)
 
         obj = Obj.load({})
         assert obj.status == Status.INACTIVE

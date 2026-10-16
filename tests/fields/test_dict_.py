@@ -64,10 +64,10 @@ class TestDict:
         obj = Obj.load(raw)
         assert Obj.dump(obj) == raw
 
-    def test_missing_default(self):
+    def test_default(self):
         @s.seared
         class Obj(s.Seared):
-            meta: dict = s.Dict(missing={})
+            meta: dict = s.Dict(default={})
 
         obj = Obj.load({})
         assert obj.meta == {}

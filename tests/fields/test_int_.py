@@ -13,10 +13,10 @@ class TestInt:
         assert obj.val == 42
         assert Obj.dump(obj) == {'val': 42}
 
-    def test_missing_default(self):
+    def test_default(self):
         @s.seared
         class Obj(s.Seared):
-            val: int = s.Int(missing=0)
+            val: int = s.Int(default=0)
 
         obj = Obj.load({})
         assert obj.val == 0

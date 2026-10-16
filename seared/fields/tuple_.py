@@ -18,7 +18,6 @@ class Tuple(Field):
         *fields: Field,
         default: tuple | None = None,
         default_factory: Callable[[], Any] | None = None,
-        missing: tuple | None = None,
         data_key: str | None = None,
         keyed: bool = False,
         many: bool = False,
@@ -35,7 +34,6 @@ class Tuple(Field):
             dump=dump,
             default=default,
             default_factory=default_factory,
-            missing=missing,
             doc=doc,
         )
         object.__setattr__(self, 'tuple_fields', fields)

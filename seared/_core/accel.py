@@ -238,10 +238,9 @@ def _field_spec(owner: str, attr: str, wire: str, f: Field) -> dict[str, Any]:
         'many': f.many,
         'keyed': f.keyed,
         'dump': f.dump,
-        # ``missing`` is the resolved default — ``Field.__post_init__`` has
-        # already folded ``default=`` into it, so a backend never reimplements
-        # that resolution.
-        'default': f.missing,
+        # The static default; a ``default_factory``, when set, wins and is
+        # called per instance.
+        'default': f.default,
         'default_factory': f.default_factory,
     }
     if kind == 'nested':

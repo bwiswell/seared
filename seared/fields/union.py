@@ -66,7 +66,7 @@ class Union(Field):
         # which a Union doesn't have: its envelope is always populated on load,
         # and absent from a constructor call it's ``None``. Refused by name, so
         # an old ``default=Variant`` can't quietly change meaning.
-        for option in ('default', 'default_factory', 'missing'):
+        for option in ('default', 'default_factory'):
             if getattr(self, option) is not None:
                 msg = (
                     f'Union: {option}= is not supported, since a Union has no default value; '

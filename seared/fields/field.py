@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -20,29 +19,16 @@ class Field:
     # ``seared.doc`` in the generated schema pages, and available to any other
     # tooling through ``Cls.__seared_fields__``.
     doc: str | None = None
-    # Canonical default kwargs. ``default`` is a static value; ``default_factory``
-    # is a zero-arg callable invoked per-instance by the decorator (the clean home
-    # for mutable defaults). ``missing`` is the deprecated legacy alias for
-    # ``default`` — kept working, but warns. The decorator/load path reads the
-    # resolved value off ``missing``; ``__post_init__`` folds ``default`` into it.
+    # The value an absent key gets. ``default`` is a static value, read as-is by
+    # construction, ``load`` and the accelerator spec; ``default_factory`` is a
+    # zero-arg callable invoked per instance (the clean home for mutable
+    # defaults), and wins when both are set. ``missing=``, the alias these
+    # replaced, was removed in 0.4.0.
     default: Any = None
     default_factory: Callable[[], Any] | None = None
-    missing: Any = None
 
     def __post_init__(self) -> None:
-        """Fold ``default=`` into ``missing``, warning on the deprecated alias."""
-        # A factory wins and is resolved per-instance downstream — leave
-        # ``missing`` untouched so the decorator knows to call the factory.
-        if self.default_factory is not None:
-            return
-        if self.default is not None:
-            object.__setattr__(self, 'missing', self.default)
-        elif self.missing is not None:
-            warnings.warn(
-                'seared: `missing=` is deprecated; use `default=` (or `default_factory=` for mutable defaults).',
-                DeprecationWarning,
-                stacklevel=_caller_stacklevel(self),
-            )
+        """Nothing to resolve; kept so a subclass's ``super().__post_init__()`` still works."""
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> Any:
         """Python value → JSON-safe value. Override in subclasses.
@@ -60,26 +46,3 @@ class Field:
         Optional ``format=`` kwarg parallels :meth:`serialize`.
         """
         raise NotImplementedError
-
-
-def _caller_stacklevel(field: Field) -> int:
-    """The ``stacklevel`` that pins a warning on whoever constructed ``field``.
-
-    No fixed number is right: between the caller and ``__post_init__`` sit
-    the dataclass-generated ``__init__`` plus whatever the concrete field
-    adds (``T`` / ``Tuple`` define an ``__init__``, ``Enum`` a
-    ``__post_init__``). Every one of those frames is a method of ``field``
-    itself, so skip frames whose ``self`` *is* it; the first that isn't is
-    the caller.
-    """
-    import inspect
-
-    # ``currentframe()`` is this helper; one back is ``Field.__post_init__``,
-    # the frame that calls ``warnings.warn`` and so ``stacklevel=1``.
-    frame = inspect.currentframe()
-    frame = frame.f_back if frame is not None else None
-    level = 1
-    while frame is not None and frame.f_locals.get('self') is field:
-        frame = frame.f_back
-        level += 1
-    return level

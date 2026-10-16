@@ -34,3 +34,10 @@ class NotSeared:
 @s.seared
 class Holder(s.Seared):
     nested: object = s.T(NotSeared)
+
+
+# ERROR[unknown-argument]: `missing=` was removed in 0.4.0; the spelling is
+# `default=` (or `default_factory=` for a mutable default).
+@s.seared
+class Legacy(s.Seared):
+    x: int = s.Int(missing=3)

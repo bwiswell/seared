@@ -57,10 +57,10 @@ class TestTuple:
         d = Obj.dump(Obj(point=None))
         assert 'point' not in d
 
-    def test_missing_default(self):
+    def test_default(self):
         @s.seared
         class Obj(s.Seared):
-            point: tuple = s.Tuple(s.Float(), s.Float(), missing=(0.0, 0.0))
+            point: tuple = s.Tuple(s.Float(), s.Float(), default=(0.0, 0.0))
 
         obj = Obj.load({})
         assert obj.point == (0.0, 0.0)

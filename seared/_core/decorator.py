@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     # lists the Field constructors so ``x: str = s.Str(...)`` is read as a field
     # (annotation drives the type; the ``.pyi`` stubs return ``Any`` so the
     # assignment is legal). ``default=`` / ``default_factory=`` are the names
-    # PEP 681 keys required-vs-optional off, which is why they are the canonical
-    # spelling and ``missing=`` is deprecated: a field declared with ``missing=``
-    # reads as *required* to a checker regardless of its runtime behaviour.
+    # PEP 681 keys required-vs-optional off, which is why they are the only
+    # spelling (``missing=``, which a checker read as *required*, was removed in
+    # 0.4.0).
     from typing import dataclass_transform, overload
 
     from seared.fields.bool_ import Bool
@@ -208,13 +208,13 @@ def _wrap_init_replaces_field_defaults(cls: type, specs: tuple[_HotSpec, ...]) -
     Without this wrapper, ``Foo()`` (where ``x: Optional[int] = s.Int()``)
     would leave ``self.x`` as the ``Int`` metadata object instead of ``None``.
 
-    For mutable ``missing`` values (``list``, ``dict``, ``set``,
+    For mutable ``default`` values (``list``, ``dict``, ``set``,
     ``frozenset``), each instance gets its own ``copy.deepcopy`` of the
     template — closes the classic Python shared-default footgun
-    (``f: list = s.Int(many=True, missing=[])`` would otherwise have
+    (``f: list = s.Int(many=True, default=[])`` would otherwise have
     every instance share the same list object). Deep copy ensures
-    nested mutable structures (``missing={'tags': []}``) are also
-    isolated per-instance.
+    nested mutable structures (``default={'tags': []}``) are also
+    isolated per-instance. ``default_factory=`` is the cleaner spelling.
 
     A ``__post_init__`` is wrapped too, to substitute first. The dataclass
     ``__init__`` calls the hook before it returns — before the ``__init__``
@@ -240,12 +240,12 @@ def _wrap_init_replaces_field_defaults(cls: type, specs: tuple[_HotSpec, ...]) -
             v = getattr(self, attr, None)
             if isinstance(v, Field):
                 if f.default_factory is not None:
-                    missing = f.default_factory()
+                    default = f.default_factory()
                 else:
-                    missing = f.missing
-                    if isinstance(missing, _MUTABLE_DEFAULT_TYPES):
-                        missing = copy.deepcopy(missing)
-                object.__setattr__(self, attr, missing)
+                    default = f.default
+                    if isinstance(default, _MUTABLE_DEFAULT_TYPES):
+                        default = copy.deepcopy(default)
+                object.__setattr__(self, attr, default)
 
     __init__.__qualname__ = f'{cls.__qualname__}.__init__'
     cls.__init__ = __init__  # ty: ignore[invalid-assignment]
@@ -277,12 +277,12 @@ def _fill_defaults(obj: Any, specs: tuple[_HotSpec, ...], field_class: type[_Fie
         v = getattr(obj, attr, None)
         if isinstance(v, field_class):
             if f.default_factory is not None:
-                missing = f.default_factory()
+                default = f.default_factory()
             else:
-                missing = f.missing
-                if isinstance(missing, _MUTABLE_DEFAULT_TYPES):
-                    missing = copy.deepcopy(missing)
-            object.__setattr__(obj, attr, missing)
+                default = f.default
+                if isinstance(default, _MUTABLE_DEFAULT_TYPES):
+                    default = copy.deepcopy(default)
+            object.__setattr__(obj, attr, default)
 
 
 def _make_dump(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
@@ -340,7 +340,7 @@ def _make_load(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callab
             elif f.default_factory is not None:
                 kwargs[attr] = f.default_factory()
             else:
-                kwargs[attr] = f.missing
+                kwargs[attr] = f.default
         try:
             return cls(**kwargs)
         except ValidationError as e:
