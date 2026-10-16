@@ -115,6 +115,12 @@ else:
 #: both ``load`` and ``dump``. ``__seared_fields__`` keeps the ``FieldSpec``s.
 type _HotSpec = tuple[str, str, Any]
 
+#: ``_HotSpec`` plus whether the field is ``UNWRAP``, as ``load`` and ``dump``
+#: iterate it. The answer is fixed at decoration, and asking ``_is_unwrap``
+#: per field per call would cost a function call and a ``getattr`` each time:
+#: about a tenth of the pure-Python ``load``.
+type _LoopSpec = tuple[str, str, Any, bool]
+
 
 def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> type:
     from seared.fields.field import Field  # local import avoids core<->field cycle
@@ -194,6 +200,11 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> typ
 
 def _is_unwrap(f: Any) -> bool:
     return getattr(type(f), 'UNWRAP', False)
+
+
+def _loop_specs(specs: tuple[_HotSpec, ...]) -> tuple[_LoopSpec, ...]:
+    """``specs`` with each field's ``UNWRAP`` flag resolved, once per class, in declaration order."""
+    return tuple((attr, wire, f, _is_unwrap(f)) for attr, wire, f in specs)
 
 
 _MUTABLE_DEFAULT_TYPES = (list, dict, set, frozenset)
@@ -287,10 +298,11 @@ def _fill_defaults(obj: Any, specs: tuple[_HotSpec, ...], field_class: type[_Fie
 
 def _make_dump(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callable:
     cls_name = cls.__name__
+    loop = _loop_specs(specs)
 
     def dump(obj: Any, format: str = 'json') -> dict[str, Any]:
         out: dict[str, Any] = {}
-        for attr, wire, f in specs:
+        for attr, wire, f, unwrap in loop:
             if not f.dump:
                 continue
             v = getattr(obj, attr, None)
@@ -301,7 +313,7 @@ def _make_dump(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callab
                     out[wire] = None
                 continue
             try:
-                if _is_unwrap(f):
+                if unwrap:
                     # UNWRAP field serializes to a dict that's merged at the top
                     # level of the parent's wire form (rather than nested under
                     # ``wire``). This is what makes {tag, payload} envelopes land
@@ -320,6 +332,7 @@ def _make_dump(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callab
 
 def _make_load(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callable:  # noqa: C901 — one flat loop: a helper would cost a call per key
     cls_name = cls.__name__
+    loop = _loop_specs(specs)
 
     # Each failure gains its location as it passes back up through here: a
     # ``load`` path names wire keys, so it addresses the input the caller
@@ -329,8 +342,8 @@ def _make_load(cls: type, specs: tuple[_HotSpec, ...], validate: bool) -> Callab
             msg = f'expected dict, got {type(data).__name__}'
             raise ValidationError(msg, cls_name=cls_name)
         kwargs: dict[str, Any] = {}
-        for attr, wire, f in specs:
-            if _is_unwrap(f):
+        for attr, wire, f, unwrap in loop:
+            if unwrap:
                 kwargs[attr] = _load_envelope(f, data, validate, format, cls_name)
                 continue
             if wire in data:

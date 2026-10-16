@@ -75,6 +75,9 @@ lines as it lands, and the entry is dated when that version is released.
 - **`to_toml` leaves out `None`-valued keys**, at any depth, since TOML has no null; they read back as absent. A
   `Dict` value of `None` had made `tomli-w` raise.
 - **`SPEC_ABI` 2's spec carries `nullable`** for each field.
+- **The pure-Python `load` and `dump` make one fewer call per field.** Whether a field is a `Union` envelope is now
+  settled once per class, when the class is decorated, rather than asked of every field on every call. Nothing
+  else changes, and accelerated classes never ran that code.
 
 ### Removed
 

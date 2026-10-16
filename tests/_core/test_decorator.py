@@ -691,6 +691,56 @@ class TestPerObjectPathsImportNothing:
         assert imported == []
 
 
+@s.seared(accel=False)
+class _Enveloped(s.Seared):
+    leaf: _Leaf = s.T(_Leaf, required=True)
+    action: object = s.Union(variants={'leaf': _Leaf}, tag_key='kind', payload_key='args')
+
+
+class TestUnwrapIsResolvedOnce:
+    """Pin: ``load`` and ``dump`` never ask whether a field is ``UNWRAP``.
+
+    The answer is fixed when the class is decorated. Asked per field per call,
+    it cost about a tenth of the pure-Python ``load``.
+    """
+
+    def test_no_call_per_load_or_dump(self, monkeypatch):
+        from seared._core import decorator
+
+        calls: list[object] = []
+        real = decorator._is_unwrap
+
+        def counting(f):
+            calls.append(f)
+            return real(f)
+
+        monkeypatch.setattr(decorator, '_is_unwrap', counting)
+
+        tree = _Tree.load({'leaves': [{'x': 1}], 'hooked': {'x': 3}})
+        _Tree.dump(tree)
+        wire = {'leaf': {'x': 1, 'tags': []}, 'kind': 'leaf', 'args': {'x': 2, 'tags': []}}
+        assert _Enveloped.dump(_Enveloped.load(wire)) == wire
+
+        assert calls == []
+
+    def test_a_class_decorated_later_still_resolves_it(self, monkeypatch):
+        from seared._core import decorator
+
+        calls: list[object] = []
+        real = decorator._is_unwrap
+        monkeypatch.setattr(decorator, '_is_unwrap', lambda f: calls.append(f) or real(f))
+
+        @s.seared(accel=False)
+        class Late(s.Seared):
+            x: int = s.Int(required=True)
+            action: object = s.Union(variants={'leaf': _Leaf}, tag_key='kind', payload_key='args')
+
+        at_decoration = len(calls)
+        Late.dump(Late.load({'x': 1, 'kind': 'leaf', 'args': {'x': 2}}))
+        assert at_decoration > 0
+        assert len(calls) == at_decoration
+
+
 # ---------------------------------------------------------------------------
 # Error paths
 # ---------------------------------------------------------------------------
