@@ -41,3 +41,5 @@ class Demo(s.Seared):
     note: str | None = s.Str(default=None, data_key='n')
     hidden: str = s.Str(default='x', dump=False)
     action: StartCmd = s.Union(variants={'start': StartCmd}, tag_key='type')
+    reading: float | None = s.Float(nullable=True, default=None)
+    fix: int | None = s.Int(nullable=True, required=True)

@@ -31,6 +31,16 @@ class TestDocument:
     def test_dump_false_note(self):
         assert 'not emitted (`dump=False`)' in self.md
 
+    def test_an_optional_field_with_no_default_shows_none(self):
+        assert r'| `note` | `n` | `str \| None` |  | `None` |  |' in self.md
+
+    def test_a_nullable_field_says_so(self):
+        assert r'| `reading` | — | `float \| None` |  | `None` | nullable: `null` loads as `None` |' in self.md
+        assert r'| `fix` | — | `int \| None` | ✓ | — | nullable: `null` loads as `None` |' in self.md
+
+    def test_a_union_row_is_required_with_no_default(self):
+        assert '| `action` | — | `StartCmd` | ✓ | — |  |' in self.md
+
     def test_enum_section(self):
         assert '## Enumerations' in self.md
         assert '### `band` → `Band`' in self.md

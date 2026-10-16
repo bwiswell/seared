@@ -45,7 +45,14 @@ def render_header(schema: SchemaDoc) -> str:
 
 
 def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) -> str:
-    """Render the ``## Fields`` table, linking nested schemas via ``link_for``."""
+    """Render the ``## Fields`` table, linking nested schemas via ``link_for``.
+
+    ``required`` is the wire contract, so a ``Union`` row is ticked whatever
+    its ``required`` says: a missing or ``null`` tag always raises. ``default``
+    is the Python value an omitted field gets (`` `None` ``, never
+    `` `null` ``), or ``—`` when there is none. ``notes`` carries the field's
+    ``doc``, then whether it is nullable and whether ``dump`` skips it.
+    """
     if not schema.fields:
         return ''
     rows = [
@@ -61,6 +68,8 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
         notes = []
         if f.doc:
             notes.append(_cell(f.doc))
+        if f.nullable:
+            notes.append('nullable: `null` loads as `None`')
         if not f.dump:
             notes.append('not emitted (`dump=False`)')
         rows.append(
