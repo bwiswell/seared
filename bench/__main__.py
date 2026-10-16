@@ -3,7 +3,9 @@
 Prints a results table and (unless ``--no-write``) records the run to
 ``bench/results.json`` — the committed artifact behind
 ``docs/overview/benchmarks.md`` — then re-renders the docs' tables from it
-(see ``bench.tables``).
+(see ``bench.tables``). ``--runs N`` times every case N times, interleaved so
+machine drift spreads across cases rather than landing on one; the docs quote
+the median.
 """
 
 from __future__ import annotations
@@ -42,16 +44,30 @@ def main() -> None:
         default=DEFAULT_ITERATIONS,
         help=f'iterations per (case, op) (default: {DEFAULT_ITERATIONS})',
     )
+    parser.add_argument(
+        '--runs',
+        type=int,
+        default=1,
+        help='time every case this many times; the docs quote the median (the committed artifact uses 3)',
+    )
     parser.add_argument('--out', type=Path, default=_DEFAULT_OUT, help=f'results JSON path (default: {_DEFAULT_OUT})')
     parser.add_argument('--no-write', action='store_true', help='print the table only; do not write the JSON artifact')
     args = parser.parse_args()
+    if args.runs < 1:
+        parser.error('--runs must be at least 1')
 
     data = payload()
+    cases = _collect_cases()
     measurements = []
-    for case in _collect_cases():
-        for m in run_case(case, data, args.iterations):
-            measurements.append(m)
-            print(f'{m.library:<12} {m.variant:<7} {m.op:<5} {m.ops_per_s:>10,.0f} ops/s  ({m.us_per_op:6.2f} us/op)')
+    for run in range(args.runs):
+        if args.runs > 1:
+            print(f'\n=== run {run + 1} of {args.runs} ===')
+        for case in cases:
+            for m in run_case(case, data, args.iterations, run):
+                measurements.append(m)
+                print(
+                    f'{m.library:<12} {m.variant:<7} {m.op:<5} {m.ops_per_s:>10,.0f} ops/s  ({m.us_per_op:6.2f} us/op)'
+                )
 
     python, plat = environment()
     report = Report(
@@ -59,6 +75,7 @@ def main() -> None:
         python=python,
         platform=plat,
         iterations=args.iterations,
+        runs=args.runs,
         measurements=measurements,
     )
     if args.no_write:

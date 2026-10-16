@@ -56,6 +56,9 @@ class Measurement(s.Seared):
     op: str = s.Str(required=True, doc="'load' or 'dump'")
     ops_per_s: float = s.Float(required=True)
     us_per_op: float = s.Float(required=True)
+    # Which of the report's runs this came from. The default keeps an artifact
+    # recorded before runs were tagged loadable, as a single run.
+    run: int = s.Int(default=0, doc='0-based run index within the report')
 
 
 @s.seared
@@ -66,11 +69,12 @@ class Report(s.Seared):
     python: str = s.Str(required=True)
     platform: str = s.Str(required=True)
     iterations: int = s.Int(required=True)
+    runs: int = s.Int(default=1, doc='times every case ran; the docs quote the median')
     measurements: list[Measurement] = s.T(Measurement, many=True, required=True)
 
 
-def run_case(case: Case, data: dict[str, Any], n: int) -> list[Measurement]:
-    """Time ``case.load`` / ``case.dump`` over ``n`` iterations each."""
+def run_case(case: Case, data: dict[str, Any], n: int, run: int = 0) -> list[Measurement]:
+    """Time ``case.load`` / ``case.dump`` over ``n`` iterations each, as run ``run``."""
     warmup = max(1, int(n * WARMUP_FRACTION))
 
     for _ in range(warmup):
@@ -95,6 +99,7 @@ def run_case(case: Case, data: dict[str, Any], n: int) -> list[Measurement]:
             op=op,
             ops_per_s=n / t,
             us_per_op=t * 1e6 / n,
+            run=run,
         )
         for op, t in [('load', t_load), ('dump', t_dump)]
     ]
