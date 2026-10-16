@@ -58,7 +58,10 @@ payload = {
 
 20,000 iterations per (case, op), single-threaded, timed via
 `time.perf_counter()` after a 5% warmup pass. All cases run the same
-payload built once upfront.
+payload built once upfront. With `--runs N`, every case is timed N times,
+the runs interleaved across the cases so that machine drift doesn't land on
+one of them, and every number below is the median of the runs. The
+committed results use three.
 
 **The `seared` cases are pinned `accel=False`.** Otherwise an accelerator
 wheel that happened to be installed in the benching environment would
@@ -70,10 +73,11 @@ being accelerated.
 
 ## Results
 
-Recorded <!-- bench:run -->2026-08-31, Python 3.14.3, 20,000 iterations; seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run --> —
+Recorded <!-- bench:run -->2026-08-31, Python 3.14.3, 20,000 iterations, one run; seared 0.3.0, rusted 0.2.0, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run --> —
 Linux x86_64 (WSL2), laptop-class CPU, otherwise idle. Raw numbers:
-[`bench/results.json`](../../bench/results.json). The tables are rendered
-from that file (`uv run python -m bench.tables`), never typed in.
+[`bench/results.json`](../../bench/results.json). The tables, and every
+number quoted in the prose below, are rendered from that file
+(`uv run python -m bench.tables`), never typed in.
 
 <!-- bench:ops -->
 | Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
@@ -96,32 +100,57 @@ baselines (e.g. the 2026-04-24 run against marshmallow 3.26, where seared
 led load by ~8×) are in the git history of `bench/results.json`'s
 predecessors; marshmallow 4 closed part of the gap.
 
-One recorded run is one sample. On an idle machine the spread across
-repeated runs is ~4% on the pure-Python cases and ~9% on the accelerated
-ones; under background load it widens to ±20% and the *ratios* move with it
-(the `rusted` load ratio was seen anywhere from 10.0× to 11.8×). Bench on a
-quiet box, and read the ratios as approximate: seared is ~3.5× marshmallow
-on load and ~1.8× on dump, and `rusted` is ~11× / ~9× over pure Python.
+### Run-to-run spread
+
+Every number here is <!-- bench:runs -->from one run<!-- /bench:runs -->.
+How far each column's rate moved between the runs, as `max / min - 1`:
+
+<!-- bench:spread -->
+| Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
+|------|---------------|-------------------|----------------|------------|-----------------|
+| load | n/a           | n/a               | n/a            | n/a        | n/a             |
+| dump | n/a           | n/a               | n/a            | n/a        | n/a             |
+<!-- /bench:spread -->
+
+The widest is <!-- bench:spread-max -->n/a<!-- /bench:spread-max -->.
+Background load widens the spread, and the *ratios* move with it, so bench
+on a quiet box and read the ratios as approximate: seared is
+<!-- bench:load-vs-marshmallow -->~3.3×<!-- /bench:load-vs-marshmallow -->
+marshmallow on load and
+<!-- bench:dump-vs-marshmallow -->~1.8×<!-- /bench:dump-vs-marshmallow -->
+on dump, and `rusted` is
+<!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> /
+<!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> over pure Python.
 
 ## Reading the results
 
 - **Versus marshmallow** (the like-for-like pure-Python comparison),
-  seared loads ~3.5× and dumps ~1.8× faster.
-- **Versus pydantic**, pure-Python seared is ~5× slower. That is the
-  expected cost of pure Python versus a compiled Rust core, and it is the
-  trade seared makes by default: zero runtime dependencies, no binary
-  wheels.
+  seared loads <!-- bench:load-vs-marshmallow -->~3.3×<!-- /bench:load-vs-marshmallow -->
+  and dumps <!-- bench:dump-vs-marshmallow -->~1.8×<!-- /bench:dump-vs-marshmallow -->
+  faster.
+- **Versus pydantic**, pure-Python seared loads
+  <!-- bench:pydantic-vs-seared -->~5×<!-- /bench:pydantic-vs-seared -->
+  slower. That is the expected cost of pure Python versus a compiled Rust
+  core, and it is the trade seared makes by default: zero runtime
+  dependencies, no binary wheels.
 - **With `rusted` installed that trade is optional rather than permanent.**
-  The same classes run ~11× faster on `load` and ~9× on `dump` than the
-  Python path, and roughly 2× ahead of pydantic on this schema — for an
-  install and no code change. The default stays pure Python; every platform
-  without a wheel keeps working.
-- **Strict versus lax is within noise on `load`** (the guards are cheap
-  `isinstance` checks against builtin types) but costs ~14% on `dump`,
-  where those guards are most of what the pass actually does. `rusted`
-  closes the load gap to nothing and leaves the dump gap at ~15% — cheaper
-  guards, not absent ones. Most of seared's advantage over marshmallow comes
-  from per-call overhead, not validation.
+  The same classes run
+  <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`
+  and <!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> on `dump`
+  than the Python path, and load
+  <!-- bench:rusted-vs-pydantic -->~2.2×<!-- /bench:rusted-vs-pydantic -->
+  as fast as pydantic on this schema, for an install and no code change.
+  The default stays pure Python; every platform without a wheel keeps
+  working.
+- **Strict versus lax costs little on `load`.** Lax is
+  <!-- bench:lax-load-gain -->~6%<!-- /bench:lax-load-gain --> faster there,
+  where the guards are cheap `isinstance` checks against builtin types,
+  against <!-- bench:lax-dump-gain -->~13%<!-- /bench:lax-dump-gain --> on
+  `dump`, where those guards are most of what the pass actually does.
+  `rusted` closes the load gap and leaves the dump gap at
+  <!-- bench:rusted-lax-dump-gain -->~14%<!-- /bench:rusted-lax-dump-gain -->:
+  cheaper guards, not absent ones. Most of seared's advantage over
+  marshmallow comes from per-call overhead, not validation.
 
 ## Why seared is fast (for pure Python)
 
@@ -143,33 +172,42 @@ on load and ~1.8× on dump, and `rusted` is ~11× / ~9× over pure Python.
 # From the repo root. Comparators are behind the `bench` extra —
 # they are NOT seared dependencies.
 uv sync --extra bench
-uv run python -m bench
+uv run python -m bench --runs 3     # how the committed results are recorded
 ```
 
-The runner prints an `ops/s` table, rewrites `bench/results.json`, and
-re-renders the tables in this file and the README from it (suppress both
-with `--no-write`; tune with `-n`). To re-render without re-running, or to
-check in CI that the docs still match the committed results:
+The runner prints an `ops/s` line per case and op, rewrites
+`bench/results.json`, and re-renders every generated number in this file and
+the README from it (suppress both with `--no-write`; tune with `-n` and
+`--runs`; a scratch `--out` path records without touching the docs). To
+re-render without re-running, or to check that the docs still match the
+committed results:
 
 ```sh
-uv run python -m bench.tables           # rewrite the tables from results.json
+uv run python -m bench.tables           # rewrite the numbers from results.json
 uv run python -m bench.tables --check   # exit 1 if a doc has drifted
 ```
- Missing comparators are
-skipped with a note, so `uv run python -m bench` also works in a plain
-dev sync and times seared alone. Absolute numbers vary by machine;
-relative ratios should hold across hardware.
 
-To include the `seared+rusted` rows, install the accelerator alongside:
+The check also runs as the `bench-tables` prek hook whenever the README,
+this page or `bench/` changes. Missing comparators are skipped with a note,
+so `uv run python -m bench` also works in a plain dev sync and times seared
+alone. Absolute numbers vary by machine; relative ratios should hold across
+hardware.
+
+To include the `seared+rusted` rows, install the accelerator alongside. It
+isn't on a package index, so install a wheel built from
+[`rusted`](https://github.com/bwiswell/rusted), **after** any `uv sync`: a
+sync is exact, and removes a package the lockfile doesn't name (`uv run`
+leaves it alone).
 
 ```sh
-uv pip install rusted        # or: uv pip install path/to/rusted-*.whl
-uv run --no-sync python -m bench
+uv pip install path/to/rusted-*.whl
+uv run --no-sync python -m bench --runs 3
 ```
 
-Each recorded `Measurement` carries the version of what produced it —
-`seared+rusted` rows read `0.3.0/rusted 0.2.0` — so a results file always
-says which code the numbers came from.
+Each recorded `Measurement` carries the version of what produced it and the
+run it came from (`seared+rusted` rows read
+<!-- bench:version-example -->`0.3.0/rusted 0.2.0`<!-- /bench:version-example -->),
+so a results file always says which code the numbers came from.
 
 ## Caveats
 
@@ -198,7 +236,3 @@ says which code the numbers came from.
   Arrow IPC alternatives.
 - **Cold-start measurements.** First-decoration cost matters for short-
   lived processes (e.g. CLI tools).
-- **Prose ratios.** The tables are generated (0.3.3), but the rounded
-  ratios quoted in prose here and in the README ("~3.5× marshmallow on
-  load", "~11× / ~9×") are still written by hand. They are deliberately
-  approximate; re-read them against the tables after a re-bench.

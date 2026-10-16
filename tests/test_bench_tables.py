@@ -14,20 +14,34 @@ import statistics
 import pytest
 
 from bench.harness import Measurement, Report
-from bench.tables import Results, blocks, load, ops_table, render, spread_table, update
+from bench.tables import (
+    Results,
+    _approx_gain,
+    _approx_x,
+    blocks,
+    load,
+    ops_table,
+    render,
+    run_line,
+    spread_table,
+    update,
+)
 
 _VERSION = '0.3.4'
+_RUSTED_VERSION = '0.3.4/rusted 0.3.1'
 MARSHMALLOW = ('marshmallow', 'default')
 STRICT = ('seared', 'strict')
+LAX = ('seared', 'lax')
 PYDANTIC = ('pydantic', 'default')
+RUSTED = ('seared+rusted', 'strict')
 
 
-def _m(case: tuple[str, str], op: str, ops_per_s: float, run: int = 0) -> Measurement:
+def _m(case: tuple[str, str], op: str, ops_per_s: float, run: int = 0, version: str = _VERSION) -> Measurement:
     library, variant = case
     return Measurement(
         library=library,
         variant=variant,
-        version=_VERSION,
+        version=version,
         op=op,
         ops_per_s=ops_per_s,
         us_per_op=1e6 / ops_per_s,
@@ -35,11 +49,16 @@ def _m(case: tuple[str, str], op: str, ops_per_s: float, run: int = 0) -> Measur
     )
 
 
-def _case(case: tuple[str, str], load_rates: list[float], dump_rates: list[float] | None = None) -> list[Measurement]:
+def _case(
+    case: tuple[str, str],
+    load_rates: list[float],
+    dump_rates: list[float] | None = None,
+    version: str = _VERSION,
+) -> list[Measurement]:
     """One case's load and dump measurements, one of each per run."""
     out = []
     for run, (load_rate, dump_rate) in enumerate(zip(load_rates, dump_rates or load_rates, strict=True)):
-        out += [_m(case, 'load', load_rate, run), _m(case, 'dump', dump_rate, run)]
+        out += [_m(case, 'load', load_rate, run, version), _m(case, 'dump', dump_rate, run, version)]
     return out
 
 
@@ -115,6 +134,54 @@ class TestTables:
     def test_the_spread_table_reads_a_percentage_for_several_runs(self):
         table = spread_table(Results(_report(_case(STRICT, [100.0, 130.0, 110.0]), runs=3)))
         assert '30.0%' in table
+
+
+class TestProse:
+    def test_the_headline_quotes_strict_not_lax(self):
+        # Through 0.3.3 the README's hand-written 3.5 ratio was the lax
+        # column's, presented as the default's. Strict is the default.
+        rows = _case(MARSHMALLOW, [10_000.0]) + _case(STRICT, [33_000.0]) + _case(LAX, [35_000.0])
+        assert blocks(_report(rows))['load-vs-marshmallow'] == '~3.3\N{MULTIPLICATION SIGN}'
+
+    @pytest.mark.parametrize(
+        ('ratio', 'expected'),
+        [(4.94, '~4.9'), (5.0, '~5'), (9.14, '~9'), (11.35, '~11'), (2.18, '~2.2')],
+    )
+    def test_ratios_keep_a_decimal_only_below_five(self, ratio, expected):
+        assert _approx_x(ratio) == f'{expected}\N{MULTIPLICATION SIGN}'
+
+    def test_gains_are_whole_percentages(self):
+        assert _approx_gain(1.129) == '~13%'
+        assert _approx_gain(1.056) == '~6%'
+
+    def test_a_missing_input_reads_na(self):
+        out = blocks(_report(_case(STRICT, [30_000.0])))  # no comparators, no rusted
+        for name in ('load-vs-marshmallow', 'pydantic-vs-seared', 'rusted-load', 'lax-load-gain', 'version-example'):
+            assert out[name] == 'n/a', name
+        assert _approx_x(None) == 'n/a'
+
+    def test_one_run_says_so_and_has_no_spread(self):
+        out = blocks(_report(_case(STRICT, [30_000.0])))
+        assert out['runs'] == 'from one run'
+        assert out['spread-max'] == 'n/a'
+
+    def test_several_runs_quote_their_median_and_widest_spread(self):
+        rows = _case(STRICT, [100.0, 130.0, 110.0]) + _case(MARSHMALLOW, [50.0, 52.0, 51.0])
+        out = blocks(_report(rows, runs=3))
+        assert out['runs'] == 'the median of three runs'
+        assert out['spread-max'] == '~30%'
+
+    def test_the_run_line_names_versions_and_runs(self):
+        rows = _case(STRICT, [1.0]) + _case(RUSTED, [10.0], version=_RUSTED_VERSION)
+        assert run_line(_report(rows)) == (
+            '2026-10-16, Python 3.14.3, 20,000 iterations, one run; seared 0.3.4, rusted 0.3.1'
+        )
+        rows3 = _case(STRICT, [1.0, 1.0, 1.0])
+        assert ', median of 3 runs; seared 0.3.4' in run_line(_report(rows3, runs=3))
+
+    def test_the_version_example_is_a_code_span(self):
+        rows = _case(STRICT, [1.0]) + _case(RUSTED, [10.0], version=_RUSTED_VERSION)
+        assert blocks(_report(rows))['version-example'] == '`0.3.4/rusted 0.3.1`'
 
 
 class TestRendering:
