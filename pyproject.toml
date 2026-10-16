@@ -140,7 +140,10 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["tests"]
+# The repo root too, so the tests of `bench/tables.py` can import the repo-only
+# `bench` package. Keep those tests flat in `tests/`: with `tests` on the path,
+# a `tests/bench/` package would shadow the real one.
+pythonpath = ["tests", "."]
 # importlib mode lets multiple ``test_init.py`` (one per Pattern B
 # subdir) coexist without basename collisions during collection.
 addopts = "--import-mode=importlib"
