@@ -114,6 +114,9 @@ The breaking release: the README's *Upgrading to 0.4.0* lists every break with w
 - **Dependencies:** the dev group's `pytest` range lifts to `>=8.0,<10.0`, and the refreshed lockfile resolves
   pytest 9.1.1, ruff 0.17.1 and ty 0.0.89, and polars 2.0 for the frame tests, which the `polars` extra's `>=1.0`
   already allowed. seared itself still has no runtime dependencies.
+- **The benchmarks are re-recorded** with seared 0.4.0 and rusted 0.4.0. Against marshmallow, seared loads ~3.7× and
+  dumps ~2.0× faster, and rusted runs ~11× faster on `load` and ~8× on `dump`. The dump ratio reads lower than
+  0.3.4's ~9× because the pure-Python `dump` got faster, while rusted's held steady.
 
 ### Fixed
 
