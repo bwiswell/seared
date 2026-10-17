@@ -1,8 +1,9 @@
 # `doc/__init__.py` — schema documentation
 
 `seared.doc` writes a Markdown page for every `@seared` class in a module or
-package, so a schema's docs come from the schema itself. It needs nothing
-beyond the standard library.
+package, so a schema's docs come from the schema itself. It also describes
+a class as JSON Schema ([`json_schema`](json_schema.md), 0.4.2). It needs
+nothing beyond the standard library.
 
 ```sh
 seared-doc mypkg.models -o docs/models            # write the pages
@@ -48,6 +49,8 @@ same pipeline.
 | `build_docs(target, *, render_one=None)` | [`generate`](generate.md) | the whole doc set, in memory |
 | `undocumented(target)` | [`generate`](generate.md) | every field with no `doc=`, as `module.Class.attr` |
 | `main(argv=None, *, render_one=None, prog=None)` | [`generate`](generate.md) | the CLI |
+| `json_schema(cls, *, mode='load', unknown=None)` | [`json_schema`](json_schema.md) | a class → a JSON Schema 2020-12 document, of its input or its output |
+| `field_schema(field, *, mode='load', defs, annotation=None, unknown='ignore')` | [`json_schema`](json_schema.md) | one field's schema, for an object of your own |
 
 `document` and `introspect` are also re-exported at the package root, as
 `s.document` and `s.introspect`.

@@ -9,8 +9,9 @@ s.field_kind(s.Str)               # a field class answers too: FieldKind.STR
 ```
 
 A field's kind says which of seared's built-in fields it is. It's for code
-that maps fields onto something else: a JSON Schema, a column type, a check
-that a value fits in one key segment. New in 0.4.2.
+that maps fields onto something else: a JSON Schema (seared's own,
+[`../doc/json_schema.md`](../doc/json_schema.md), is built on it), a column
+type, a check that a value fits in one key segment. New in 0.4.2.
 
 ## Why not `type(field).__name__`
 
