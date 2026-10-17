@@ -50,6 +50,9 @@ class FieldDoc:
     # so positional construction keeps working; the annotation can't show it,
     # since an ordinary optional field is ``X | None`` too.
     nullable: bool = False
+    # An ``NDArray``'s declared element type, as numpy names it (``'float32'``),
+    # or ``None`` (0.4.1). Appended for the same reason as ``nullable``.
+    dtype: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,6 +154,7 @@ def _field_doc(attr: str, wire: str, f: Any, type_str: str) -> FieldDoc:
         envelope=envelope,
         fallback=fallback,
         nullable=bool(getattr(f, 'nullable', False)),
+        dtype=str(f.dtype) if getattr(f, 'dtype', None) is not None else None,
     )
 
 

@@ -30,6 +30,13 @@ wire depends on, but a class or a call can now refuse it instead.
   without a `doc=` as `module.Class.attr` and fails with exit status 1, so with `--check` CI fails on missing docs
   as well as drift. `seared.doc.undocumented(target)` returns the same list. `python -m zeared.doc` runs the same
   CLI, so it gains the flag with this version.
+- **`NDArray(dtype=…)`**, an element type for an array field, as anything `numpy.dtype()` accepts. `load` casts to
+  it, so a `float32` array comes back `float32` where it came back `float64`. A strict load casts only what it can
+  carry over whole, by the scalar fields' rules: no `bool` for a number, no fractional, non-finite or out-of-range
+  value for an integer, no overflow to infinity for a float, and only `0` and `1` for a `bool`. The error names the
+  element (`Samples.values[1][2]`). A strict dump refuses an array of another dtype, and a lax one casts it.
+  `seared.doc` shows the dtype in the notes column, from a new `FieldDoc.dtype`. An array still declines the
+  accelerator, so `rusted` is unaffected.
 - **Docs for config files:** `docs/overview/configuration.md`, and `docs/_core/unknown.md` for the new module. The
   README gains *Configuration files*.
 
