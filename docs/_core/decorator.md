@@ -25,7 +25,10 @@ class Foo(s.Seared): ...
 ## What `_build` does
 
 1. **Wrap `dataclasses.dataclass`** — base machinery for `__slots__`,
-   `__init__`, `__eq__`, `__repr__`.
+   `__init__`, `__eq__`, `__repr__`. The class keeps its own `__doc__`:
+   `dataclass()` writes its generated signature there when the class has no
+   docstring, and the decorator puts the `None` back (0.4.1), so schema docs
+   and generated types don't read the signature as the class's description.
 2. **Walk fields** — pull every `dataclasses.Field` whose `.default` is
    a `seared.Field` instance. Build a `FieldSpec(attr, wire, field)` per
    declared field (a named tuple; see [`base.md`](base.md)); expose the

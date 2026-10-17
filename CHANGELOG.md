@@ -39,6 +39,18 @@ wire depends on, but a class or a call can now refuse it instead.
   public `load`. So a nested class's `unknown=` applies only when that class is loaded by itself, and each nested
   object skips a call layer.
 
+### Fixed
+
+- **`seared.doc` documents every class the decorator built.** `is_seared_class` asked for the `Seared` base and at
+  least one field, so a decorated class without the base (`@zeared` is the same decorator) or a `Union` variant with
+  no fields got no page, and a page that linked to it linked to nothing. It now asks only whether `@seared` built
+  the class, so a subclass of a decorated class that isn't decorated itself no longer counts, where its inherited
+  fields used to give it a page.
+- **A class without a docstring stays without one.** `dataclass()` writes its generated signature into `__doc__`
+  when a class has none, so `seared.doc` used the signature as the class's summary, on its page and in the index,
+  and zeared's TypeScript emitter put it in the class's JSDoc. The decorator now puts the `None` back, so such a
+  class's `__doc__` is `None`.
+
 ## 0.4.0 — 2026-10-17
 
 **Errors that say where they happened, `null` read as absent, lossless strict coercion, and `SPEC_ABI` 2.**
