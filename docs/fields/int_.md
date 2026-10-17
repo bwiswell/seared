@@ -1,4 +1,4 @@
-# `int.py` — `Int`
+# `int_.py` — `Int`
 
 ```python
 count: int = s.Int(required=True)

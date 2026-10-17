@@ -48,8 +48,8 @@ class Seared:
         """Instance → wire dict.
 
         ``format`` is the carrier hint threaded into every field (see
-        ``_core.decorator``); ``Bytes`` and ``NDArray`` emit native binary
-        under ``'msgpack'``, and the rest ignore it.
+        ``_core.decorator``); ``Bytes`` emits native binary under
+        ``'msgpack'``, ``T`` and ``Tuple`` pass it on, and the rest ignore it.
 
         This declaration and the implementation the decorator attaches must
         stay signature-identical — ``tests/_core/test_base.py`` asserts it.

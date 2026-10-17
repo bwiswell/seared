@@ -18,10 +18,15 @@ class Telemetry(s.Seared):           # subclass of Seared
 | Attribute / Method | Behaviour |
 |--------------------|-----------|
 | `__seared_fields__: ClassVar[tuple[FieldSpec, ...]]` | Empty tuple on the bare base; populated by the decorator with one `FieldSpec` per declared field, in order. |
-| `dump(obj)` | Raises `NotImplementedError` until decorated. |
-| `load(data)` | Raises `NotImplementedError` until decorated. |
+| `__seared_accel__: ClassVar[AccelInfo]` | Whether the compiled accelerator took the class, and the reason if not (see [`accel.md`](accel.md)). On the bare base: not accelerated, "class is not decorated with @seared". |
+| `dump(obj, format='json')` | Raises `NotImplementedError` until decorated. `format` is the carrier hint the decorator threads into every field (see [`decorator.md`](decorator.md#format-carrier-hint)). |
+| `load(data, format='json')` | Raises `NotImplementedError` until decorated. `format` as for `dump`. |
 | `dumps(obj, **kwargs)` | JSON convenience wrapper around `dump`; `**kwargs` pass through to `json.dumps`, as they do for `to_json`. |
 | `loads(data)` | JSON convenience wrapper around `load`. |
+| `to_json` / `from_json`, `to_toml` / `from_toml`, `to_yaml` / `from_yaml`, `to_csv` / `from_csv` | The per-format codecs. Declared here so calls on a decorated class type-check; the decorator attaches the real ones (see [`../formats/index.md`](../formats/index.md)). |
+
+`dump` and `load` here must stay signature-identical to what the decorator
+attaches; `tests/_core/test_base.py` asserts it.
 
 `dumps` writes a `NaN` or infinite float as a bare `NaN` / `Infinity`,
 which is Python's `json` default: Python reads it back, but standard JSON

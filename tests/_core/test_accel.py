@@ -425,36 +425,42 @@ class TestSpecEmission:
 # The contract: accelerated and pure must be indistinguishable.
 # ---------------------------------------------------------------------------
 
-#: (label, payload) — valid and malformed, strict-mode.
-CASES = [
+#: (label, payload) — strict mode loads every one.
+LOADING = [
     ('valid', PAYLOAD),
-    ('missing-required', {'items': []}),
     ('int-from-str', {**PAYLOAD, 'items': [{'x': '7', 'y': 1.0}]}),
-    ('int-from-float', {**PAYLOAD, 'items': [{'x': 7.9, 'y': 1.0}]}),
     ('int-from-integral-float', {**PAYLOAD, 'items': [{'x': 7.0, 'y': 1.0}]}),
+    ('float-from-str', {**PAYLOAD, 'items': [{'x': 1, 'y': '2.5'}]}),
+    ('bool-from-str', {**PAYLOAD, 'flag': 'yes'}),
+    ('bool-from-zero-and-one', {**PAYLOAD, 'flag': 1}),
+    ('null-defaulted', {**PAYLOAD, 'flag': None}),
+    ('null-factory', {**PAYLOAD, 'tags': None}),
+    ('unknown-keys', {**PAYLOAD, 'surprise': 1}),
+    ('defaults-omitted', {'name': 'd', 'items': []}),
+]
+
+#: (label, payload) — strict mode refuses every one.
+REFUSED = [
+    ('missing-required', {'items': []}),
+    ('int-from-float', {**PAYLOAD, 'items': [{'x': 7.9, 'y': 1.0}]}),
     ('int-from-inf', {**PAYLOAD, 'items': [{'x': math.inf, 'y': 1.0}]}),
     ('int-from-nan', {**PAYLOAD, 'items': [{'x': math.nan, 'y': 1.0}]}),
     ('int-from-bool', {**PAYLOAD, 'items': [{'x': True, 'y': 1.0}]}),
     ('int-garbage', {**PAYLOAD, 'items': [{'x': 'nope', 'y': 1.0}]}),
-    ('float-from-str', {**PAYLOAD, 'items': [{'x': 1, 'y': '2.5'}]}),
     ('float-garbage', {**PAYLOAD, 'items': [{'x': 1, 'y': 'nope'}]}),
     ('str-wrong-type', {**PAYLOAD, 'name': 42}),
-    ('bool-from-str', {**PAYLOAD, 'flag': 'yes'}),
     ('bool-garbage', {**PAYLOAD, 'flag': []}),
-    ('bool-from-zero-and-one', {**PAYLOAD, 'flag': 1}),
     ('bool-from-other-int', {**PAYLOAD, 'flag': 2}),
     ('many-not-a-list', {**PAYLOAD, 'tags': 'alpha'}),
     ('nested-not-a-dict', {**PAYLOAD, 'items': [7]}),
     ('null-required', {**PAYLOAD, 'name': None}),
-    ('null-defaulted', {**PAYLOAD, 'flag': None}),
-    ('null-factory', {**PAYLOAD, 'tags': None}),
     ('null-nested-required', {**PAYLOAD, 'items': None}),
     ('null-inside-nested', {**PAYLOAD, 'items': [{'x': None, 'y': 1.0}]}),
     ('null-element', {**PAYLOAD, 'tags': ['a', None]}),
-    ('unknown-keys', {**PAYLOAD, 'surprise': 1}),
-    ('defaults-omitted', {'name': 'd', 'items': []}),
     ('top-level-not-a-dict', ['not', 'a', 'dict']),
 ]
+
+CASES = LOADING + REFUSED
 
 
 def _outcome(fn, arg):
@@ -495,14 +501,18 @@ class TestDifferential:
             assert got[0] == 'ok'
             assert accelerated.dump(got[1]) == pure.dump(want[1])
 
-    @pytest.mark.parametrize(('label', 'payload'), CASES, ids=[c[0] for c in CASES])
+    @pytest.mark.parametrize(('label', 'payload'), LOADING, ids=[c[0] for c in LOADING])
     def test_dump_matches(self, pair, label, payload):
         accelerated, pure = pair
-        try:
-            a_obj, p_obj = accelerated.load(payload), pure.load(payload)
-        except Exception:  # noqa: BLE001 — load parity is the other test's job
-            pytest.skip('payload does not load')
+        a_obj, p_obj = accelerated.load(payload), pure.load(payload)
         assert _outcome(accelerated.dump, a_obj) == _outcome(pure.dump, p_obj)
+
+    @pytest.mark.parametrize(('label', 'payload'), CASES, ids=[c[0] for c in CASES])
+    def test_each_case_is_in_the_right_list(self, pair, label, payload):
+        """``LOADING`` loads and ``REFUSED`` raises, so the dump test skips nothing silently."""
+        _accelerated, pure = pair
+        loaded = _outcome(pure.load, payload)[0] == 'ok'
+        assert loaded is (label in {case[0] for case in LOADING})
 
     def test_attribute_values_match(self, pair):
         accelerated, pure = pair

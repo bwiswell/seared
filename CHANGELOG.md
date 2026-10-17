@@ -11,7 +11,8 @@ lines as it lands, and the entry is dated when that version is released.
 
 ## 0.4.0 — unreleased
 
-**Errors that say where they happened, `null` read as absent, `SPEC_ABI` 2, and the changelog in the repository.**
+**Errors that say where they happened, `null` read as absent, lossless strict coercion, and `SPEC_ABI` 2.**
+The breaking release: the README's *Upgrading to 0.4.0* lists every break with what to do.
 
 ### Added
 
@@ -39,6 +40,8 @@ lines as it lands, and the entry is dated when that version is released.
 - **`Seared.dumps(obj, **kwargs)`** passes keyword arguments through to `json.dumps`, as `to_json` already did. Pass
   `allow_nan=False` for JSON bound for a browser: by default a `NaN` or infinite float is written as a bare `NaN` or
   `Infinity`, which Python reads back and standard JSON parsers refuse. The default is unchanged.
+- **Pages for `seared.doc`** under `docs/doc/` (the CLI, discovery, the public API and the page format), and a
+  README *Schema docs* section.
 
 ### Changed
 
@@ -72,12 +75,16 @@ lines as it lands, and the entry is dated when that version is released.
   `required key missing`, and a defaulted one gets its default, where before the `null` satisfied `required` and
   replaced the default with `None`. `dump` already left `None` out, so seared-to-seared traffic is unchanged; the
   change is for `null`s from elsewhere. The same goes in lax mode, for YAML's `~`, and for the cells `from_csv`
-  finds missing in a short row. A `null` element inside a `many` or `keyed` collection is still an error.
+  finds missing in a short row. A `null` element inside a `many` or `keyed` collection is still an error in strict
+  mode; lax mode hands it to the field's own coercion, as before.
 - A `null` under a `Union`'s `payload_key` is an absent payload, so the variant loads from its defaults rather than
   raising `expected dict, got NoneType`.
 - **`to_toml` leaves out `None`-valued keys**, at any depth, since TOML has no null; they read back as absent. A
   `Dict` value of `None` had made `tomli-w` raise.
 - **`SPEC_ABI` 2's spec carries `nullable`** for each field.
+- **The pure-Python `load` and `dump` make one fewer call per field.** Whether a field is a `Union` envelope is now
+  settled once per class, when the class is decorated, rather than asked of every field on every call. Nothing
+  else changes, and accelerated classes never ran that code.
 - **Breaking:** strict coercion no longer loses data.
   - Strict `Int` refuses a float with a fractional part (`3.7`), which it used to truncate. Integral floats (`3.0`)
     and numeric strings (`'42'`) still load, and lax mode still truncates.
@@ -85,9 +92,6 @@ lines as it lands, and the entry is dated when that version is released.
     `True`. Lax mode is unchanged.
   - A strict int-valued `Enum` follows strict `Int`: `2.9` and `True` are refused, where they used to load as the
     members for `2` and `1`.
-- **The pure-Python `load` and `dump` make one fewer call per field.** Whether a field is a `Union` envelope is now
-  settled once per class, when the class is decorated, rather than asked of every field on every call. Nothing
-  else changes, and accelerated classes never ran that code.
 - **Breaking:** `seared.doc`'s fields table follows 0.4.0's rules, so a committed page checked with `--check` fails
   until it is regenerated, which is one command. Three things change, and nothing else on the page:
   - an optional field with no default shows `None` in the `default` column, the value its attribute gets, rather
@@ -95,13 +99,20 @@ lines as it lands, and the entry is dated when that version is released.
   - a nullable field's notes say `nullable: null loads as None`, which its annotation can't show; `FieldDoc` gains a
     `nullable` flag, appended so positional construction still works;
   - a `Union` row is marked required, with no default: a missing or `null` tag always raises.
-
 - **Breaking:** CSV's empty cell is its null. `from_csv` reads an empty cell, like a short row's missing one, as
   `null`, so the field takes its default, a nullable one keeps `None`, and a required one raises
   `required key missing`. It had reached the field as `''`: a `Str` loaded it as `''` and every other kind refused
   it, so an optional `None` couldn't round-trip through CSV. Now one does, for every flat field kind; an empty
   string can't, since it shares the cell with `None`. And `to_csv` gives a `dump=False` field no column, where it
   had written one that was always empty.
+- **The docs say what the code does.** `NDArray` is nested lists, its dtype inferred on load and `format=`
+  ignored, never the binary envelope they described; `format=` reaches `Bytes`, and `T` and `Tuple` pass it on; a
+  lax `null` element is coerced by its field's kind; `SearedError` is raised for accelerator setup. The field pages
+  gain what they lacked: the date and time `format=` option, coercion for `Float` and `Str`, an exact `Enum`
+  lookup, `Union`'s options.
+- The README gains *Upgrading to 0.4.0*, and installs seared by its `v0.4.0` tag.
+- **Dependencies:** the dev group's `pytest` range lifts to `>=8.0,<10.0`. The lockfile stays on 8.4.2 until the
+  release's relock; the suite passes on 9.1.1.
 
 ### Fixed
 
@@ -213,8 +224,8 @@ in step with a `rusted` release.
   `T`, is declined until `SPEC_ABI` 2. `rusted` 0.3.0 implements ABI 1, which still gives the old lax answer, and
   the ABI number is the only compatibility check seared makes; declining keeps the answer the same whichever wheel
   is installed. Strict `Bool` classes still accelerate. The reason reads
-  `Cls.attr: Bool under validate=False is not accelerated until SPEC_ABI 2`. No class in zeared, stored, zemqtt or
-  the rio-* apps is lax, so none of them loses acceleration.
+  `Cls.attr: Bool under validate=False is not accelerated until SPEC_ABI 2`. Lax mode is opt-in, so only a class
+  declared `validate=False` loses acceleration.
 - `docs/_core/accel.md` states the rule behind that decline: changing what an existing kind *means*, not only the
   shape of its spec, needs an ABI bump.
 - **The docs state today's semantics plainly**, ahead of the 0.4.0 changes, in the README's *Limits* and a new *Load

@@ -26,7 +26,8 @@ class Union(Field):
 
     ``Union`` is an ``UNWRAP`` field: the seared decorator merges the
     envelope at the parent class's top-level wire dict rather than nesting
-    it under a wire key. Only one ``UNWRAP`` field is allowed per class.
+    it under a wire key. A class can hold several ``UNWRAP`` fields, as long
+    as their ``tag_key`` / ``payload_key`` wire keys don't collide.
 
     Unknown tags on load raise ``ValidationError`` by default. Pass
     ``fallback=<VariantCls>`` to enable graceful schema-evolution

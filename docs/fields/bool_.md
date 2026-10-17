@@ -1,4 +1,4 @@
-# `bool.py` — `Bool`
+# `bool_.py` — `Bool`
 
 ```python
 flag: bool = s.Bool(default=False)

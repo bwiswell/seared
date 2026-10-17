@@ -9,8 +9,17 @@ from ._core.base import Seared
 from ._core.decorator import seared
 ```
 
-The package init pulls these together with every Field subclass to
-form the user-facing API:
+The package init (`seared/__init__.py`) pulls these together with the
+rest of the user-facing API. `import seared as s` gives:
+
+| Group | Names |
+|---|---|
+| The model | `Seared`, `seared`, `FieldSpec` |
+| Fields | `Field`, `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, and the optional `NDArray`, `PandasFrame`, `PolarsFrame` (each needs its extra only when used) |
+| Errors | `SearedError`, `ValidationError` |
+| The accelerator | `AccelInfo`, `accel_status` (see [`_core/accel.md`](_core/accel.md)) |
+| Schema docs | `document`, `introspect` (see [`doc/index.md`](doc/index.md)) |
+| Version | `__version__` |
 
 ```python
 import seared as s

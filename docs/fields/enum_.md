@@ -1,4 +1,4 @@
-# `_enum.py` — `Enum`
+# `enum_.py` — `Enum`
 
 ```python
 import enum
@@ -13,8 +13,14 @@ class Brush(s.Seared):
 ```
 
 `enum.Enum` ↔ underlying `value` on the wire (string for `str`-valued
-enums, int for `IntEnum` / int-valued enums). Auto-coerces strings on
-deserialize for ergonomic round-trip.
+enums, int for `IntEnum` / int-valued enums). `enum=` is required:
+`s.Enum()` without it raises `TypeError`.
+
+`load` takes a member as is, and otherwise looks the wire value up with
+`Color(value)`. For a string-valued enum that match is exact: `'red'`
+finds `RED`, and neither the member name `'RED'` nor `'Red'` does. A
+strict `dump` refuses anything but a member; lax mode writes the value it
+was given.
 
 An int-valued enum takes the values an [`Int`](int_.md) would, by the same
 mode's rules: `2`, `'2'` and `2.0` in both modes, while `2.9` and `True`

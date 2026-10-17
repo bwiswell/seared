@@ -45,11 +45,15 @@ class Foo(s.Seared): ...
    `load`, which resolves every omitted field before constructing, hands
    it the real default. An inherited hook is wrapped again by each
    subclass, so it sees the subclass's omitted fields resolved too.
-5. **Generate `dump` / `load`** — bound classmethods that walk the
-   spec list, calling each field's `serialize` / `deserialize`. Both
-   accept an optional `format=` kwarg threaded through to the field
-   methods.
-6. **Attach format codecs** — calls `_attach_format_methods` (from
+5. **Offer the class to the accelerator** — `try_compile` (from
+   `_core.accel`) returns a compiled `(load, dump)` pair when a backend
+   takes the class, and otherwise records why on `cls.__seared_accel__`.
+   See [`accel.md`](accel.md).
+6. **Generate `dump` / `load`** — the compiled pair, or else bound
+   classmethods that walk the spec list, calling each field's
+   `serialize` / `deserialize`. Both accept an optional `format=` kwarg
+   threaded through to the field methods.
+7. **Attach format codecs** — calls `_attach_format_methods` (from
    `seared.formats`) to wire `to_json` / `from_json` / `to_csv` /
    etc. onto the class.
 
@@ -99,9 +103,9 @@ only implement scalar `serialize(value)` / `deserialize(value)`.
 
 `Cls.dump(obj, format='msgpack')` and `Cls.load(data, format='msgpack')`
 thread the carrier hint through `_apply` and into each field's
-`serialize` / `deserialize` via `**kwargs['format']`. `Bytes` and
-`NDArray` use it to emit native bytes (no base64 overhead) when the
-carrier supports them. JSON callers pass `format='json'` (default) or
+`serialize` / `deserialize` via `**kwargs['format']`. `Bytes` uses it to
+emit native bytes (no base64 overhead) when the carrier supports them,
+and `T` and `Tuple` pass it on to what they hold. JSON callers pass `format='json'` (default) or
 omit the kwarg.
 
 ## `UNWRAP` field handling
