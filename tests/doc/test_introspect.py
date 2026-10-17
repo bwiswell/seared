@@ -91,6 +91,18 @@ class TestDocstringCleanup:
         assert ':meth:' not in schema.doc
 
 
+class TestDtype:
+    def test_an_ndarrays_dtype_reaches_the_model_and_the_notes(self):
+        @s.seared
+        class Samples(s.Seared):
+            values: object = s.NDArray(dtype='float32', required=True, doc='the samples')
+            loose: object = s.NDArray(default=None)
+
+        fields = {f.attr: f for f in introspect(Samples).fields}
+        assert (fields['values'].dtype, fields['loose'].dtype) == ('float32', None)
+        assert 'the samples · dtype: `float32`' in document(Samples)
+
+
 class TestUndocumentedClass:
     def test_has_no_summary_rather_than_the_dataclass_signature(self):
         # Before 0.4.1 the page's summary was the signature ``dataclass()`` writes into ``__doc__``.
