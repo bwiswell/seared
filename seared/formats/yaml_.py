@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from seared._core.base import Seared
+    from seared._core.unknown import Unknown
 
 from ._common import read_source
 
@@ -33,8 +34,8 @@ def to(cls: type[Seared], obj: Seared) -> str:
     return yaml.safe_dump(cls.dump(obj), sort_keys=False)
 
 
-def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:
-    """Parse YAML ``source`` (path or string content) and load into ``cls``."""
+def from_(cls: type[Seared], source: str | os.PathLike, unknown: Unknown | None = None) -> Seared:
+    """Parse YAML ``source`` (path or string content) and load into ``cls``; ``unknown`` as in ``load``."""
     yaml = _import_yaml()
     payload = yaml.safe_load(read_source(source))
     # ValueError, not TypeError: the malformed-payload contract is pinned
@@ -42,4 +43,4 @@ def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:
     if not isinstance(payload, dict):
         msg = f'{cls.__name__}.from_yaml: top-level YAML must be a mapping, got {type(payload).__name__}'
         raise ValueError(msg)  # noqa: TRY004
-    return cls.load(payload)
+    return cls.load(payload, unknown=unknown)

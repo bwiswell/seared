@@ -125,3 +125,25 @@ class TestNull:
         cfg = Proxied(name='a', upstream=Upstream(), extra={'list': [1, None]})
         with pytest.raises(TypeError):
             Proxied.to_toml(cfg)
+
+
+@s.seared(unknown='raise')
+class StrictCfg(s.Seared):
+    name: str = s.Str(required=True)
+    port: int = s.Int(default=7447)
+
+
+class TestUnknownKeys:
+    """``from_toml`` honours the class's ``unknown=`` and a call's own (0.4.1): the config case."""
+
+    def test_a_typo_in_a_refusing_config_is_refused(self):
+        with pytest.raises(s.ValidationError, match=r'^StrictCfg\.prot: unknown key$'):
+            StrictCfg.from_toml('name = "a"\nprot = 1\n')
+
+    def test_a_call_overrides_the_class(self):
+        assert StrictCfg.from_toml('name = "a"\nprot = 1\n', unknown='ignore') == StrictCfg(name='a')
+        with pytest.raises(s.ValidationError, match='unknown key'):
+            Cfg.from_toml('name = "a"\nport = 1\nprot = 1\n', unknown='raise')
+
+    def test_by_default_a_typo_is_dropped(self):
+        assert Cfg.from_toml('name = "a"\nport = 1\nprot = 2\n') == Cfg(name='a', port=1)

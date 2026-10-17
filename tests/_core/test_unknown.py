@@ -1,5 +1,5 @@
 """Tests for ``seared._core.unknown`` — ``unknown_keys``, the report of every key
-a wire dict holds that its class doesn't declare."""
+a wire dict holds that its class doesn't declare, and the refusal built on it."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import operator
 import pytest
 
 import seared as s
-from seared._core.unknown import unknown_keys
+from seared._core.unknown import check_unknown, refuse_unknown_keys, unknown_keys
 
 
 @s.seared
@@ -171,3 +171,34 @@ class TestUnionEnvelopes:
 
     def test_a_known_tag_under_a_fallback_union_is_still_checked(self):
         assert unknown_keys(Tolerant, {'id': 1, 'type': 'stop', 'args': {'reasn': 'x'}}) == [('args', 'reasn')]
+
+
+class TestRefusal:
+    def test_nothing_unknown_refuses_nothing(self):
+        assert refuse_unknown_keys(Config, {'identity': 'c1'}) is None
+
+    def test_one_unknown_key(self):
+        with pytest.raises(s.ValidationError) as caught:
+            refuse_unknown_keys(Config, {'identity': 'c1', 'identty': 'c2'})
+        err = caught.value
+        assert (err.reason, err.path, err.cls_name) == ('unknown key', ('identty',), 'Config')
+        assert str(err) == 'Config.identty: unknown key'
+
+    def test_the_first_is_the_path_and_the_rest_are_named(self):
+        data = {'identity': 'c1', 'streams': [{'cls': 'x', 'retension': '7d'}], 'zenoh': {}, 'oops': 1}
+        with pytest.raises(s.ValidationError) as caught:
+            refuse_unknown_keys(Config, data)
+        assert caught.value.path == ('streams', 0, 'retension')
+        assert str(caught.value) == 'Config.streams[0].retension: unknown key (1 more: oops)'
+
+    def test_past_five_more_the_rest_are_counted(self):
+        data = {'identity': 'c1', **{f'k{i}': i for i in range(8)}}
+        with pytest.raises(s.ValidationError) as caught:
+            refuse_unknown_keys(Config, data)
+        assert caught.value.reason == 'unknown key (7 more: k1, k2, k3, k4, k5, …)'
+
+    def test_only_ignore_and_raise_are_options(self):
+        check_unknown('ignore', 'here')
+        check_unknown('raise', 'here')
+        with pytest.raises(ValueError, match="here: unknown= takes 'ignore' or 'raise', got 'strict'"):
+            check_unknown('strict', 'here')

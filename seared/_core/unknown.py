@@ -7,7 +7,12 @@ file, or any input a person or an agent wrote, it hides a typo instead: the
 misspelt key is dropped, and its setting keeps its default.
 
 :func:`unknown_keys` reports those keys without raising, by walking the data
-against the class tree.
+against the class tree. The ``unknown=`` option refuses them: ``'raise'`` on
+``@seared`` makes it a class's default, and on ``load``, ``loads`` or a
+``from_*`` reader it governs one call. :func:`refuse_unknown_keys` is that
+refusal. A refusing load walks the whole input before the class's own load
+runs, compiled or not, so nested classes' own options don't apply to it, and an
+accelerated class stays accelerated.
 
 What counts as known, at each level:
 
@@ -30,10 +35,53 @@ A value of the wrong type isn't the walk's concern either: ``load`` reports it.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
+
+from .errors import ValidationError, render_path
 
 if TYPE_CHECKING:
     from .errors import PathSegment
+
+#: What a load does with a key its class doesn't declare: ignore it (the
+#: default, and what the wire depends on), or refuse the load.
+type Unknown = Literal['ignore', 'raise']
+
+#: The keys a refusal names after the first, before it says how many more.
+_NAMED = 5
+
+
+def check_unknown(unknown: object, where: str) -> None:
+    """Refuse an ``unknown=`` value that isn't one of its two.
+
+    Raises:
+        ValueError: If ``unknown`` is neither ``'ignore'`` nor ``'raise'``.
+    """
+    if unknown not in ('ignore', 'raise'):
+        msg = f"{where}: unknown= takes 'ignore' or 'raise', got {unknown!r}"
+        raise ValueError(msg)
+
+
+def refuse_unknown_keys(cls: type, data: Any) -> None:
+    """Raise at the first key in ``data`` that ``cls`` doesn't declare, naming the rest.
+
+    One error for every typo, so a config with three is fixed in one pass: its
+    ``path`` is the first unknown key's, and its reason counts and names the
+    others (``unknown key (2 more: streams[0].retension, zenoh.mdoe)``).
+
+    Raises:
+        ValidationError: If any key in ``data`` is unknown.
+        TypeError: If ``cls`` isn't a ``@seared`` class.
+    """
+    found = unknown_keys(cls, data)
+    if not found:
+        return
+    reason = 'unknown key'
+    rest = found[1:]
+    if rest:
+        named = ', '.join(render_path(path) for path in rest[:_NAMED])
+        etc = ', …' if len(rest) > _NAMED else ''
+        reason = f'unknown key ({len(rest)} more: {named}{etc})'
+    raise ValidationError(reason, path=found[0], cls_name=cls.__name__)
 
 
 def unknown_keys(cls: type, data: Any) -> list[tuple[PathSegment, ...]]:
@@ -45,8 +93,8 @@ def unknown_keys(cls: type, data: Any) -> list[tuple[PathSegment, ...]]:
     isn't a dict has no keys to report: ``load`` refuses it on its own.
 
     Never raises for what ``data`` holds, and never changes it: it's a report.
-    The ``unknown='raise'`` option (on ``@seared``, ``load`` and the ``from_*``
-    readers) refuses a load on the strength of it.
+    :func:`refuse_unknown_keys`, behind the ``unknown='raise'`` option, is the
+    refusal.
 
     Args:
         cls: A ``@seared`` class.
@@ -145,4 +193,4 @@ def _one(field: Any, value: Any, path: tuple[PathSegment, ...], found: list[tupl
                 _descend(slot, item, (*path, index), found)
 
 
-__all__ = ['unknown_keys']
+__all__ = ['Unknown', 'check_unknown', 'refuse_unknown_keys', 'unknown_keys']

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from seared._core.base import Seared
+    from seared._core.unknown import Unknown
 
 import csv as _csv
 import io
@@ -80,7 +81,7 @@ def to(cls: type[Seared], items: Iterable[Seared]) -> str:
     return out.getvalue()
 
 
-def from_(cls: type[Seared], source: str | os.PathLike) -> list[Seared]:
+def from_(cls: type[Seared], source: str | os.PathLike, unknown: Unknown | None = None) -> list[Seared]:
     """Parse CSV ``source`` (path or string content) into ``list[cls]``.
 
     An empty cell is CSV's null, and a short row's missing cells are too:
@@ -95,7 +96,7 @@ def from_(cls: type[Seared], source: str | os.PathLike) -> list[Seared]:
     records = []
     for i, row in enumerate(reader):
         try:
-            records.append(cls.load({k: None if v == '' else v for k, v in row.items()}))
+            records.append(cls.load({k: None if v == '' else v for k, v in row.items()}, unknown=unknown))
         except ValidationError as e:
             # The record's 0-based index among the data rows, header not
             # counted: ``Cls[41].port`` is ``rows[41]['port']``.

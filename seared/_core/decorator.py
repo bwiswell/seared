@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from .accel import try_compile
 from .base import FieldSpec
 from .errors import ValidationError, add_location
+from .unknown import check_unknown, refuse_unknown_keys
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from seared.fields.uuid_ import UUID
 
     from .errors import PathSegment
+    from .unknown import Unknown
 
     @overload
     def seared[ClsT](cls: type[ClsT], /) -> type[ClsT]: ...
@@ -53,6 +55,7 @@ if TYPE_CHECKING:
         slots: bool = ...,
         validate: bool = ...,
         accel: bool = ...,
+        unknown: Unknown = ...,
     ) -> Callable[[type[ClsT]], type[ClsT]]: ...
     @dataclass_transform(
         kw_only_default=True,
@@ -80,7 +83,7 @@ if TYPE_CHECKING:
             UUID,
         ),
     )
-    def seared(cls=None, *, slots=True, validate=True, accel=True): ...
+    def seared(cls=None, *, slots=True, validate=True, accel=True, unknown='ignore'): ...
 else:
 
     def seared(
@@ -89,6 +92,7 @@ else:
         slots: bool = True,
         validate: bool = True,
         accel: bool = True,
+        unknown: str = 'ignore',
     ) -> Any:
         """Decorator turning a class into a seared dataclass.
 
@@ -98,10 +102,19 @@ else:
         ``accel=False`` keeps the class on the pure-Python ``load`` / ``dump``
         even when an accelerator backend is installed (see
         ``seared._core.accel``); it is the per-class opt-out and always wins.
+
+        ``unknown='raise'`` makes the class refuse a key it doesn't declare,
+        wherever it is the class loaded: ``load``, ``loads`` and the ``from_*``
+        readers raise ``ValidationError`` instead of dropping it. For a config;
+        never for a wire message, which depends on ignoring keys a newer
+        publisher sends (see ``seared._core.unknown``). The default,
+        ``'ignore'``, is what ``load`` has always done. A call's own
+        ``unknown=`` overrides the class's.
         """
+        check_unknown(unknown, '@seared')
 
         def decorate(c: type) -> type:
-            return _build(c, slots=slots, validate=validate, accel=accel)
+            return _build(c, slots=slots, validate=validate, accel=accel, unknown=unknown)
 
         if cls is None:
             return decorate
@@ -122,7 +135,7 @@ type _HotSpec = tuple[str, str, Any]
 type _LoopSpec = tuple[str, str, Any, bool]
 
 
-def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> type:
+def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True, unknown: str = 'ignore') -> type:
     from seared.fields.field import Field  # local import avoids core<->field cycle
 
     # Sampled before ``dataclass()`` — with ``slots=True`` it returns a *new*
@@ -185,7 +198,12 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> typ
     # or a caller writing to the documented signature (``Cls.load(data=...)``)
     # gets a TypeError at runtime while type-checking clean.
     cls.dump = classmethod(lambda _c, obj, format='json': dump_fn(obj, format))
-    cls.load = classmethod(lambda _c, data, format='json': load_fn(data, format))
+    cls.load = classmethod(_load_entry(cls, load_fn, unknown))
+    cls.__seared_unknown__ = unknown
+    # The load itself, behind no option: what a nested ``T`` or ``Union``
+    # calls, since a refusing outer load has already walked its subtree. It
+    # also spares each nested object the public entry's call layer.
+    cls.__seared_load__ = staticmethod(load_fn)
 
     # Attach per-format codec methods (to_json/from_json/to_toml/...) once
     # at decorator time. Optional formats (TOML write, YAML, ...) raise
@@ -196,6 +214,35 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True) -> typ
     _attach_format_methods(cls)
 
     return cls
+
+
+def _load_entry(cls: type, load_fn: Callable, class_unknown: str) -> Callable:
+    """The ``load`` a class exposes: its own load, behind its ``unknown=`` option (0.4.1).
+
+    A refusal walks the input before ``load_fn`` runs, so it works the same
+    whether ``load_fn`` is compiled or pure Python. Each class gets the shape
+    for its default, so a class that ignores unknown keys pays one ``is None``
+    test per load and nothing more.
+    """
+    where = f'{cls.__name__}.load'
+    if class_unknown == 'ignore':
+
+        def load(_c: Any, data: Any, format: str = 'json', unknown: str | None = None) -> Any:
+            if unknown is not None and unknown != 'ignore':
+                check_unknown(unknown, where)
+                refuse_unknown_keys(cls, data)
+            return load_fn(data, format)
+
+        return load
+
+    def load_refusing(_c: Any, data: Any, format: str = 'json', unknown: str | None = None) -> Any:
+        if unknown is None or unknown == 'raise':
+            refuse_unknown_keys(cls, data)
+        else:
+            check_unknown(unknown, where)
+        return load_fn(data, format)
+
+    return load_refusing
 
 
 def _is_unwrap(f: Any) -> bool:
