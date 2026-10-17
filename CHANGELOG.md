@@ -9,7 +9,7 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
-## 0.4.2 — unreleased
+## 0.4.2 — 2026-10-17
 
 **JSON Schema from a class, on a public field kind.** `seared.doc.json_schema` describes what a class's `load` takes
 and what its `dump` writes, and `s.field_kind` says which built-in field a field is, a subclass included. Neither

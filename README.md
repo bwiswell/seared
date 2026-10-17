@@ -31,22 +31,22 @@ for free.
 
 ## Setup
 
-Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.1`).
+Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.2`).
 Install one by its tag:
 
 ```sh
 # uv
-uv add git+https://github.com/bwiswell/seared --tag v0.4.1
+uv add git+https://github.com/bwiswell/seared --tag v0.4.2
 
 # pip
-pip install git+https://github.com/bwiswell/seared.git@v0.4.1
+pip install git+https://github.com/bwiswell/seared.git@v0.4.2
 ```
 
 `uv add` records the tag as the dependency's source:
 
 ```toml
 [tool.uv.sources]
-seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.1" }
+seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.2" }
 ```
 
 **The tag is the pin.** uv doesn't check a version specifier such as
@@ -119,11 +119,11 @@ cell raises. `to_csv` heads each column with its wire key and gives a
 **10. msgpack writes a `Tuple`'s `Bytes` slot as raw bytes**, as it writes a
 top-level `Bytes`, where it wrote base64. Payloads written before still load.
 
-**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.1` is the latest), and
-`rusted` to its `v0.4.0` with it: 0.4.1 changes nothing `rusted` sees. zeared
-pins seared by tag itself (zeared 0.4.1 pins `v0.4.0`), and uv refuses two
-tags for one package, so a project on both uses the seared tag its zeared
-pins.
+**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.2` is the latest), and
+`rusted` to its `v0.4.0` with it: 0.4.1 and 0.4.2 change nothing `rusted`
+sees. zeared pins seared by tag itself (zeared 0.4.1 pins `v0.4.0`), and uv
+refuses two tags for one package, so a project on both uses the seared tag
+its zeared pins.
 
 ## Quick start
 
