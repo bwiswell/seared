@@ -374,6 +374,29 @@ then the enum members and `Union` variants. Pages mirror the package tree
 and link nested classes to each other. See
 [`docs/doc/index.md`](docs/doc/index.md).
 
+## JSON Schema
+
+`seared.doc.json_schema` (0.4.2) describes a class's JSON wire form as a JSON
+Schema 2020-12 document, for a tool's input and output, an API document, or a
+check in another language. It describes and never validates, so seared
+stays zero-dependency.
+
+```python
+from seared.doc import json_schema
+
+json_schema(Reading)                    # the input: what load takes
+json_schema(Reading, mode='dump')       # the output: what dump writes
+json_schema(Reading, unknown='raise')   # closed: keys no class declares are refused
+```
+
+The two modes make two promises: input valid against the load schema
+loads, and what `dump` writes validates against the dump schema. Nested
+classes go under `$defs`, a `Union` is an envelope on its parent, and a
+schema is closed exactly where `load` would refuse an unknown key, which by
+default is where the class says (`@s.seared(unknown='raise')`).
+`field_schema` gives one field's schema, for an object of your own. See
+[`docs/doc/json_schema.md`](docs/doc/json_schema.md).
+
 ## Documentation
 
 `docs/` mirrors the source layout exactly — namespace subdirs map to
@@ -386,7 +409,7 @@ namespace dirs in `docs/`, and each source file gets one `.md`.
 - [`docs/_core/`](docs/_core/) — `Seared` base class, `@seared` decorator, exception hierarchy, the accelerator seam (`accel.md`), unknown keys (`unknown.md`).
 - [`docs/fields/`](docs/fields/) — every Field subclass (one doc per file).
 - [`docs/formats/index.md`](docs/formats/index.md) — file-format codecs (JSON / TOML / YAML / CSV).
-- [`docs/doc/index.md`](docs/doc/index.md) — schema documentation generation (`seared.doc`).
+- [`docs/doc/index.md`](docs/doc/index.md) — schema documentation generation (`seared.doc`), Markdown and JSON Schema.
 
 ## Errors
 
