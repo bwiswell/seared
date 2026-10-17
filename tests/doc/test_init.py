@@ -2,8 +2,9 @@
 exports: ``__all__`` names exactly the public API, and each name is the object
 its own module defines, so a rename there can't leave a stale re-export.
 
-The modules come from ``importlib``: ``seared.doc.introspect`` is also the name
-of a re-exported function, which shadows the submodule as an attribute.
+The modules come from ``importlib``: ``seared.doc.introspect`` and
+``seared.doc.json_schema`` are also the names of re-exported functions, which
+shadow the submodules as attributes.
 """
 
 from __future__ import annotations
@@ -32,6 +33,8 @@ EXPORTS = {
     'render_header': 'render',
     'render_schema': 'render',
     'render_variants': 'render',
+    'field_schema': 'json_schema',
+    'json_schema': 'json_schema',
 }
 
 
