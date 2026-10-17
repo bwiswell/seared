@@ -25,6 +25,7 @@ EXPORTS = {
     'build_docs': 'generate',
     'collect': 'generate',
     'main': 'generate',
+    'undocumented': 'generate',
     'document': 'render',
     'render_enums': 'render',
     'render_fields_table': 'render',

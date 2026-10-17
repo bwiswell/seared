@@ -127,14 +127,17 @@ class Union(Field):
             # Flat: the variant's keys sit beside the tag in the parent's own
             # dict, so its errors already carry the right path.
             payload = {k: v for k, v in value.items() if k != self.tag_key}
-            return variant_cls.load(payload, kwargs.get('format', 'json'))
+            # The variant's own load, behind no ``unknown=``: the payload holds
+            # the parent's keys too, and an outer refusing load has already
+            # walked it (``seared._core.unknown``).
+            return variant_cls.__seared_load__(payload, kwargs.get('format', 'json'))
         # A ``null`` payload is an absent one, as a ``null`` is for any key that
         # isn't nullable: the variant loads from its defaults.
         payload = value.get(self.payload_key)
         if payload is None:
             payload = {}
         try:
-            return variant_cls.load(payload, kwargs.get('format', 'json'))
+            return variant_cls.__seared_load__(payload, kwargs.get('format', 'json'))
         except ValidationError as e:
             add_location(e, self.payload_key)
             raise

@@ -7,6 +7,7 @@ beyond the standard library.
 ```sh
 seared-doc mypkg.models -o docs/models            # write the pages
 seared-doc mypkg.models -o docs/models --check    # CI: fail if they've drifted
+seared-doc mypkg.models -o docs/models --check --require-docs   # …or a field has no doc=
 python -m seared.doc mypkg.models -o docs/models  # the same, without the script
 ```
 
@@ -38,13 +39,14 @@ same pipeline.
 | Name | From | |
 |---|---|---|
 | `introspect(cls)` | [`introspect`](introspect.md) | a class → `SchemaDoc` |
-| `is_seared_class(obj)` | [`introspect`](introspect.md) | whether `obj` is a decorated `@seared` class |
+| `is_seared_class(obj)` | [`introspect`](introspect.md) | whether the `@seared` decorator built `obj`, base class and fields aside |
 | `SchemaDoc`, `FieldDoc`, `EnumDoc`, `VariantDoc` | [`introspect`](introspect.md) | the intermediate model |
 | `document(cls, *, link_for=…)` | [`render`](render.md) | a class → its Markdown page |
 | `render_schema(schema, *, link_for=…)` | [`render`](render.md) | a `SchemaDoc` → its page |
 | `render_header`, `render_fields_table`, `render_enums`, `render_variants` | [`render`](render.md) | the page's sections |
 | `collect(target)` | [`generate`](generate.md) | every class reachable from a module or package |
 | `build_docs(target, *, render_one=None)` | [`generate`](generate.md) | the whole doc set, in memory |
+| `undocumented(target)` | [`generate`](generate.md) | every field with no `doc=`, as `module.Class.attr` |
 | `main(argv=None, *, render_one=None, prog=None)` | [`generate`](generate.md) | the CLI |
 
 `document` and `introspect` are also re-exported at the package root, as

@@ -91,6 +91,30 @@ class TestDocstringCleanup:
         assert ':meth:' not in schema.doc
 
 
+class TestDtype:
+    def test_an_ndarrays_dtype_reaches_the_model_and_the_notes(self):
+        @s.seared
+        class Samples(s.Seared):
+            values: object = s.NDArray(dtype='float32', required=True, doc='the samples')
+            loose: object = s.NDArray(default=None)
+
+        fields = {f.attr: f for f in introspect(Samples).fields}
+        assert (fields['values'].dtype, fields['loose'].dtype) == ('float32', None)
+        assert 'the samples · dtype: `float32`' in document(Samples)
+
+
+class TestUndocumentedClass:
+    def test_has_no_summary_rather_than_the_dataclass_signature(self):
+        # Before 0.4.1 the page's summary was the signature ``dataclass()`` writes into ``__doc__``.
+        @s.seared
+        class NoDoc(s.Seared):
+            n: int = s.Int(default=0)
+
+        schema = introspect(NoDoc)
+        assert (schema.summary, schema.doc) == (None, None)
+        assert 'Int(' not in document(NoDoc)
+
+
 class TestIsSearedClass:
     def test_recognises_models(self):
         assert is_seared_class(Demo)
@@ -100,6 +124,32 @@ class TestIsSearedClass:
         assert not is_seared_class(Band)
         assert not is_seared_class(int)
         assert not is_seared_class(is_seared_class)
+
+    def test_a_decorated_class_without_the_base_counts(self):
+        # ``@zeared`` is the same decorator, and neither needs the base class (0.4.1).
+        @s.seared
+        class Bare:
+            n: int = s.Int(default=0)
+
+        assert is_seared_class(Bare)
+
+    def test_a_decorated_class_without_fields_counts(self):
+        @s.seared
+        class Empty(s.Seared):
+            pass
+
+        assert is_seared_class(Empty)
+
+    def test_only_what_the_decorator_built_counts(self):
+        class Undecorated(s.Seared):
+            pass
+
+        class Inherited(Inner):  # a decorated parent; never decorated itself
+            pass
+
+        assert not is_seared_class(s.Seared)
+        assert not is_seared_class(Undecorated)
+        assert not is_seared_class(Inherited)
 
 
 class TestUnionFallback:

@@ -57,4 +57,7 @@ class T(Field):
         """Dict → an instance of the nested schema."""
         if isinstance(value, self.schema):
             return value
-        return self.schema.load(value, kwargs.get('format', 'json'))
+        # The class's own load, behind no ``unknown=``: a refusing outer load
+        # walked this subtree before it started, and the nested class's option
+        # governs only a load of that class itself.
+        return self.schema.__seared_load__(value, kwargs.get('format', 'json'))

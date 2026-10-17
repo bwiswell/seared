@@ -22,8 +22,15 @@ resolved annotations for the type strings.
 
 ## `is_seared_class(obj)`
 
-True for a decorated `@seared` class: a subclass of `Seared`, not `Seared`
-itself, with at least one declared field.
+True for a class the `@seared` decorator built, which it marks by setting
+`__seared_fields__` on the class it returns. So a decorated class counts
+whether or not it subclasses `Seared` (`@zeared` is the same decorator), and
+whether or not it has fields, as a `Union` variant may not. The bare `Seared`
+base doesn't count, and nor does a subclass of a decorated class that isn't
+decorated itself.
+
+Before 0.4.1 it asked for the `Seared` base and at least one field, so a
+page could link to a decorated class that the generator never documented.
 
 ## The model
 
@@ -52,12 +59,13 @@ All four are frozen, slotted dataclasses.
 | `many`, `keyed`, `dump` | the field's options |
 | `doc` | the field's `doc=` |
 | `nullable` | whether a wire `null` is a value (`nullable=True`), which the annotation can't show |
+| `dtype` | an `NDArray`'s declared element type as numpy names it (`'float32'`), or `None` (0.4.1) |
 | `enum` | an `EnumDoc`, for an `Enum` field |
 | `nested` | the target class, for a `T` field |
 | `variants`, `envelope`, `fallback` | for a `Union`: its `VariantDoc`s, `'flat'` or `` 'nested under `args`' ``, and its fallback class |
 
-`nullable` comes last, with a default, so positional construction from
-before it was added still works.
+`nullable` and `dtype` come last, with defaults, so positional construction
+from before they were added still works.
 
 ### `EnumDoc` and `VariantDoc`
 

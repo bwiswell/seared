@@ -31,22 +31,22 @@ for free.
 
 ## Setup
 
-Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.0`).
+Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.1`).
 Install one by its tag:
 
 ```sh
 # uv
-uv add git+https://github.com/bwiswell/seared --tag v0.4.0
+uv add git+https://github.com/bwiswell/seared --tag v0.4.1
 
 # pip
-pip install git+https://github.com/bwiswell/seared.git@v0.4.0
+pip install git+https://github.com/bwiswell/seared.git@v0.4.1
 ```
 
 `uv add` records the tag as the dependency's source:
 
 ```toml
 [tool.uv.sources]
-seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.0" }
+seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.1" }
 ```
 
 **The tag is the pin.** uv doesn't check a version specifier such as
@@ -119,9 +119,11 @@ cell raises. `to_csv` heads each column with its wire key and gives a
 **10. msgpack writes a `Tuple`'s `Bytes` slot as raw bytes**, as it writes a
 top-level `Bytes`, where it wrote base64. Payloads written before still load.
 
-**11. Pins.** Move seared's source to `tag = "v0.4.0"`, and `rusted` to its
-`v0.4.0` with it. zeared 0.4.0 pins seared `v0.4.0` itself, so a project on
-both moves the two together.
+**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.1` is the latest), and
+`rusted` to its `v0.4.0` with it: 0.4.1 changes nothing `rusted` sees. zeared
+pins seared by tag itself (zeared 0.4.1 pins `v0.4.0`), and uv refuses two
+tags for one package, so a project on both uses the seared tag its zeared
+pins.
 
 ## Quick start
 
@@ -178,13 +180,16 @@ also = Outer.from_json(raw)
 @s.seared(slots=False)       # allow instance __dict__ (default: slots=True)
 @s.seared(validate=False)    # lax mode: skip type checks, coerce where obvious
 @s.seared(accel=False)       # keep the pure-Python load/dump (default: accel=True)
+@s.seared(unknown='raise')   # refuse keys the class doesn't declare (default: 'ignore')
 ```
 
-The three flags are orthogonal. `validate=True` (the default) raises
+The four options are orthogonal. `validate=True` (the default) raises
 `s.ValidationError` on type mismatches during load/dump; `validate=False`
 trusts the caller and is faster on hot paths where inputs are already
 known-good. `accel=False` keeps the class off the compiled accelerator even
 when `rusted` is installed (see [Accelerator](#accelerator)).
+`unknown='raise'` is for config files (see
+[Configuration files](#configuration-files)).
 
 See [`docs/_core/decorator.md`](docs/_core/decorator.md) for the full
 internals.
@@ -274,6 +279,33 @@ CSV refuses nested fields (`T`, `Union`, `NDArray`, `Tuple`,
 classes only. See [`docs/formats/index.md`](docs/formats/index.md) for
 the full codec matrix.
 
+## Configuration files
+
+`load` ignores a key its class doesn't declare. On the wire that's
+load-bearing: an older subscriber reads a newer publisher's payload by
+ignoring fields it doesn't know yet. In a config file it hides a typo,
+since the misspelt key is dropped and its setting keeps its default.
+`unknown='raise'` (0.4.1) refuses instead:
+
+```python
+@s.seared(unknown='raise')           # this class refuses wherever it's loaded
+class Config(s.Seared):
+    identity: str = s.Str(required=True)
+    port: int = s.Int(default=7447)
+
+Config.from_toml('identity = "a"\nprot = 8000\n')
+# ValidationError: Config.prot: unknown key
+
+Config.from_toml('identity = "a"\nprot = 8000\n', unknown='ignore')  # one call overrides the class
+s.unknown_keys(Config, {'identity': 'a', 'prot': 8000})            # a report: [('prot',)]
+```
+
+The refusal covers nested sections, names every unknown key in one error,
+and runs before the load, so a misspelt required key reads as unknown
+rather than missing. It never touches the accelerator. Keep it off wire
+messages. See [`docs/overview/configuration.md`](docs/overview/configuration.md)
+and [`docs/_core/unknown.md`](docs/_core/unknown.md).
+
 ## DataFrame fields
 
 ```python
@@ -317,11 +349,13 @@ spec.attr, spec.wire, spec.field     # 'a', 'a', Int(...)
 `seared.doc` writes a Markdown page for every `@seared` class in a module or
 package, from its fields, their `doc=` text and the class docstring, plus
 an index. `--check` turns it into a CI guard that fails when the committed
-pages have drifted from the code.
+pages have drifted from the code, and `--require-docs` (0.4.1) one that
+fails when a field has no `doc=`.
 
 ```sh
 seared-doc mypkg.models -o docs/models            # or: python -m seared.doc …
 seared-doc mypkg.models -o docs/models --check    # exit 1 on drift
+seared-doc mypkg.models -o docs/models --check --require-docs   # …or on a field without doc=
 ```
 
 ```python
@@ -342,7 +376,8 @@ namespace dirs in `docs/`, and each source file gets one `.md`.
 - [`docs/overview/architecture.md`](docs/overview/architecture.md) — decorator pipeline, `UNWRAP`, format hints.
 - [`docs/overview/benchmarks.md`](docs/overview/benchmarks.md) — full benchmark methodology, results, and reproduction steps.
 - [`docs/seared.md`](docs/seared.md) — package re-export module entry point.
-- [`docs/_core/`](docs/_core/) — `Seared` base class, `@seared` decorator, exception hierarchy, the accelerator seam (`accel.md`).
+- [`docs/overview/configuration.md`](docs/overview/configuration.md) — seared for config files: refusing unknown keys, defaults, what it leaves to you.
+- [`docs/_core/`](docs/_core/) — `Seared` base class, `@seared` decorator, exception hierarchy, the accelerator seam (`accel.md`), unknown keys (`unknown.md`).
 - [`docs/fields/`](docs/fields/) — every Field subclass (one doc per file).
 - [`docs/formats/index.md`](docs/formats/index.md) — file-format codecs (JSON / TOML / YAML / CSV).
 - [`docs/doc/index.md`](docs/doc/index.md) — schema documentation generation (`seared.doc`).
@@ -351,7 +386,7 @@ namespace dirs in `docs/`, and each source file gets one `.md`.
 
 | Exception | Raised when |
 |-----------|-------------|
-| `s.ValidationError` | Wire value fails type checks; required field missing; bad enum member; unknown `Union` tag without `fallback=`; CSV/Pandas/Polars shape mismatch. |
+| `s.ValidationError` | Wire value fails type checks; required field missing; bad enum member; unknown `Union` tag without `fallback=`; an unknown key, under `unknown='raise'`; CSV/Pandas/Polars shape mismatch. |
 | `s.SearedError`     | Base; `ValidationError` extends this. Also extends `ValueError` for downstream compatibility (`except ValueError:` catches seared errors). Raised itself at decoration time for an unrecognised `SEARED_ACCEL`, or `SEARED_ACCEL=require` with no backend that loads. |
 
 A `ValidationError` says where it happened. Its message reads

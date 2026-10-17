@@ -51,7 +51,8 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
     its ``required`` says: a missing or ``null`` tag always raises. ``default``
     is the Python value an omitted field gets (`` `None` ``, never
     `` `null` ``), or ``—`` when there is none. ``notes`` carries the field's
-    ``doc``, then whether it is nullable and whether ``dump`` skips it.
+    ``doc``, then an ``NDArray``'s declared dtype, whether it is nullable and
+    whether ``dump`` skips it.
     """
     if not schema.fields:
         return ''
@@ -68,6 +69,8 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
         notes = []
         if f.doc:
             notes.append(_cell(f.doc))
+        if f.dtype is not None:
+            notes.append(f'dtype: `{f.dtype}`')
         if f.nullable:
             notes.append('nullable: `null` loads as `None`')
         if not f.dump:

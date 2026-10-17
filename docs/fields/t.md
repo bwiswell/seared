@@ -12,7 +12,11 @@ class Outer(s.Seared):
 
 Embeds another seared class as a field. The wire form is the inner
 class's `dump` output (a nested dict). On `load`, dispatches to the
-inner class's `load`.
+inner class's own load, `Inner.__seared_load__`, with no `unknown=` in
+front of it: inside another class's load, unknown keys are the outermost
+load's to refuse, and its walk covers this subtree (see
+[`../_core/unknown.md`](../_core/unknown.md)). So `Inner`'s own
+`unknown='raise'` applies when `Inner` is loaded by itself.
 
 Supports `many=True` and `keyed=True` for lists / maps of nested
 instances.

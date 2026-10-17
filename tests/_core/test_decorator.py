@@ -971,3 +971,103 @@ class TestNullOnDump:
             secret: str | None = s.Str(nullable=True, dump=False)
 
         assert Hidden.dump(Hidden()) == {}
+
+
+@s.seared
+class _Lenient(s.Seared):
+    n: int = s.Int(default=0)
+    must: str = s.Str(default='')
+
+
+@s.seared(unknown='raise')
+class _Strict(s.Seared):
+    n: int = s.Int(default=0)
+    must: str | None = s.Str(default=None)
+
+
+@s.seared(unknown='raise')
+class _StrictRequired(s.Seared):
+    retention: str = s.Str(required=True)
+
+
+class TestUnknownOption:
+    """``@seared(unknown=…)`` and ``load(unknown=…)`` (0.4.1)."""
+
+    def test_by_default_an_unknown_key_is_dropped(self):
+        assert _Lenient.load({'n': 2, 'nn': 3}) == _Lenient(n=2)
+        assert _Lenient.__seared_unknown__ == 'ignore'
+
+    def test_a_refusing_class_raises_at_the_unknown_key(self):
+        with pytest.raises(s.ValidationError, match=r'^_Strict\.nn: unknown key$'):
+            _Strict.load({'n': 2, 'nn': 3})
+        assert _Strict.__seared_unknown__ == 'raise'
+
+    def test_a_refusing_class_still_loads_known_keys(self):
+        assert _Strict.load({'n': 2, 'must': 'x'}) == _Strict(n=2, must='x')
+
+    def test_a_call_can_refuse_for_a_lenient_class(self):
+        with pytest.raises(s.ValidationError, match='unknown key'):
+            _Lenient.load({'nn': 3}, unknown='raise')
+
+    def test_a_call_can_ignore_for_a_refusing_class(self):
+        assert _Strict.load({'n': 2, 'nn': 3}, unknown='ignore') == _Strict(n=2)
+
+    def test_unknown_is_also_the_third_positional_argument(self):
+        with pytest.raises(s.ValidationError, match='unknown key'):
+            _Lenient.load({'nn': 3}, 'json', 'raise')
+
+    def test_the_refusal_runs_before_the_load(self):
+        # A misspelt required key: the unknown key says why, where "required key
+        # missing" would only say what.
+        with pytest.raises(s.ValidationError, match=r'^_StrictRequired\.retension: unknown key$'):
+            _StrictRequired.load({'retension': '7d'})
+
+    def test_data_that_isnt_a_dict_keeps_its_own_error(self):
+        with pytest.raises(s.ValidationError, match='expected dict'):
+            _Strict.load(['n'])
+
+    def test_a_bad_option_is_refused_at_decoration(self):
+        with pytest.raises(ValueError, match="@seared: unknown= takes 'ignore' or 'raise', got 'strict'"):
+
+            @s.seared(unknown='strict')  # ty: ignore[invalid-argument-type]
+            class _Bad(s.Seared):
+                n: int = s.Int(default=0)
+
+    @pytest.mark.parametrize('cls', [_Lenient, _Strict])
+    def test_a_bad_option_is_refused_per_call(self, cls):
+        with pytest.raises(ValueError, match=rf"{cls.__name__}\.load: unknown= takes 'ignore' or 'raise'"):
+            cls.load({'n': 1}, unknown='strict')  # ty: ignore[invalid-argument-type]
+
+    def test_loads_takes_the_option_too(self):
+        assert _Lenient.loads('{"n": 2, "nn": 3}') == _Lenient(n=2)
+        with pytest.raises(s.ValidationError, match='unknown key'):
+            _Lenient.loads('{"n": 2, "nn": 3}', unknown='raise')
+        with pytest.raises(s.ValidationError, match='unknown key'):
+            _Strict.loads('{"n": 2, "nn": 3}')
+
+    def test_the_bare_load_sits_behind_the_option(self):
+        # What a nested ``T`` or ``Union`` calls: the class's own load, no option in front.
+        assert _Strict.__seared_load__({'n': 2, 'nn': 3}, 'json') == _Strict(n=2)
+
+
+class TestDocstring:
+    """The decorator keeps the class's own docstring, or its lack of one (0.4.1)."""
+
+    @pytest.mark.parametrize('slots', [True, False])
+    def test_an_undocumented_class_stays_undocumented(self, slots):
+        # ``dataclass()`` would write its generated signature here.
+        @s.seared(slots=slots)
+        class NoDoc(s.Seared):
+            n: int = s.Int(default=0)
+
+        assert NoDoc.__doc__ is None
+
+    @pytest.mark.parametrize('slots', [True, False])
+    def test_a_written_docstring_is_kept(self, slots):
+        @s.seared(slots=slots)
+        class Doc(s.Seared):
+            """Has words."""
+
+            n: int = s.Int(default=0)
+
+        assert Doc.__doc__ == 'Has words.'

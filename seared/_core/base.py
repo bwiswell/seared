@@ -7,9 +7,11 @@ from .accel import AccelInfo
 
 if TYPE_CHECKING:
     import os
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from seared.fields.field import Field
+
+    from .unknown import Unknown
 
 
 class FieldSpec(NamedTuple):
@@ -43,6 +45,15 @@ class Seared:
         reason='class is not decorated with @seared',
     )
 
+    #: What ``load`` does by default with a key the class doesn't declare:
+    #: ``'ignore'`` or ``'raise'``, from ``@seared(unknown=…)`` (0.4.1).
+    __seared_unknown__: ClassVar[str] = 'ignore'
+
+    #: Internal: the class's load, ``(data, format) -> instance``, with no
+    #: ``unknown=`` in front of it. A nested ``T`` or ``Union`` loads through it
+    #: (see ``seared._core.unknown``). Set by the decorator.
+    __seared_load__: ClassVar[Callable[[Any, str], Any]]
+
     @classmethod
     def dump(cls, obj: Seared, format: str = 'json') -> dict[str, Any]:
         """Instance → wire dict.
@@ -70,13 +81,22 @@ class Seared:
         return json.dumps(cls.dump(obj), **kwargs)
 
     @classmethod
-    def load(cls, data: dict[str, Any], format: str = 'json') -> Self:
-        """Wire dict → instance. ``format`` as in :meth:`dump`."""
+    def load(cls, data: dict[str, Any], format: str = 'json', unknown: Unknown | None = None) -> Self:
+        """Wire dict → instance. ``format`` as in :meth:`dump`.
+
+        ``unknown`` says what to do with a key the class doesn't declare:
+        ``'ignore'`` drops it, ``'raise'`` refuses the load with a
+        ``ValidationError`` naming every such key, and ``None`` (the default)
+        takes the class's own ``@seared(unknown=…)``, which is ``'ignore'``
+        unless it says otherwise. The refusal covers the whole input, nested
+        classes included (see ``seared._core.unknown``).
+        """
         raise NotImplementedError
 
     @classmethod
-    def loads(cls, data: str) -> Self:
-        return cls.load(json.loads(data))
+    def loads(cls, data: str, unknown: Unknown | None = None) -> Self:
+        """JSON string → instance. ``unknown`` as in :meth:`load`."""
+        return cls.load(json.loads(data), unknown=unknown)
 
     # Per-format codecs. Real implementations are attached at decorator
     # time (``seared/formats/_attach_format_methods``); these
@@ -88,7 +108,7 @@ class Seared:
         raise NotImplementedError
 
     @classmethod
-    def from_json(cls, source: str | os.PathLike) -> Self:
+    def from_json(cls, source: str | os.PathLike, unknown: Unknown | None = None) -> Self:
         raise NotImplementedError
 
     @classmethod
@@ -96,7 +116,7 @@ class Seared:
         raise NotImplementedError
 
     @classmethod
-    def from_toml(cls, source: str | os.PathLike) -> Self:
+    def from_toml(cls, source: str | os.PathLike, unknown: Unknown | None = None) -> Self:
         raise NotImplementedError
 
     @classmethod
@@ -104,7 +124,7 @@ class Seared:
         raise NotImplementedError
 
     @classmethod
-    def from_yaml(cls, source: str | os.PathLike) -> Self:
+    def from_yaml(cls, source: str | os.PathLike, unknown: Unknown | None = None) -> Self:
         raise NotImplementedError
 
     @classmethod
@@ -112,5 +132,5 @@ class Seared:
         raise NotImplementedError
 
     @classmethod
-    def from_csv(cls, source: str | os.PathLike) -> list[Self]:
+    def from_csv(cls, source: str | os.PathLike, unknown: Unknown | None = None) -> list[Self]:
         raise NotImplementedError

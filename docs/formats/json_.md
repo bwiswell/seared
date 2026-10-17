@@ -6,7 +6,7 @@ Stdlib-only. No extras required. Always available.
 
 ```python
 Cls.to_json(obj, *, indent=None, **kwargs) -> str
-Cls.from_json(source) -> Cls
+Cls.from_json(source, unknown=None) -> Cls
 ```
 
 `to_json` passes `**kwargs` straight to `json.dumps` — useful for

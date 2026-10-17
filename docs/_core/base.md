@@ -19,11 +19,13 @@ class Telemetry(s.Seared):           # subclass of Seared
 |--------------------|-----------|
 | `__seared_fields__: ClassVar[tuple[FieldSpec, ...]]` | Empty tuple on the bare base; populated by the decorator with one `FieldSpec` per declared field, in order. |
 | `__seared_accel__: ClassVar[AccelInfo]` | Whether the compiled accelerator took the class, and the reason if not (see [`accel.md`](accel.md)). On the bare base: not accelerated, "class is not decorated with @seared". |
+| `__seared_unknown__: ClassVar[str]` | The class's `unknown=`: `'ignore'` (also the bare base's) or `'raise'` (see [`unknown.md`](unknown.md)). |
+| `__seared_load__` | Internal: the class's own load, `(data, format) -> instance`, with no `unknown=` in front. Nested `T` and `Union` fields call it. Set by the decorator. |
 | `dump(obj, format='json')` | Raises `NotImplementedError` until decorated. `format` is the carrier hint the decorator threads into every field (see [`decorator.md`](decorator.md#format-carrier-hint)). |
-| `load(data, format='json')` | Raises `NotImplementedError` until decorated. `format` as for `dump`. |
+| `load(data, format='json', unknown=None)` | Raises `NotImplementedError` until decorated. `format` as for `dump`. `unknown` is `'ignore'`, `'raise'`, or `None` for the class's own (see [`unknown.md`](unknown.md)). |
 | `dumps(obj, **kwargs)` | JSON convenience wrapper around `dump`; `**kwargs` pass through to `json.dumps`, as they do for `to_json`. |
-| `loads(data)` | JSON convenience wrapper around `load`. |
-| `to_json` / `from_json`, `to_toml` / `from_toml`, `to_yaml` / `from_yaml`, `to_csv` / `from_csv` | The per-format codecs. Declared here so calls on a decorated class type-check; the decorator attaches the real ones (see [`../formats/index.md`](../formats/index.md)). |
+| `loads(data, unknown=None)` | JSON convenience wrapper around `load`; `unknown` as there. |
+| `to_json` / `from_json`, `to_toml` / `from_toml`, `to_yaml` / `from_yaml`, `to_csv` / `from_csv` | The per-format codecs, each `from_*` taking `unknown=` as `load` does. Declared here so calls on a decorated class type-check; the decorator attaches the real ones (see [`../formats/index.md`](../formats/index.md)). |
 
 `dump` and `load` here must stay signature-identical to what the decorator
 attaches; `tests/_core/test_base.py` asserts it.

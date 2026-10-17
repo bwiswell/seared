@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import seared as s
 
 
@@ -196,3 +198,29 @@ class TestFormatHint:
         field = s.T(self.Blob)
         assert field.serialize(self.Blob(data=b'\x01')) == {'data': 'AQ=='}
         assert field.deserialize({'data': 'AQ=='}).data == b'\x01'
+
+
+@s.seared(unknown='raise')
+class StrictInner(s.Seared):
+    x: int = s.Int(required=True)
+
+
+@s.seared
+class LenientOuter(s.Seared):
+    inner: StrictInner = s.T(StrictInner, required=True)
+
+
+class TestUnknownKeysWhenNested:
+    """A nested class's own ``unknown=`` governs only a load of that class (0.4.1)."""
+
+    def test_an_ignoring_outer_load_ignores_a_nested_unknown_key(self):
+        loaded = LenientOuter.load({'inner': {'x': 1, 'xx': 2}})
+        assert loaded.inner == StrictInner(x=1)
+
+    def test_a_refusing_outer_load_refuses_it_at_its_full_path(self):
+        with pytest.raises(s.ValidationError, match=r'^LenientOuter\.inner\.xx: unknown key$'):
+            LenientOuter.load({'inner': {'x': 1, 'xx': 2}}, unknown='raise')
+
+    def test_the_nested_class_loaded_itself_refuses(self):
+        with pytest.raises(s.ValidationError, match='unknown key'):
+            StrictInner.load({'x': 1, 'xx': 2})

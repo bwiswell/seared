@@ -12,4 +12,5 @@ def NDArray(
     doc: str | None = ...,
     default: Any = ...,
     default_factory: Callable[[], Any] = ...,
+    dtype: Any = ...,
 ) -> Any: ...
