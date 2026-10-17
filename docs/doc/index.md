@@ -39,7 +39,7 @@ same pipeline.
 | Name | From | |
 |---|---|---|
 | `introspect(cls)` | [`introspect`](introspect.md) | a class → `SchemaDoc` |
-| `is_seared_class(obj)` | [`introspect`](introspect.md) | whether `obj` is a decorated `@seared` class |
+| `is_seared_class(obj)` | [`introspect`](introspect.md) | whether the `@seared` decorator built `obj`, base class and fields aside |
 | `SchemaDoc`, `FieldDoc`, `EnumDoc`, `VariantDoc` | [`introspect`](introspect.md) | the intermediate model |
 | `document(cls, *, link_for=…)` | [`render`](render.md) | a class → its Markdown page |
 | `render_schema(schema, *, link_for=…)` | [`render`](render.md) | a `SchemaDoc` → its page |

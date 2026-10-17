@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import seared as s
 from seared.doc import generate
 from seared.doc.generate import build_docs, check_docs, collect, main, undocumented, write_docs
@@ -42,6 +44,20 @@ class TestCollect:
         # Geo is only reachable via Reading's T(Geo) — closure must pull it in.
         names = {c.__name__ for c in collect('doc.sample.telemetry.reading')}
         assert {'Reading', 'Geo'} <= names
+
+
+class TestEveryLinkHasAPage:
+    """Every class a page links to is collected, so no link dangles (0.4.1)."""
+
+    def test_a_bare_class_and_a_fieldless_variant_are_collected(self):
+        names = {c.__name__ for c in collect('doc.linked')}
+        assert names == {'Bare', 'Command', 'Go', 'Stop'}
+
+    def test_no_page_links_to_a_page_that_isnt_there(self):
+        docs = build_docs('doc.linked')
+        targets = set(re.findall(r'\]\(([^)#]+\.md)\)', docs['Command.md']))
+        assert targets == {'Bare.md', 'Go.md', 'Stop.md'}
+        assert targets <= set(docs)
 
 
 class TestWriteAndCheck:

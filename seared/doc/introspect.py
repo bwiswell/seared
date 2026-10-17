@@ -67,13 +67,17 @@ class SchemaDoc:
 
 
 def is_seared_class(obj: Any) -> TypeGuard[type[Seared]]:
-    """True for a decorated ``@seared`` class (not the base itself)."""
-    return (
-        isinstance(obj, type)
-        and issubclass(obj, Seared)
-        and obj is not Seared
-        and bool(getattr(obj, '__seared_fields__', ()))
-    )
+    """True for a class the ``@seared`` decorator built.
+
+    The decorator sets ``__seared_fields__`` on the class it returns, so that
+    is the mark: a decorated class counts whether or not it subclasses
+    ``Seared`` (``@zeared`` is the same decorator), and whether or not it has
+    fields (a ``Union`` variant may have none). The bare ``Seared`` base
+    doesn't, and nor does a subclass of a decorated class that isn't
+    decorated itself. Before 0.4.1 the check asked for the base and a field,
+    so a page could link to a class that got no page.
+    """
+    return isinstance(obj, type) and obj is not Seared and vars(obj).get('__seared_fields__') is not None
 
 
 def introspect(cls: type[Seared]) -> SchemaDoc:

@@ -101,6 +101,32 @@ class TestIsSearedClass:
         assert not is_seared_class(int)
         assert not is_seared_class(is_seared_class)
 
+    def test_a_decorated_class_without_the_base_counts(self):
+        # ``@zeared`` is the same decorator, and neither needs the base class (0.4.1).
+        @s.seared
+        class Bare:
+            n: int = s.Int(default=0)
+
+        assert is_seared_class(Bare)
+
+    def test_a_decorated_class_without_fields_counts(self):
+        @s.seared
+        class Empty(s.Seared):
+            pass
+
+        assert is_seared_class(Empty)
+
+    def test_only_what_the_decorator_built_counts(self):
+        class Undecorated(s.Seared):
+            pass
+
+        class Inherited(Inner):  # a decorated parent; never decorated itself
+            pass
+
+        assert not is_seared_class(s.Seared)
+        assert not is_seared_class(Undecorated)
+        assert not is_seared_class(Inherited)
+
 
 class TestUnionFallback:
     """Pin: a ``Union``'s fallback variant is read from ``fallback=`` (its name since 0.4.0) and rendered."""
