@@ -14,7 +14,7 @@ import seared as s
 @s.seared
 class Cfg(s.Seared):
     name: str = s.Str(required=True)
-    items: list = s.Str(many=True, missing=[])
+    items: list = s.Str(many=True, default=[])
 
 
 class TestRoundTrip:
@@ -62,3 +62,24 @@ class TestErrors:
         pytest.importorskip('yaml')
         with pytest.raises(ValueError, match='must be a mapping'):
             Cfg.from_yaml('- a\n- list\n')
+
+
+@s.seared
+class Proxied(s.Seared):
+    name: str = s.Str(default='anon')
+    proxy: str | None = s.Str(nullable=True, default='direct')
+
+
+class TestNull:
+    """Pin: YAML's ``~`` / ``null`` follows JSON's ``null``."""
+
+    def test_a_null_reads_as_absent_unless_nullable(self):
+        pytest.importorskip('yaml')
+        got = Proxied.from_yaml('name: ~\nproxy: ~\n')
+        assert (got.name, got.proxy) == ('anon', None)
+
+    def test_a_nullable_none_is_written_as_null(self):
+        pytest.importorskip('yaml')
+        text = Proxied.to_yaml(Proxied(proxy=None))
+        assert 'proxy: null' in text
+        assert Proxied.from_yaml(text).proxy is None

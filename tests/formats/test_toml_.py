@@ -15,7 +15,7 @@ import seared as s
 class Cfg(s.Seared):
     name: str = s.Str(required=True)
     port: int = s.Int(required=True)
-    debug: bool = s.Bool(missing=False)
+    debug: bool = s.Bool(default=False)
 
 
 class TestRoundTrip:
@@ -83,3 +83,45 @@ class TestErrors:
         # Use an explicit invalid form to test our wrapper.
         cfg = Cfg.from_toml('name = "x"\nport = 1\n')
         assert cfg.name == 'x'
+
+
+@s.seared
+class Upstream(s.Seared):
+    host: str | None = s.Str(nullable=True, default='localhost')
+
+
+@s.seared
+class Proxied(s.Seared):
+    name: str = s.Str(required=True)
+    proxy: str | None = s.Str(nullable=True, default='direct')
+    upstream: Upstream = s.T(Upstream, required=True)
+    mirrors: list[Upstream] = s.T(Upstream, many=True, default_factory=list)
+    extra: dict = s.Dict(default_factory=dict)
+
+
+class TestNull:
+    """Pin: TOML has no null, so a ``None`` that ``dump`` writes as ``null`` is left out.
+
+    It reads back as an absent key: a nullable field with a default comes back
+    as the default, which is the one round trip TOML can't make.
+    """
+
+    def test_a_nullable_none_is_left_out_at_any_depth(self):
+        pytest.importorskip('tomli_w')
+        cfg = Proxied(name='a', proxy=None, upstream=Upstream(host=None), mirrors=[Upstream(host=None)])
+        text = Proxied.to_toml(cfg)
+        assert 'proxy' not in text
+        assert 'host' not in text
+        back = Proxied.from_toml(text)
+        assert (back.proxy, back.upstream.host, back.mirrors[0].host) == ('direct', 'localhost', 'localhost')
+
+    def test_a_dict_value_of_none_is_left_out(self):
+        pytest.importorskip('tomli_w')
+        cfg = Proxied(name='a', upstream=Upstream(), extra={'kept': 1, 'dropped': None})
+        assert Proxied.from_toml(Proxied.to_toml(cfg)).extra == {'kept': 1}
+
+    def test_a_none_array_element_is_still_refused(self):
+        pytest.importorskip('tomli_w')
+        cfg = Proxied(name='a', upstream=Upstream(), extra={'list': [1, None]})
+        with pytest.raises(TypeError):
+            Proxied.to_toml(cfg)

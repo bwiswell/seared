@@ -45,7 +45,11 @@ class FieldDoc:
     nested: type[Seared] | None = None  # T(schema) target
     variants: tuple[VariantDoc, ...] | None = None
     envelope: str | None = None  # Union envelope description
-    fallback: type[Seared] | None = None  # Union default variant
+    fallback: type[Seared] | None = None  # Union fallback variant
+    # Whether ``null`` is a value (``nullable=True``). Appended with a default
+    # so positional construction keeps working; the annotation can't show it,
+    # since an ordinary optional field is ``X | None`` too.
+    nullable: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,21 +119,24 @@ def _clean_doc(text: str) -> str:
 
 def _field_doc(attr: str, wire: str, f: Any, type_str: str) -> FieldDoc:
     enum = nested = variants = envelope = fallback = None
+    # A Union's tag is required on the wire whatever ``required`` says: a
+    # missing or ``null`` tag always raises. It has no default either.
+    required = bool(f.required) or hasattr(f, 'variants')
     if hasattr(f, 'enum') and getattr(f, 'enum', None) is not None:
         e = f.enum
         enum = EnumDoc(name=e.__name__, members=tuple((m.name, m.value) for m in e))
     elif hasattr(f, 'variants'):
         variants = tuple(VariantDoc(tag=t, cls=c) for t, c in f.variants.items())
         envelope = 'flat' if getattr(f, 'payload_key', None) is None else f'nested under `{f.payload_key}`'
-        fallback = getattr(f, 'default', None)
+        fallback = getattr(f, 'fallback', None)
     elif hasattr(f, 'schema'):
         nested = f.schema
     return FieldDoc(
         attr=attr,
         wire_key=None if wire == attr else wire,
         type_str=type_str,
-        required=bool(f.required),
-        default_repr=_default_repr(f),
+        required=required,
+        default_repr=_default_repr(f, required),
         many=bool(f.many),
         keyed=bool(f.keyed),
         dump=bool(f.dump),
@@ -139,18 +146,22 @@ def _field_doc(attr: str, wire: str, f: Any, type_str: str) -> FieldDoc:
         variants=variants,
         envelope=envelope,
         fallback=fallback,
+        nullable=bool(getattr(f, 'nullable', False)),
     )
 
 
-def _default_repr(f: Any) -> str:
-    if f.required:
+def _default_repr(f: Any, required: bool) -> str:
+    """The default cell: a Python value, as the field's attribute gets it, or ``—`` when there is none."""
+    if required:
         return '—'
     factory = getattr(f, 'default_factory', None)
     if factory is not None:
         return f'`<factory: {getattr(factory, "__name__", "callable")}>`'
-    value = f.missing  # resolved default (default= folds into missing)
+    value = f.default
     if value is None:
-        return '`null`'
+        # ``None``, not ``null``: the attribute's value. A wire ``null`` is
+        # that value only on a nullable field, which the notes say.
+        return '`None`'
     if isinstance(value, _enum.Enum):
         return f'`{type(value).__name__}.{value.name}`'
     return f'`{value!r}`'

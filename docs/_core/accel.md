@@ -11,7 +11,7 @@ zero-dependency and pure Python, and any platform without a wheel simply
 runs the Python path.
 
 ```sh
-uv add git+https://www.github.com/bwiswell/rusted.git   # nothing in your code changes
+uv add git+https://github.com/bwiswell/rusted --tag v0.4.0   # nothing in your code changes
 ```
 
 There is no `seared[core]` extra: seared declares no dependency on the
@@ -44,7 +44,7 @@ from being seared's problem.
 | 2 | `UUID`, `Date`, `DateTime`, `Time`, `TimeDelta`, `Decimal`, `Bytes`, `Enum`, `Path`, `Dict` | supported |
 | 3 | `Tuple`, `Union`, `NDArray`, `PandasFrame`, `PolarsFrame` | deferred |
 
-The field *flags* — `many`, `keyed`, `required`, `default`,
+The field *flags* — `many`, `keyed`, `required`, `nullable`, `default`,
 `default_factory`, `data_key`, `dump=False` — are all carried in Tier 1.
 
 Tier 2 does not run as fast as Tier 1, and can't: those kinds spend their
@@ -65,22 +65,31 @@ A class is also declined when it defines its own `__init__`, a
 attribute assignment, which would skip all three — and a plain attribute
 never reaches the spec, so nothing but `__init__` would ever set it.
 
-So, until the next `SPEC_ABI`, is a `validate=False` class with a `Bool`
-field. seared 0.3.3 fixed lax `Bool` (it skipped the spelling table, so
-`'false'` loaded as `True`; see [`../fields/bool_.md`](../fields/bool_.md)).
-Backends built against `SPEC_ABI` 1 still give the old answer, and an ABI
-number is all seared can check, so the class keeps the Python path and gets
-the same answer whatever is installed:
+## `SPEC_ABI` 2
 
-```python
->>> Lax.__seared_accel__
-AccelInfo(accelerated=False, backend=None,
-          reason='Lax.flag: Bool under validate=False is not accelerated until SPEC_ABI 2')
-```
+The general rule for a backend: changing what an existing kind *means*, not
+just its spec shape, needs an ABI bump, or an older backend would keep the
+old meaning without anyone noticing. seared 0.4.0 changes several meanings,
+so it emits `SPEC_ABI` 2, and a backend built against 1 (`rusted` 0.3.x)
+declines every class: the Python path gives the new answers, at Python
+speed. `rusted` 0.4.0 is the matching release.
 
-That is also the general rule for a backend: changing what an existing kind
-*means*, not just its spec shape, needs an ABI bump, or an older backend
-would keep the old meaning without anyone noticing.
+Lax `Bool` is the first of them. seared 0.3.3 fixed it (lax mode skipped the
+spelling table, so `'false'` loaded as `True`; see
+[`../fields/bool_.md`](../fields/bool_.md)) but could only keep ABI 1
+backends away from it by declining every `validate=False` class with a
+`Bool`. ABI 2 carries the fix, so those classes accelerate again.
+
+The null rule is another. A `null` on a field that isn't nullable now reads
+as an absent key, where an ABI 1 backend loads it as `None`. Each field's
+spec gains a `nullable` flag: when it's set, `load` keeps a `null` as `None`
+and `dump` writes `None` as `null`. Everywhere else `dump` still leaves
+`None` out.
+
+Strict coercion is a third. Strict `Int` refuses a fractional float where ABI 1
+truncated it, strict `Bool` takes only the ints `0` and `1`, and `inf` into
+an `Int` raises `ValidationError` in both modes, where ABI 1 let the
+`OverflowError` out. An int-valued `Enum` follows `Int`.
 
 ## Introspection
 
@@ -93,8 +102,8 @@ AccelInfo(accelerated=False, backend=None,
           reason='HasTuple.pair: Tuple is not an accelerated field type')
 
 >>> s.accel_status()
-{'mode': 'auto', 'spec_abi': 1, 'available': True, 'backend': 'rusted',
- 'backend_version': '0.2.1', 'supports_seared': '>=0.3.1,<0.4', 'reason': None}
+{'mode': 'auto', 'spec_abi': 2, 'available': True, 'backend': 'rusted',
+ 'backend_version': '0.4.0', 'supports_seared': '>=0.4,<0.5', 'reason': None}
 ```
 
 `__seared_accel__` sits alongside `__seared_fields__` on every decorated
@@ -132,6 +141,22 @@ with `load(data, format)` and `dump(obj, format)` matching the decorator's
 own closures. `SUPPORTS_SEARED` and `__version__` are optional and purely
 diagnostic — `SPEC_ABI` is the whole compatibility gate, because seared is
 zero-dependency and has no PEP 440 specifier parser to hand.
+
+**Errors (from `SPEC_ABI` 2).** The class to raise rides in the spec as
+`spec['error']`, so a backend never imports seared. Construct it as
+`error(reason, path=…, cls_name=…)`, and end with the same three parts the
+Python path would, which gives the same message:
+
+- `reason`: the field-level text, word for word, plus the two the decorator
+  builds itself: `required key missing` and `expected dict, got <type>`;
+- `path`: wire keys, list indices and keyed-dict keys on `load`; attribute
+  names on `dump`;
+- `cls_name`: the outermost class the error passed through.
+
+How a backend builds them is its own business. seared's Python path
+prepends in place as the error unwinds; `refcore` rebuilds through the
+constructor at each level, which needs nothing but the public parts and costs
+nothing until something fails.
 
 `tests/refcore.py` is a complete pure-Python implementation of this
 protocol. It's the differential-test oracle: seared's entire suite runs

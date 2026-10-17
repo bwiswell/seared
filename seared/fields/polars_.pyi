@@ -7,9 +7,9 @@ def PolarsFrame(
     keyed: bool = ...,
     many: bool = ...,
     required: bool = ...,
+    nullable: bool = ...,
     dump: bool = ...,
     doc: str | None = ...,
     default: Any = ...,
     default_factory: Callable[[], Any] = ...,
-    missing: Any = ...,
 ) -> Any: ...

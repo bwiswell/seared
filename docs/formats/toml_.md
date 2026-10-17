@@ -15,6 +15,14 @@ Cls.from_toml(source) -> Cls     # stdlib only
 `from_toml` accepts a path-like or a string of TOML content (see
 [`_common.md`](_common.md)). Top-level value must be a TOML table.
 
+## No null
+
+TOML has no null. `to_toml` leaves out every `None`-valued key, at any
+depth, so a nullable field's `None` (or a `Dict` value's) is written as an
+absent key, and that's how `from_toml` reads it back: a nullable field with
+a default comes back as the default. A `None` *element* of an array has no
+such reading, and `tomli-w` refuses it.
+
 ## Missing-extra behaviour
 
 `to_toml` raises a clear `ImportError` at call time when `tomli-w`

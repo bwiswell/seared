@@ -156,7 +156,7 @@ class TestProse:
 
     def test_a_missing_input_reads_na(self):
         out = blocks(_report(_case(STRICT, [30_000.0])))  # no comparators, no rusted
-        for name in ('load-vs-marshmallow', 'pydantic-vs-seared', 'rusted-load', 'lax-load-gain', 'version-example'):
+        for name in ('load-vs-marshmallow', 'pydantic-vs-seared', 'rusted-load', 'lax-dump-gain', 'version-example'):
             assert out[name] == 'n/a', name
         assert _approx_x(None) == 'n/a'
 

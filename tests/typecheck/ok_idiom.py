@@ -74,3 +74,20 @@ assert_type(spec.wire, str)
 assert_type(spec.field, s.Field)
 attr, wire, field = spec
 assert_type(field, s.Field)
+
+
+# `nullable=True` makes `None` a value: the annotation says `| None`, and it's
+# independent of `required`. A nullable required field must still be passed,
+# but `None` is a legal argument for it.
+@s.seared
+class Nulls(s.Seared):
+    maybe: int | None = s.Int(nullable=True, default=None)
+    fallback: int | None = s.Int(nullable=True, default=5)
+    must: int | None = s.Int(nullable=True, required=True)
+    child: Inner | None = s.T(Inner, nullable=True, default=None)
+    pair: tuple | None = s.Tuple(s.Int(), s.Int(), nullable=True, default=None)
+
+
+nulls = Nulls(must=None)
+assert_type(nulls.must, int | None)
+assert_type(nulls.fallback, int | None)

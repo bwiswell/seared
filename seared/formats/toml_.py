@@ -6,7 +6,7 @@ Read via stdlib ``tomllib`` (Python ≥ 3.11); write via the optional
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import os
@@ -32,7 +32,22 @@ def to(cls: type[Seared], obj: Seared) -> str:
             'Reading TOML works without the extra (uses stdlib tomllib).'
         )
         raise ImportError(msg) from e
-    return tomli_w.dumps(cls.dump(obj))
+    return tomli_w.dumps(_without_nulls(cls.dump(obj)))
+
+
+def _without_nulls(value: Any) -> Any:
+    """``value`` with every ``None``-valued key left out, at any depth.
+
+    TOML has no null, so a nullable field's ``None`` (or a ``Dict`` value's)
+    is written as an absent key, which is how ``load`` reads it back. A
+    ``None`` *element* of an array has no such reading, and is left for
+    ``tomli-w`` to reject.
+    """
+    if isinstance(value, dict):
+        return {k: _without_nulls(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [_without_nulls(v) for v in value]
+    return value
 
 
 def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:

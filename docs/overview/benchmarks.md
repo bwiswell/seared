@@ -73,7 +73,7 @@ being accelerated.
 
 ## Results
 
-Recorded <!-- bench:run -->2026-10-16, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.3.4, rusted 0.3.1, marshmallow 4.3.1, pydantic 2.13.5<!-- /bench:run --> —
+Recorded <!-- bench:run -->2026-10-17, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.0, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run --> —
 Linux x86_64 (WSL2), laptop-class CPU, otherwise idle. Raw numbers:
 [`bench/results.json`](../../bench/results.json). The tables, and every
 number quoted in the prose below, are rendered from that file
@@ -82,8 +82,8 @@ number quoted in the prose below, are rendered from that file
 <!-- bench:ops -->
 | Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
 |------|---------------|----------------------|----------------------|---------------|-----------------|
-| load | 8,550 ops/s   | 30,842 ops/s (~3.6×) | 30,164 ops/s (~3.5×) | 147,706 ops/s | 337,158 ops/s   |
-| dump | 23,603 ops/s  | 44,066 ops/s (~1.9×) | 48,832 ops/s (~2.1×) | 170,499 ops/s | 408,068 ops/s   |
+| load | 8,732 ops/s   | 32,413 ops/s (~3.7×) | 32,701 ops/s (~3.7×) | 151,905 ops/s | 354,951 ops/s   |
+| dump | 24,887 ops/s  | 50,139 ops/s (~2.0×) | 55,743 ops/s (~2.2×) | 175,409 ops/s | 404,854 ops/s   |
 <!-- /bench:ops -->
 
 Per-op timing:
@@ -91,8 +91,8 @@ Per-op timing:
 <!-- bench:us -->
 | Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
 |------|---------------|-------------------|----------------|------------|-----------------|
-| load | 117.0 µs      | 32.4 µs           | 33.2 µs        | 6.8 µs     | 3.0 µs          |
-| dump | 42.4 µs       | 22.7 µs           | 20.5 µs        | 5.9 µs     | 2.5 µs          |
+| load | 114.5 µs      | 30.9 µs           | 30.6 µs        | 6.6 µs     | 2.8 µs          |
+| dump | 40.2 µs       | 19.9 µs           | 17.9 µs        | 5.7 µs     | 2.5 µs          |
 <!-- /bench:us -->
 
 Ratios in the first table are versus `marshmallow`. Earlier recorded
@@ -108,35 +108,35 @@ How far each column's rate moved between the runs, as `max / min - 1`:
 <!-- bench:spread -->
 | Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
 |------|---------------|-------------------|----------------|------------|-----------------|
-| load | 5.9%          | 8.6%              | 2.8%           | 7.1%       | 4.5%            |
-| dump | 8.1%          | 3.1%              | 3.1%           | 6.0%       | 6.8%            |
+| load | 0.8%          | 11.9%             | 12.0%          | 10.3%      | 10.7%           |
+| dump | 2.9%          | 10.6%             | 11.0%          | 11.8%      | 11.6%           |
 <!-- /bench:spread -->
 
-The widest is <!-- bench:spread-max -->~9%<!-- /bench:spread-max -->.
+The widest is <!-- bench:spread-max -->~12%<!-- /bench:spread-max -->.
 Background load widens the spread, and the *ratios* move with it, so bench
 on a quiet box and read the ratios as approximate: seared is
-<!-- bench:load-vs-marshmallow -->~3.6×<!-- /bench:load-vs-marshmallow -->
+<!-- bench:load-vs-marshmallow -->~3.7×<!-- /bench:load-vs-marshmallow -->
 marshmallow on load and
-<!-- bench:dump-vs-marshmallow -->~1.9×<!-- /bench:dump-vs-marshmallow -->
+<!-- bench:dump-vs-marshmallow -->~2.0×<!-- /bench:dump-vs-marshmallow -->
 on dump, and `rusted` is
 <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> /
-<!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> over pure Python.
+<!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> over pure Python.
 
 ## Reading the results
 
 - **Versus marshmallow** (the like-for-like pure-Python comparison),
-  seared loads <!-- bench:load-vs-marshmallow -->~3.6×<!-- /bench:load-vs-marshmallow -->
-  and dumps <!-- bench:dump-vs-marshmallow -->~1.9×<!-- /bench:dump-vs-marshmallow -->
+  seared loads <!-- bench:load-vs-marshmallow -->~3.7×<!-- /bench:load-vs-marshmallow -->
+  and dumps <!-- bench:dump-vs-marshmallow -->~2.0×<!-- /bench:dump-vs-marshmallow -->
   faster.
 - **Versus pydantic**, pure-Python seared loads
-  <!-- bench:pydantic-vs-seared -->~4.8×<!-- /bench:pydantic-vs-seared -->
+  <!-- bench:pydantic-vs-seared -->~4.7×<!-- /bench:pydantic-vs-seared -->
   slower. That is the expected cost of pure Python versus a compiled Rust
   core, and it is the trade seared makes by default: zero runtime
   dependencies, no binary wheels.
 - **With `rusted` installed that trade is optional rather than permanent.**
   The same classes run
   <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`
-  and <!-- bench:rusted-dump -->~9×<!-- /bench:rusted-dump --> on `dump`
+  and <!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> on `dump`
   than the Python path, and load
   <!-- bench:rusted-vs-pydantic -->~2.3×<!-- /bench:rusted-vs-pydantic -->
   as fast as pydantic on this schema, for an install and no code change.
@@ -148,7 +148,7 @@ on dump, and `rusted` is
   On `dump`, where those guards are most of what the pass actually does,
   lax is <!-- bench:lax-dump-gain -->~11%<!-- /bench:lax-dump-gain --> faster.
   `rusted` closes the load gap and leaves the dump gap at
-  <!-- bench:rusted-lax-dump-gain -->~15%<!-- /bench:rusted-lax-dump-gain -->:
+  <!-- bench:rusted-lax-dump-gain -->~17%<!-- /bench:rusted-lax-dump-gain -->:
   cheaper guards, not absent ones. Most of seared's advantage over
   marshmallow comes from per-call overhead, not validation.
 
@@ -158,13 +158,16 @@ on dump, and `rusted` is
   is a slot read.
 - **No schema class layer.** Field metadata is stored as `Field` defaults
   on the dataclass; no separate `Schema` object indirection on every call.
-- **Pre-baked spec tuple.** `__seared_fields__` is computed once at decorator
-  time; each `dump` / `load` walks the same `(attr, wire, Field)` triples.
+- **Pre-baked spec tuple.** The loop spec is computed once at decorator
+  time: `dump` / `load` walk plain `(attr, wire, field, unwrap)` tuples,
+  with each field's `UNWRAP` flag already resolved, rather than the
+  `FieldSpec` named tuples `__seared_fields__` exposes or a per-call
+  `UNWRAP` check.
 - **No Marshmallow `Meta` / `pre_load` / `post_dump` machinery.** The
   decorator does one simple pass per direction.
-- **`format=` kwarg threading is free.** `Bytes` / `NDArray` get their
-  carrier hint via `**kwargs`; other fields ignore — no per-call dispatch
-  overhead.
+- **`format=` kwarg threading is free.** `Bytes` gets its carrier hint
+  via `**kwargs` (`T` and `Tuple` pass it on); other fields ignore it — no
+  per-call dispatch overhead.
 
 ## Reproduction
 
@@ -206,7 +209,7 @@ uv run --no-sync python -m bench --runs 3
 
 Each recorded `Measurement` carries the version of what produced it and the
 run it came from (`seared+rusted` rows read
-<!-- bench:version-example -->`0.3.4/rusted 0.3.1`<!-- /bench:version-example -->),
+<!-- bench:version-example -->`0.4.0/rusted 0.4.0`<!-- /bench:version-example -->),
 so a results file always says which code the numbers came from.
 
 ## Caveats

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 from conftest import Color, Status
 
@@ -12,7 +14,7 @@ class TestEnum:
         @s.seared
         class Obj(s.Seared):
             color: Color = s.Enum(enum=Color, required=True)
-            optional_color: Color | None = s.Enum(enum=Color, missing=Color.RED)
+            optional_color: Color | None = s.Enum(enum=Color, default=Color.RED)
 
         return Obj
 
@@ -29,7 +31,7 @@ class TestEnum:
         assert d['color'] == 2
         assert d['optional_color'] == 1
 
-    def test_missing_default(self, cls):
+    def test_default(self, cls):
         obj = cls.load({'color': 0})
         assert obj.optional_color == Color.RED
 
@@ -100,10 +102,10 @@ class TestEnum:
         d = Obj.dump(Obj(status=Status.PENDING))
         assert d == {'status': 'pending'}
 
-    def test_str_enum_missing_default(self):
+    def test_str_enum_default(self):
         @s.seared
         class Obj(s.Seared):
-            status: Status | None = s.Enum(enum=Status, missing=Status.INACTIVE)
+            status: Status | None = s.Enum(enum=Status, default=Status.INACTIVE)
 
         obj = Obj.load({})
         assert obj.status == Status.INACTIVE
@@ -127,3 +129,29 @@ class TestEnum:
         obj = Obj.load(raw)
         assert obj.mapping == {'a': Status.ACTIVE, 'b': Status.PENDING}
         assert Obj.dump(obj) == raw
+
+
+class TestIntValuedCoercion:
+    """Pin: an int-valued enum takes the values an ``Int`` would, by the same mode's rules."""
+
+    @pytest.mark.parametrize('validate', [True, False], ids=['strict', 'lax'])
+    @pytest.mark.parametrize('raw', [2, '2', 2.0])
+    def test_lossless_values_load_in_both_modes(self, validate, raw):
+        assert s.Enum(enum=Color).deserialize(raw, validate=validate) is Color.BLUE
+
+    @pytest.mark.parametrize('raw', [2.9, True])
+    def test_strict_refuses_what_strict_int_refuses(self, raw):
+        with pytest.raises(s.ValidationError, match=rf'^{raw!r} is not a valid Color$'):
+            s.Enum(enum=Color).deserialize(raw)
+
+    @pytest.mark.parametrize(('raw', 'want'), [(2.9, Color.BLUE), (True, Color.GREEN)])
+    def test_lax_reads_them_as_lax_int_does(self, raw, want):
+        assert s.Enum(enum=Color).deserialize(raw, validate=False) is want
+
+    @pytest.mark.parametrize('validate', [True, False], ids=['strict', 'lax'])
+    def test_inf_is_a_validation_error_in_both_modes(self, validate):
+        with pytest.raises(s.ValidationError, match=r'^inf is not a valid Color$'):
+            s.Enum(enum=Color).deserialize(math.inf, validate=validate)
+
+    def test_a_str_valued_enum_is_unaffected(self):
+        assert s.Enum(enum=Status).deserialize('active') is Status.ACTIVE

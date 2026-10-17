@@ -26,6 +26,8 @@ class Bool(Field):
         Lax mode reads the same spellings first and only then falls back to
         truthiness, so ``'false'`` is ``False`` in both modes. Lax still never
         raises: anything else is its truthiness (``'maybe'`` → ``True``).
+        Strict mode takes only the ints ``0`` and ``1``, as its string table
+        takes only ``'0'`` and ``'1'``.
         """
         if isinstance(value, bool):
             return value
@@ -37,7 +39,7 @@ class Bool(Field):
                 return False
         if not validate:
             return bool(value)
-        if isinstance(value, int):
+        if isinstance(value, int) and value in (0, 1):
             return bool(value)
         msg = f'cannot deserialize {value!r} as bool'
         raise ValidationError(msg)

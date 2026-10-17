@@ -57,10 +57,10 @@ class TestTimeDelta:
         d = Obj.dump(Obj(duration=None))
         assert 'duration' not in d
 
-    def test_missing_default(self):
+    def test_default(self):
         @s.seared
         class Obj(s.Seared):
-            duration: timedelta = s.TimeDelta(missing=timedelta(0))
+            duration: timedelta = s.TimeDelta(default=timedelta(0))
 
         obj = Obj.load({})
         assert obj.duration == timedelta(0)

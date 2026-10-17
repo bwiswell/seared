@@ -50,6 +50,16 @@ class TestBoolSpellings:
         with pytest.raises(s.ValidationError, match="cannot deserialize 'maybe' as bool"):
             s.Bool().deserialize('maybe')
 
+    @pytest.mark.parametrize(('raw', 'want'), [(0, False), (1, True)])
+    def test_strict_reads_the_ints_zero_and_one(self, raw, want):
+        assert s.Bool().deserialize(raw) is want
+
+    @pytest.mark.parametrize('raw', [2, -1, 1.0])
+    def test_strict_rejects_any_other_number(self, raw):
+        # As its string table reads ``'0'`` and ``'1'`` but not ``'2'``.
+        with pytest.raises(s.ValidationError, match=rf'^cannot deserialize {raw!r} as bool$'):
+            s.Bool().deserialize(raw)
+
     @pytest.mark.parametrize(('raw', 'want'), [('maybe', True), ('', False), (2, True), (0, False), ([], False)])
     def test_lax_falls_back_to_truthiness(self, raw, want):
         assert s.Bool().deserialize(raw, validate=False) is want

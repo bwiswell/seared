@@ -48,8 +48,8 @@ class Seared:
         """Instance → wire dict.
 
         ``format`` is the carrier hint threaded into every field (see
-        ``_core.decorator``); ``Bytes`` and ``NDArray`` emit native binary
-        under ``'msgpack'``, and the rest ignore it.
+        ``_core.decorator``); ``Bytes`` emits native binary under
+        ``'msgpack'``, ``T`` and ``Tuple`` pass it on, and the rest ignore it.
 
         This declaration and the implementation the decorator attaches must
         stay signature-identical — ``tests/_core/test_base.py`` asserts it.
@@ -57,8 +57,17 @@ class Seared:
         raise NotImplementedError
 
     @classmethod
-    def dumps(cls, obj: Seared) -> str:
-        return json.dumps(cls.dump(obj))
+    def dumps(cls, obj: Seared, **kwargs: Any) -> str:
+        """Instance → JSON string.
+
+        ``**kwargs`` pass through to ``json.dumps``, as they do for
+        ``to_json``. ``allow_nan=False`` is the one to know: by default a
+        ``NaN`` or ``inf`` float is written as a bare ``NaN`` / ``Infinity``,
+        which Python reads back but standard JSON parsers (browsers
+        included) refuse, and with it ``dumps`` raises ``ValueError``
+        instead.
+        """
+        return json.dumps(cls.dump(obj), **kwargs)
 
     @classmethod
     def load(cls, data: dict[str, Any], format: str = 'json') -> Self:

@@ -5,7 +5,7 @@ Folds in three feature suites that hammer different parts of the
 decorator's responsibilities:
 
 - ``test_mutable_defaults`` — deep-copy semantics for mutable
-  ``missing`` defaults (the decorator wraps ``__init__``).
+  ``default`` values (the decorator wraps ``__init__``).
 - ``test_multi_union`` — multi-``Union`` collision-detection that
   ``_build`` performs at class-creation time.
 - ``test_binary_format`` — ``format=`` kwarg threading through
@@ -15,7 +15,9 @@ decorator's responsibilities:
 from __future__ import annotations
 
 import builtins
+import functools
 import json
+import operator
 from dataclasses import InitVar  # noqa: TC003 — dataclass() resolves the string annotation at runtime
 
 import pytest
@@ -86,12 +88,12 @@ class TestSearedDecorator:
         assert (spec.attr, spec.wire) == ('x', 'ex')
         assert spec.field is spec[2]
 
-    def test_natural_init_replaces_field_defaults_with_missing(self):
+    def test_natural_init_replaces_field_defaults(self):
         @s.seared
         class Foo(s.Seared):
             x: int = s.Int(required=True)
             y: int | None = s.Int()
-            z: int = s.Int(missing=42)
+            z: int = s.Int(default=42)
 
         f = Foo(x=1)
         assert f.y is None
@@ -137,13 +139,13 @@ class TestMixedClass:
 
         @s.seared
         class B(s.Seared):
-            a: int = s.Int(missing=5)
-            b: float = s.Float(missing=3.14)
-            c: str = s.Str(missing='hello')
+            a: int = s.Int(default=5)
+            b: float = s.Float(default=3.14)
+            c: str = s.Str(default='hello')
             d: A = s.T(A, required=True)
-            e: Color = s.Enum(enum=Color, missing=Color.GREEN)
-            f: list = s.Int(many=True, missing=[])
-            g: dict = s.Float(keyed=True, missing={})
+            e: Color = s.Enum(enum=Color, default=Color.GREEN)
+            f: list = s.Int(many=True, default=[])
+            g: dict = s.Float(keyed=True, default={})
 
         data = {
             'a': 3,
@@ -191,16 +193,16 @@ class TestMixedClass:
 
 
 # ---------------------------------------------------------------------------
-# Mutable ``missing`` defaults — deep-copied per instance (was
+# Mutable ``default`` values — deep-copied per instance (was
 # tests/test_mutable_defaults.py).
 # ---------------------------------------------------------------------------
 
 
-class TestListMissing:
+class TestListDefault:
     def test_two_instances_have_distinct_lists(self):
         @s.seared
         class Bag(s.Seared):
-            tags: list = s.Str(many=True, missing=[])
+            tags: list = s.Str(many=True, default=[])
 
         a = Bag()
         b = Bag()
@@ -212,7 +214,7 @@ class TestListMissing:
     def test_explicit_value_unaffected(self):
         @s.seared
         class Bag(s.Seared):
-            tags: list = s.Str(many=True, missing=[])
+            tags: list = s.Str(many=True, default=[])
 
         explicit = ['a', 'b']
         a = Bag(tags=explicit)
@@ -222,11 +224,11 @@ class TestListMissing:
         assert a.tags == ['a', 'b', 'c']  # documented passthrough
 
 
-class TestDictMissing:
+class TestDictDefault:
     def test_two_instances_have_distinct_dicts(self):
         @s.seared
         class Doc(s.Seared):
-            meta: dict = s.Str(keyed=True, missing={})
+            meta: dict = s.Str(keyed=True, default={})
 
         a = Doc()
         b = Doc()
@@ -234,13 +236,13 @@ class TestDictMissing:
         assert b.meta == {}, 'dict missing-default sharing regressed'
 
     def test_nested_mutable_isolated_via_deepcopy(self):
-        """Pin deepcopy semantics: ``missing={'tags': ['default']}``
+        """Pin deepcopy semantics: ``default={'tags': ['default']}``
         gives each instance its own OUTER dict AND its own INNER list.
         With shallow copy, the inner list would be shared."""
 
         @s.seared
         class Doc(s.Seared):
-            meta: dict = s.Dict(missing={'tags': ['default']})
+            meta: dict = s.Dict(default={'tags': ['default']})
 
         a = Doc()
         b = Doc()
@@ -250,14 +252,14 @@ class TestDictMissing:
         )
 
 
-class TestSetMissing:
+class TestSetDefault:
     def test_two_instances_have_distinct_sets(self):
         # No ``Set`` field type in seared; use ``Str(many=True)`` plus
-        # a ``set`` missing — the decorator's wrapper deepcopies the
-        # raw missing object regardless of the field's wire shape.
+        # a ``set`` default — the decorator's wrapper deepcopies the
+        # raw default object regardless of the field's wire shape.
         @s.seared
         class Tags(s.Seared):
-            members: set = s.Str(many=True, missing=set())
+            members: set = s.Str(many=True, default=set())
 
         a = Tags()
         b = Tags()
@@ -265,11 +267,11 @@ class TestSetMissing:
         assert b.members == set()
 
 
-class TestFrozensetMissing:
-    def test_frozenset_missing_deep_copied(self):
+class TestFrozensetDefault:
+    def test_frozenset_default_deep_copied(self):
         @s.seared
         class Tags(s.Seared):
-            members: frozenset = s.Str(many=True, missing=frozenset())
+            members: frozenset = s.Str(many=True, default=frozenset())
 
         a = Tags()
         b = Tags()
@@ -277,30 +279,30 @@ class TestFrozensetMissing:
         assert a.members == b.members == frozenset()
 
 
-class TestImmutableMissing:
-    def test_string_missing_passthrough(self):
+class TestImmutableDefault:
+    def test_string_default_passthrough(self):
         @s.seared
         class Doc(s.Seared):
-            tag: str = s.Str(missing='default')
+            tag: str = s.Str(default='default')
 
         a = Doc()
         b = Doc()
         # Strings are immutable; both share the same object — fine.
         assert a.tag == b.tag == 'default'
 
-    def test_int_missing_passthrough(self):
+    def test_int_default_passthrough(self):
         @s.seared
         class Counter(s.Seared):
-            n: int = s.Int(missing=0)
+            n: int = s.Int(default=0)
 
         a = Counter()
         b = Counter()
         assert a.n == b.n == 0
 
-    def test_none_missing_passthrough(self):
+    def test_none_default_passthrough(self):
         @s.seared
         class Maybe(s.Seared):
-            value: object = s.Str(missing=None)
+            value: object = s.Str(default=None)
 
         a = Maybe()
         assert a.value is None
@@ -435,12 +437,12 @@ class _Up(s.Seared):
 
 @s.seared
 class _Down(s.Seared):
-    reason: str = s.Str(missing='')
+    reason: str = s.Str(default='')
 
 
 @s.seared
 class _Read(s.Seared):
-    keys: list = s.Str(many=True, missing=[])
+    keys: list = s.Str(many=True, default=[])
 
 
 @s.seared
@@ -569,7 +571,7 @@ class _Blob(s.Seared):
 
 @s.seared
 class _Many(s.Seared):
-    chunks: list = s.Bytes(many=True, missing=[])
+    chunks: list = s.Bytes(many=True, default=[])
 
 
 class TestJSONDefault:
@@ -687,3 +689,285 @@ class TestPerObjectPathsImportNothing:
         _Tree.dump(tree)
 
         assert imported == []
+
+
+@s.seared(accel=False)
+class _Enveloped(s.Seared):
+    leaf: _Leaf = s.T(_Leaf, required=True)
+    action: object = s.Union(variants={'leaf': _Leaf}, tag_key='kind', payload_key='args')
+
+
+class TestUnwrapIsResolvedOnce:
+    """Pin: ``load`` and ``dump`` never ask whether a field is ``UNWRAP``.
+
+    The answer is fixed when the class is decorated. Asked per field per call,
+    it cost about a tenth of the pure-Python ``load``.
+    """
+
+    def test_no_call_per_load_or_dump(self, monkeypatch):
+        from seared._core import decorator
+
+        calls: list[object] = []
+        real = decorator._is_unwrap
+
+        def counting(f):
+            calls.append(f)
+            return real(f)
+
+        monkeypatch.setattr(decorator, '_is_unwrap', counting)
+
+        tree = _Tree.load({'leaves': [{'x': 1}], 'hooked': {'x': 3}})
+        _Tree.dump(tree)
+        wire = {'leaf': {'x': 1, 'tags': []}, 'kind': 'leaf', 'args': {'x': 2, 'tags': []}}
+        assert _Enveloped.dump(_Enveloped.load(wire)) == wire
+
+        assert calls == []
+
+    def test_a_class_decorated_later_still_resolves_it(self, monkeypatch):
+        from seared._core import decorator
+
+        calls: list[object] = []
+        real = decorator._is_unwrap
+        monkeypatch.setattr(decorator, '_is_unwrap', lambda f: calls.append(f) or real(f))
+
+        @s.seared(accel=False)
+        class Late(s.Seared):
+            x: int = s.Int(required=True)
+            action: object = s.Union(variants={'leaf': _Leaf}, tag_key='kind', payload_key='args')
+
+        at_decoration = len(calls)
+        Late.dump(Late.load({'x': 1, 'kind': 'leaf', 'args': {'x': 2}}))
+        assert at_decoration > 0
+        assert len(calls) == at_decoration
+
+
+# ---------------------------------------------------------------------------
+# Error paths
+# ---------------------------------------------------------------------------
+
+
+@s.seared
+class _PathLeaf(s.Seared):
+    n: int = s.Int(required=True)
+
+
+@s.seared
+class _PathPort(s.Seared):
+    port: int = s.Int(required=True, data_key='p')
+
+
+@s.seared
+class _PathRoot(s.Seared):
+    items: list[_PathLeaf] = s.T(_PathLeaf, many=True, required=True)
+    readers: dict = s.T(_PathPort, keyed=True, default_factory=dict)
+
+
+def _failure(fn, *args) -> s.ValidationError:
+    with pytest.raises(s.ValidationError) as info:
+        fn(*args)
+    return info.value
+
+
+class TestErrorPaths:
+    """Pin: an error says where it happened, as a path into what the caller passed."""
+
+    def test_a_load_path_retrieves_the_offending_value(self):
+        data = {'items': [{'n': 1}, {'n': 2}, {'n': 'x'}]}
+        e = _failure(_PathRoot.load, data)
+        assert str(e) == "_PathRoot.items[2].n: cannot deserialize 'x' as int"
+        assert functools.reduce(operator.getitem, e.path, data) == 'x'
+
+    def test_keyed_keys_render_in_brackets_unless_identifiers(self):
+        data = {'items': [], 'readers': {'r-1': {'p': 'bad'}}}
+        e = _failure(_PathRoot.load, data)
+        assert str(e) == "_PathRoot.readers['r-1'].p: cannot deserialize 'bad' as int"
+        assert functools.reduce(operator.getitem, e.path, data) == 'bad'
+
+    def test_a_missing_required_key_ends_the_path_at_the_absent_key(self):
+        e = _failure(_PathRoot.load, {'items': [{}]})
+        assert str(e) == '_PathRoot.items[0].n: required key missing'
+        assert e.reason == 'required key missing'
+
+    def test_a_required_key_is_named_by_its_wire_key(self):
+        e = _failure(_PathPort.load, {})
+        assert (e.path, str(e)) == (('p',), '_PathPort.p: required key missing')
+
+    def test_a_non_dict_names_the_class_alone(self):
+        e = _failure(_PathRoot.load, [])
+        assert (str(e), e.path) == ('_PathRoot: expected dict, got list', ())
+
+    def test_a_dump_path_names_attributes(self):
+        obj = _PathRoot(items=[], readers={'r-1': _PathPort(port='bad')})
+        e = _failure(_PathRoot.dump, obj)
+        assert e.path == ('readers', 'r-1', 'port')
+        assert str(e) == "_PathRoot.readers['r-1'].port: expected int, got str"
+
+    def test_a_post_init_validation_error_names_the_object(self):
+        @s.seared
+        class Window(s.Seared):
+            lo: int = s.Int(required=True)
+            hi: int = s.Int(required=True)
+
+            def __post_init__(self):
+                if self.hi < self.lo:
+                    msg = 'window ends before it starts'
+                    raise s.ValidationError(msg)
+
+        @s.seared
+        class Plan(s.Seared):
+            windows: list[Window] = s.T(Window, many=True, required=True)
+
+        assert str(_failure(Window.load, {'lo': 5, 'hi': 1})) == 'Window: window ends before it starts'
+        e = _failure(Plan.load, {'windows': [{'lo': 1, 'hi': 2}, {'lo': 5, 'hi': 1}]})
+        assert str(e) == 'Plan.windows[1]: window ends before it starts'
+
+    def test_other_exceptions_pass_through_untouched(self):
+        @s.seared
+        class Picky(s.Seared):
+            v: int = s.Int(required=True)
+
+            def __post_init__(self):
+                msg = 'not a seared error'
+                raise ValueError(msg)
+
+        with pytest.raises(ValueError, match=r'^not a seared error$') as info:
+            Picky.load({'v': 1})
+        assert not isinstance(info.value, s.ValidationError)
+
+    def test_a_field_raising_on_its_own_stays_bare(self):
+        e = _failure(s.Int().deserialize, 'x')
+        assert (str(e), e.path, e.cls_name) == ("cannot deserialize 'x' as int", (), None)
+
+
+# ---------------------------------------------------------------------------
+# Null on the wire — a ``null`` is a value only on a ``nullable`` field.
+# ---------------------------------------------------------------------------
+
+
+def _null_table(validate=True):
+    """One field per column of the null table: a required field, a defaulted one, and so on."""
+
+    @s.seared(validate=validate)
+    class Row(s.Seared):
+        req: int = s.Int(required=True)
+        dflt: int = s.Int(default=5)
+        bare: int | None = s.Int()
+        n_dflt: int | None = s.Int(nullable=True, default=5)
+        n_req: int | None = s.Int(nullable=True, required=True)
+
+    return Row
+
+
+#: The wire states, each turned into a payload for one column: absent, ``null`` or a value.
+_ABSENT, _NULL = object(), None
+_BASE = {'req': 1, 'n_req': 2}
+_ERROR = 'required key missing'
+
+#: (column, absent, null, value) — what ``load`` gives for each wire state.
+_TABLE = [
+    ('req', _ERROR, _ERROR, 7),
+    ('dflt', 5, 5, 7),
+    ('bare', None, None, 7),
+    ('n_dflt', 5, None, 7),
+    ('n_req', _ERROR, None, 7),
+]
+
+
+def _loaded(cls, column, wire):
+    data = {k: v for k, v in _BASE.items() if k != column}
+    if wire is not _ABSENT:
+        data[column] = wire
+    try:
+        return getattr(cls.load(data), column)
+    except s.ValidationError as e:
+        return e.reason
+
+
+class TestNullOnTheWire:
+    """Pin: a ``null`` on a field that isn't nullable reads as an absent key."""
+
+    @pytest.mark.parametrize('validate', [True, False], ids=['strict', 'lax'])
+    @pytest.mark.parametrize(('column', 'absent', 'null', 'value'), _TABLE, ids=[r[0] for r in _TABLE])
+    def test_the_null_table(self, validate, column, absent, null, value):
+        cls = _null_table(validate)
+        assert _loaded(cls, column, _ABSENT) == absent
+        assert _loaded(cls, column, _NULL) == null
+        assert _loaded(cls, column, 7) == value
+
+    def test_a_null_on_a_required_field_names_its_wire_key(self):
+        @s.seared
+        class Port(s.Seared):
+            port: int = s.Int(required=True, data_key='p')
+
+        e = _failure(Port.load, {'p': None})
+        assert (str(e), e.path) == ('Port.p: required key missing', ('p',))
+
+    def test_a_null_takes_the_default_factory(self):
+        @s.seared
+        class Tagged(s.Seared):
+            tags: list[str] = s.Str(many=True, default_factory=list)
+
+        assert Tagged.load({'tags': None}).tags == []
+
+    def test_a_null_nested_object_is_absent(self):
+        e = _failure(_PathRoot.load, {'items': None})
+        assert str(e) == '_PathRoot.items: required key missing'
+        assert _PathRoot.load({'items': [], 'readers': None}).readers == {}
+
+    def test_a_null_inside_a_nested_object_follows_its_own_field(self):
+        e = _failure(_PathRoot.load, {'items': [{'n': None}]})
+        assert str(e) == '_PathRoot.items[0].n: required key missing'
+
+    def test_a_nullable_collection_can_be_null(self):
+        @s.seared
+        class Readings(s.Seared):
+            values: list[int] | None = s.Int(many=True, nullable=True, default_factory=list)
+            named: dict[str, int] | None = s.Int(keyed=True, nullable=True)
+
+        got = Readings.load({'values': None, 'named': None})
+        assert (got.values, got.named) == (None, None)
+        assert Readings.load({}).values == []
+
+    def test_a_null_element_is_still_an_error(self):
+        @s.seared
+        class Readings(s.Seared):
+            values: list[int] | None = s.Int(many=True, nullable=True)
+
+        e = _failure(Readings.load, {'values': [1, None]})
+        assert e.path == ('values', 1)
+
+    def test_a_nullable_nested_object_can_be_null(self):
+        @s.seared
+        class Holder(s.Seared):
+            port: _PathPort | None = s.T(_PathPort, nullable=True, required=True)
+
+        assert Holder.load({'port': None}).port is None
+        assert str(_failure(Holder.load, {})) == 'Holder.port: required key missing'
+
+
+class TestNullOnDump:
+    """Pin: ``dump`` writes ``null`` only for a nullable field; ``load`` reads either back the same."""
+
+    def test_only_a_nullable_none_is_written(self):
+        cls = _null_table()
+        row = cls(req=1, n_req=None, n_dflt=None)
+        assert cls.dump(row) == {'req': 1, 'dflt': 5, 'n_dflt': None, 'n_req': None}
+
+    def test_a_nullable_none_survives_a_round_trip_over_its_default(self):
+        cls = _null_table()
+        row = cls(req=1, n_req=None, n_dflt=None)
+        back = cls.load(json.loads(json.dumps(cls.dump(row))))
+        assert back == row
+
+    def test_a_non_nullable_none_round_trips_as_its_default(self):
+        cls = _null_table()
+        row = cls(req=1, n_req=2, dflt=None)
+        assert 'dflt' not in cls.dump(row)
+        assert cls.load(cls.dump(row)).dflt == 5
+
+    def test_dump_false_wins_over_nullable(self):
+        @s.seared
+        class Hidden(s.Seared):
+            secret: str | None = s.Str(nullable=True, dump=False)
+
+        assert Hidden.dump(Hidden()) == {}

@@ -21,11 +21,11 @@ class T(Field):
         *,
         default: Any = None,
         default_factory: Callable[[], Any] | None = None,
-        missing: Any = None,
         data_key: str | None = None,
         keyed: bool = False,
         many: bool = False,
         required: bool = False,
+        nullable: bool = False,
         dump: bool = True,
         doc: str | None = None,
     ) -> None:
@@ -35,10 +35,10 @@ class T(Field):
             keyed=keyed,
             many=many,
             required=required,
+            nullable=nullable,
             dump=dump,
             default=default,
             default_factory=default_factory,
-            missing=missing,
             doc=doc,
         )
         object.__setattr__(self, 'schema', schema)

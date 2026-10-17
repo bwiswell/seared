@@ -1,6 +1,6 @@
 """Tests for ``seared.fields.union`` — the tagged-union ``UNWRAP`` field.
 
-Folds in the ``default=<VariantCls>`` schema-evolution fallback suite
+Folds in the ``fallback=<VariantCls>`` schema-evolution fallback suite
 (was ``tests/test_union_fallback.py``).
 """
 
@@ -188,7 +188,7 @@ class TestMultipleUnwrapDisjointKeys:
 
 
 # ---------------------------------------------------------------------------
-# Schema-evolution fallback — ``default=<VariantCls>`` (was
+# Schema-evolution fallback — ``fallback=<VariantCls>`` (was
 # tests/test_union_fallback.py).
 # ---------------------------------------------------------------------------
 
@@ -200,14 +200,14 @@ class _StartInt(s.Seared):
 
 @s.seared
 class _StopReason(s.Seared):
-    reason: str = s.Str(missing='')
+    reason: str = s.Str(default='')
 
 
 @s.seared
 class Unknown(s.Seared):
     """Generic catch-all for variants the consumer doesn't yet know about."""
 
-    raw_tag: str = s.Str(missing='')
+    raw_tag: str = s.Str(default='')
 
 
 class TestNoFallback:
@@ -225,14 +225,14 @@ class TestNoFallback:
 
 
 class TestWithFallback:
-    """``default=<Variant>`` opts into graceful fallback."""
+    """``fallback=<Variant>`` opts into graceful fallback."""
 
-    def test_unknown_tag_coerces_to_default(self):
+    def test_unknown_tag_coerces_to_fallback(self):
         @s.seared
         class Cmd(s.Seared):
             action: object = s.Union(
                 variants={'start': _StartInt, 'stop': _StopReason},
-                default=Unknown,
+                fallback=Unknown,
             )
 
         loaded = Cmd.load({'type': 'reboot', 'raw_tag': 'reboot'})
@@ -243,7 +243,7 @@ class TestWithFallback:
         class Cmd(s.Seared):
             action: object = s.Union(
                 variants={'start': _StartInt, 'stop': _StopReason},
-                default=Unknown,
+                fallback=Unknown,
             )
 
         s_loaded = Cmd.load({'type': 'start', 'speed': 10})
@@ -254,23 +254,86 @@ class TestWithFallback:
         assert isinstance(x_loaded.action, _StopReason)
         assert x_loaded.action.reason == 'test'
 
-    def test_default_must_be_a_class(self):
-        with pytest.raises(TypeError, match='default must be a class'):
+    def test_fallback_must_be_a_class(self):
+        with pytest.raises(TypeError, match='fallback must be a class'):
             s.Union(
                 variants={'start': _StartInt},
-                default='not-a-class',  # type: ignore[arg-type]
+                fallback='not-a-class',  # type: ignore[arg-type]
             )
 
-    def test_default_none_preserves_strict_behavior(self):
+    def test_fallback_none_preserves_strict_behavior(self):
         @s.seared
         class Cmd(s.Seared):
             action: object = s.Union(
                 variants={'start': _StartInt},
-                default=None,
+                fallback=None,
             )
 
         with pytest.raises(s.ValidationError, match='unknown tag'):
             Cmd.load({'type': 'reboot'})
+
+
+class TestDefaultIsRefused:
+    """Pin: ``default=`` no longer names the fallback, and is refused rather than silently reinterpreted.
+
+    Until 0.4.0 it did. Read as a field default, ``default=Unknown`` would fill
+    an omitted attribute with the *class* ``Unknown``.
+    """
+
+    @pytest.mark.parametrize('option', ['default', 'default_factory'])
+    def test_a_default_option_raises_and_points_at_fallback(self, option):
+        value = Unknown if option == 'default' else list
+        with pytest.raises(TypeError, match=r'fallback=<VariantCls>'):
+            s.Union(variants={'start': _StartInt}, **{option: value})
+
+    def test_default_none_is_still_accepted(self):
+        # ``None`` is "no default", and keeps the field optional to a type
+        # checker, so existing ``default=None`` declarations stay valid.
+        @s.seared
+        class Cmd(s.Seared):
+            action: object = s.Union(variants={'start': _StartInt}, default=None)
+
+        with pytest.raises(s.ValidationError, match='unknown tag'):
+            Cmd.load({'type': 'reboot'})
+
+    def test_an_omitted_union_constructs_as_none_not_a_class(self):
+        @s.seared
+        class Cmd(s.Seared):
+            action: object = s.Union(variants={'start': _StartInt}, fallback=Unknown)
+
+        assert Cmd().action is None
+
+
+class TestNull:
+    """Pin: a Union can't be nullable, and a ``null`` payload is an absent one."""
+
+    def test_nullable_is_refused(self):
+        with pytest.raises(TypeError, match=r'nullable= is not supported'):
+            s.Union(variants={'start': Start}, nullable=True)
+
+    def test_a_null_payload_loads_the_variant_from_its_defaults(self):
+        @s.seared
+        class Control(s.Seared):
+            action: object = s.Union(variants={'stop': Stop, 'start': Start}, tag_key='action', payload_key='args')
+
+        assert isinstance(Control.load({'action': 'stop', 'args': None}).action, Stop)
+
+    def test_a_null_payload_still_needs_the_variants_required_keys(self):
+        @s.seared
+        class Control(s.Seared):
+            action: object = s.Union(variants={'start': Start}, tag_key='action', payload_key='args')
+
+        with pytest.raises(s.ValidationError) as info:
+            Control.load({'action': 'start', 'args': None})
+        assert str(info.value) == 'Control.args.speed: required key missing'
+
+    def test_a_null_tag_is_still_missing(self):
+        @s.seared
+        class Event(s.Seared):
+            data: object = s.Union(variants={'start': Start})
+
+        with pytest.raises(s.ValidationError, match=r"missing tag 'type'"):
+            Event.load({'type': None, 'speed': 1.0})
 
 
 # ---------------------------------------------------------------------------
@@ -304,3 +367,50 @@ class TestFormatHint:
         d = FlatFrame.dump(FlatFrame(body=Chunk(data=b'\x01')), format='msgpack')
         assert d == {'type': 'chunk', 'data': b'\x01'}
         assert FlatFrame.load(d, format='msgpack').body.data == b'\x01'
+
+
+# ---------------------------------------------------------------------------
+# Error paths
+# ---------------------------------------------------------------------------
+
+
+@s.seared
+class _NestedControl(s.Seared):
+    action: object = s.Union(
+        variants={'start': Start, 'configure': Configure},
+        tag_key='action',
+        payload_key='args',
+    )
+
+
+@s.seared
+class _FlatControl(s.Seared):
+    action: object = s.Union(variants={'start': Start, 'configure': Configure}, tag_key='type')
+
+
+class TestErrorPaths:
+    """Pin: tag errors point at the tag; payload errors at the payload's own keys."""
+
+    def test_an_unknown_tag_points_at_the_tag(self):
+        with pytest.raises(s.ValidationError) as info:
+            _NestedControl.load({'action': 'halt'})
+        assert info.value.path == ('action',)
+        assert str(info.value).startswith("_NestedControl.action: Union: unknown tag 'halt'")
+
+    def test_a_missing_tag_points_at_the_tag(self):
+        with pytest.raises(s.ValidationError) as info:
+            _FlatControl.load({'speed': 1.0})
+        assert info.value.path == ('type',)
+        assert str(info.value) == "_FlatControl.type: Union: missing tag 'type' in envelope"
+
+    def test_a_nested_payload_error_is_under_the_payload_key(self):
+        with pytest.raises(s.ValidationError) as info:
+            _NestedControl.load({'action': 'start', 'args': {'speed': 'fast'}})
+        assert info.value.path == ('args', 'speed')
+        assert str(info.value) == "_NestedControl.args.speed: cannot deserialize 'fast' as float"
+
+    def test_a_flat_payload_error_is_at_the_parents_own_key(self):
+        with pytest.raises(s.ValidationError) as info:
+            _FlatControl.load({'type': 'start', 'speed': 'fast'})
+        assert info.value.path == ('speed',)
+        assert str(info.value) == "_FlatControl.speed: cannot deserialize 'fast' as float"

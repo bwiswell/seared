@@ -46,6 +46,16 @@ class TestT:
         d = Outer.dump(Outer(inner=None))
         assert 'inner' not in d
 
+    def test_nullable_passes_through(self):
+        @s.seared
+        class Outer(s.Seared):
+            inner: Inner | None = s.T(Inner, nullable=True, default_factory=lambda: Inner(x=1))
+
+        assert Outer.__seared_fields__[0].field.nullable is True
+        assert Outer.load({'inner': None}).inner is None
+        assert Outer.load({}).inner == Inner(x=1)
+        assert Outer.dump(Outer(inner=None)) == {'inner': None}
+
     def test_many_load(self):
         @s.seared
         class Outer(s.Seared):

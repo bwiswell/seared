@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     from seared._core.base import Seared
 
-from seared._core.errors import ValidationError
+from seared._core.errors import ValidationError, add_location
 
 from .field import Field
 
@@ -26,11 +26,12 @@ class Union(Field):
 
     ``Union`` is an ``UNWRAP`` field: the seared decorator merges the
     envelope at the parent class's top-level wire dict rather than nesting
-    it under a wire key. Only one ``UNWRAP`` field is allowed per class.
+    it under a wire key. A class can hold several ``UNWRAP`` fields, as long
+    as their ``tag_key`` / ``payload_key`` wire keys don't collide.
 
     Unknown tags on load raise ``ValidationError`` by default. Pass
-    ``default=<VariantCls>`` to enable graceful schema-evolution
-    fallback: unknown tags coerce to the named default variant rather
+    ``fallback=<VariantCls>`` to enable graceful schema-evolution
+    fallback: unknown tags coerce to the named variant rather
     than raising. Useful when older consumers may receive newer
     schemas — they decode what they can recognise and route the rest
     to a generic / sentinel variant.
@@ -42,7 +43,7 @@ class Union(Field):
     variants: dict[str, type[Seared]]
     tag_key: str = 'type'
     payload_key: str | None = None
-    default: type[Seared] | None = None
+    fallback: type[Seared] | None = None
 
     UNWRAP: ClassVar[bool] = True
 
@@ -58,8 +59,26 @@ class Union(Field):
             if not isinstance(cls, type):
                 msg = f'Union: variant for tag {tag!r} must be a class, got {cls!r}'
                 raise TypeError(msg)
-        if self.default is not None and not isinstance(self.default, type):
-            msg = f'Union: default must be a class, got {self.default!r}'
+        if self.fallback is not None and not isinstance(self.fallback, type):
+            msg = f'Union: fallback must be a class, got {self.fallback!r}'
+            raise TypeError(msg)
+        # Until 0.4.0, ``default=`` named the fallback variant. It now means
+        # what it means on every other field, the value an absent key gets,
+        # which a Union doesn't have: its envelope is always populated on load,
+        # and absent from a constructor call it's ``None``. Refused by name, so
+        # an old ``default=Variant`` can't quietly change meaning.
+        for option in ('default', 'default_factory'):
+            if getattr(self, option) is not None:
+                msg = (
+                    f'Union: {option}= is not supported, since a Union has no default value; '
+                    f'to fall back to a variant on an unknown tag, use fallback=<VariantCls>'
+                )
+                raise TypeError(msg)
+        # A Union's envelope spans its parent's keys (the tag, and the payload
+        # key or the variant's own fields), so there is no one key a ``null``
+        # could sit on.
+        if self.nullable:
+            msg = 'Union: nullable= is not supported, since a Union has no single wire key to carry a null'
             raise TypeError(msg)
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> dict:
@@ -94,18 +113,28 @@ class Union(Field):
         tag = value.get(self.tag_key)
         if tag is None:
             msg = f'Union: missing tag {self.tag_key!r} in envelope'
-            raise ValidationError(msg)
+            raise ValidationError(msg, path=(self.tag_key,))
         variant_cls = self.variants.get(tag)
         if variant_cls is None:
-            if self.default is not None:
+            if self.fallback is not None:
                 # Graceful schema evolution — unknown tag falls through
-                # to the configured default variant.
-                variant_cls = self.default
+                # to the configured fallback variant.
+                variant_cls = self.fallback
             else:
                 msg = f'Union: unknown tag {tag!r}; expected one of {sorted(self.variants)}'
-                raise ValidationError(msg)
+                raise ValidationError(msg, path=(self.tag_key,))
         if self.payload_key is None:
+            # Flat: the variant's keys sit beside the tag in the parent's own
+            # dict, so its errors already carry the right path.
             payload = {k: v for k, v in value.items() if k != self.tag_key}
-        else:
-            payload = value.get(self.payload_key, {})
-        return variant_cls.load(payload, kwargs.get('format', 'json'))
+            return variant_cls.load(payload, kwargs.get('format', 'json'))
+        # A ``null`` payload is an absent one, as a ``null`` is for any key that
+        # isn't nullable: the variant loads from its defaults.
+        payload = value.get(self.payload_key)
+        if payload is None:
+            payload = {}
+        try:
+            return variant_cls.load(payload, kwargs.get('format', 'json'))
+        except ValidationError as e:
+            add_location(e, self.payload_key)
+            raise

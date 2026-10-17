@@ -54,7 +54,11 @@ if TYPE_CHECKING:
 #: ``SPEC_ABI`` it was built against; only an exact match is used. This is
 #: the whole compatibility gate — seared is zero-dependency and has no PEP
 #: 440 specifier parser available, so version *strings* are diagnostic only.
-SPEC_ABI = 1
+#:
+#: 2 since seared 0.4.0, which changed what several kinds mean (lax ``Bool``
+#: among them); a backend built against 1 (``rusted`` 0.3.x) declines every
+#: class rather than give the old answers.
+SPEC_ABI = 2
 
 #: Backend module imported when ``SEARED_ACCEL_BACKEND`` is unset.
 DEFAULT_BACKEND = 'rusted'
@@ -220,32 +224,24 @@ def _nested_spec(cls: Any) -> dict[str, Any]:
     raise _NotAccelerableError(reason)
 
 
-def _field_spec(owner: str, attr: str, wire: str, f: Field, validate: bool) -> dict[str, Any]:
+def _field_spec(owner: str, attr: str, wire: str, f: Field) -> dict[str, Any]:
     """Emit one field's plain-data spec, or decline the whole class."""
     kind = _kinds().get(type(f))
     if kind is None:
         msg = f'{owner}.{attr}: {type(f).__name__} is not an accelerated field type'
-        raise _NotAccelerableError(msg)
-    # seared 0.3.3 fixed lax ``Bool`` (``'false'`` used to load as ``True``).
-    # An ABI-1 backend still implements the old answer, and an ABI number is
-    # all seared can check — so lax Bool stays on the Python path rather than
-    # change meaning with whatever wheel happens to be installed. Lifts when
-    # the fix ships behind the next SPEC_ABI.
-    if kind == 'bool' and not validate:
-        msg = f'{owner}.{attr}: Bool under validate=False is not accelerated until SPEC_ABI 2'
         raise _NotAccelerableError(msg)
     spec: dict[str, Any] = {
         'attr': attr,
         'wire': wire,
         'kind': kind,
         'required': f.required,
+        'nullable': f.nullable,
         'many': f.many,
         'keyed': f.keyed,
         'dump': f.dump,
-        # ``missing`` is the resolved default — ``Field.__post_init__`` has
-        # already folded ``default=`` into it, so a backend never reimplements
-        # that resolution.
-        'default': f.missing,
+        # The static default; a ``default_factory``, when set, wins and is
+        # called per instance.
+        'default': f.default,
         'default_factory': f.default_factory,
     }
     if kind == 'nested':
@@ -272,7 +268,7 @@ def _class_spec(cls: type, specs: tuple[FieldSpec, ...], validate: bool) -> dict
         # would stop catching it — and a backend that imported seared to get it
         # would no longer be the dependency-free leaf the design rests on.
         'error': ValidationError,
-        'fields': [_field_spec(name, attr, wire, f, validate) for attr, wire, f in specs],
+        'fields': [_field_spec(name, attr, wire, f) for attr, wire, f in specs],
     }
 
 

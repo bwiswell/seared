@@ -7,9 +7,13 @@ def Int(
     keyed: bool = ...,
     many: bool = ...,
     required: bool = ...,
+    nullable: bool = ...,
     dump: bool = ...,
     doc: str | None = ...,
     default: Any = ...,
     default_factory: Callable[[], Any] = ...,
-    missing: Any = ...,
 ) -> Any: ...
+
+# Not a field: ``Int``'s float and numeric-string coercion, which an
+# int-valued ``Enum`` shares. ``None`` when the rules refuse the value.
+def coerce_int(value: Any, validate: bool) -> int | None: ...
