@@ -250,7 +250,6 @@ def blocks(report: Report) -> dict[str, str]:
         'rusted-dump': _approx_x(r.ratio(_RUSTED, _STRICT, 'dump')),
         'pydantic-vs-seared': _approx_x(r.ratio(_PYDANTIC, _STRICT, 'load')),
         'rusted-vs-pydantic': _approx_x(r.ratio(_RUSTED, _PYDANTIC, 'load')),
-        'lax-load-gain': _approx_gain(r.ratio(_LAX, _STRICT, 'load')),
         'lax-dump-gain': _approx_gain(r.ratio(_LAX, _STRICT, 'dump')),
         'rusted-lax-dump-gain': _approx_gain(r.ratio(_RUSTED_LAX, _RUSTED, 'dump')),
     }
