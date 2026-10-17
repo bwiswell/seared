@@ -83,3 +83,23 @@ class TestNull:
         text = Proxied.to_yaml(Proxied(proxy=None))
         assert 'proxy: null' in text
         assert Proxied.from_yaml(text).proxy is None
+
+
+@s.seared(unknown='raise')
+class StrictYaml(s.Seared):
+    name: str = s.Str(required=True)
+
+
+class TestUnknownKeys:
+    """``from_yaml`` honours the class's ``unknown=`` and a call's own (0.4.1)."""
+
+    def test_the_class_default_refuses(self):
+        pytest.importorskip('yaml')
+        with pytest.raises(s.ValidationError, match=r'StrictYaml\.nmae: unknown key'):
+            StrictYaml.from_yaml('name: a\nnmae: b\n')
+
+    def test_a_call_overrides_the_class(self):
+        pytest.importorskip('yaml')
+        assert StrictYaml.from_yaml('name: a\nnmae: b\n', unknown='ignore') == StrictYaml(name='a')
+        with pytest.raises(s.ValidationError, match='unknown key'):
+            Cfg.from_yaml('name: a\nitemz: []\n', unknown='raise')

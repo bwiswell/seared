@@ -8,7 +8,7 @@ Both directions via `PyYAML`, lives behind `seared[yaml]`. Lazy import
 
 ```python
 Cls.to_yaml(obj) -> str
-Cls.from_yaml(source) -> Cls
+Cls.from_yaml(source, unknown=None) -> Cls
 ```
 
 `to_yaml` uses `yaml.safe_dump(..., sort_keys=False)` — preserves

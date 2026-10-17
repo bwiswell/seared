@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     import os
 
     from seared._core.base import Seared
+    from seared._core.unknown import Unknown
 
 import json as _json
 
@@ -22,12 +23,12 @@ def to(cls: type[Seared], obj: Seared, *, indent: int | None = None, **kwargs: A
     return _json.dumps(cls.dump(obj), indent=indent, **kwargs)
 
 
-def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:
-    """Parse JSON ``source`` (path or string content) and load into ``cls``."""
+def from_(cls: type[Seared], source: str | os.PathLike, unknown: Unknown | None = None) -> Seared:
+    """Parse JSON ``source`` (path or string content) and load into ``cls``; ``unknown`` as in ``load``."""
     payload = _json.loads(read_source(source))
     # ValueError, not TypeError: the malformed-payload contract is pinned
     # by tests and inherited by SearedError (itself a ValueError).
     if not isinstance(payload, dict):
         msg = f'{cls.__name__}.from_json: top-level JSON must be an object, got {type(payload).__name__}'
         raise ValueError(msg)  # noqa: TRY004
-    return cls.load(payload)
+    return cls.load(payload, unknown=unknown)

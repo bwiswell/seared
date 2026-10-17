@@ -245,3 +245,14 @@ class TestEmptyCells:
     def test_an_empty_string_does_not_survive(self):
         (back,) = _Nulls.from_csv(_Nulls.to_csv([_Nulls(id=1, note='', label='')]))
         assert (back.note, back.label) == (None, 'none')
+
+
+class TestUnknownColumns:
+    """An extra column is an unknown key in every row (0.4.1)."""
+
+    def test_by_default_an_extra_column_is_ignored(self):
+        assert Row.from_csv('id,name,extra\n1,a,x\n') == [Row(id=1, name='a')]
+
+    def test_a_call_can_refuse_it(self):
+        with pytest.raises(s.ValidationError, match='extra: unknown key'):
+            Row.from_csv('id,name,extra\n1,a,x\n', unknown='raise')

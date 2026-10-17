@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     import os
 
     from seared._core.base import Seared
+    from seared._core.unknown import Unknown
 
 import tomllib
 
@@ -50,8 +51,8 @@ def _without_nulls(value: Any) -> Any:
     return value
 
 
-def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:
-    """Parse TOML ``source`` (path or string content) and load into ``cls``.
+def from_(cls: type[Seared], source: str | os.PathLike, unknown: Unknown | None = None) -> Seared:
+    """Parse TOML ``source`` (path or string content) and load into ``cls``; ``unknown`` as in ``load``.
 
     Read uses stdlib ``tomllib`` — no extra required.
     """
@@ -61,4 +62,4 @@ def from_(cls: type[Seared], source: str | os.PathLike) -> Seared:
     if not isinstance(payload, dict):
         msg = f'{cls.__name__}.from_toml: top-level TOML must be a table, got {type(payload).__name__}'
         raise ValueError(msg)  # noqa: TRY004
-    return cls.load(payload)
+    return cls.load(payload, unknown=unknown)

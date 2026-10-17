@@ -9,7 +9,7 @@ optional.
 
 ```python
 Cls.to_toml(obj) -> str          # requires seared[toml]
-Cls.from_toml(source) -> Cls     # stdlib only
+Cls.from_toml(source, unknown=None) -> Cls     # stdlib only
 ```
 
 `from_toml` accepts a path-like or a string of TOML content (see

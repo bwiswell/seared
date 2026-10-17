@@ -3,6 +3,7 @@ from typing import Any
 from ._core.accel import AccelInfo, accel_status
 from ._core.base import FieldSpec
 from ._core.errors import SearedError, ValidationError
+from ._core.unknown import unknown_keys
 from .doc import document, introspect
 from .fields.bool_ import Bool
 from .fields.bytes_ import Bytes
@@ -91,4 +92,5 @@ __all__ = [
     'document',
     'introspect',
     'seared',
+    'unknown_keys',
 ]

@@ -624,3 +624,27 @@ class TestDifferential:
         assert Keyed.dump(Keyed.load({'counts': {'a': 1}})) == {'counts': {'a': 1}}
         with pytest.raises(s.ValidationError, match='expected dict for keyed field'):
             Keyed.load({'counts': [1]})
+
+
+class TestUnknownKeysUnderABackend:
+    """The refusal walks the input before the load, so a backend never sees ``unknown=`` (0.4.1)."""
+
+    def test_a_refusing_class_stays_accelerated_and_refuses_as_python_does(self, use_backend):
+        use_backend('refcore')
+        _, fast = _tier1(unknown='raise')
+        _, slow = _tier1(unknown='raise', accel=False)
+        assert fast.__seared_accel__.accelerated
+        assert not slow.__seared_accel__.accelerated
+        data = {**PAYLOAD, 'items': [{'x': 1, 'y': 1.5, 'lable': 'a'}], 'tagz': []}
+        errors = []
+        for cls in (fast, slow):
+            with pytest.raises(s.ValidationError) as caught:
+                cls.load(data)
+            errors.append((caught.value.path, caught.value.reason))
+        assert errors[0] == errors[1] == (('items', 0, 'lable'), 'unknown key (1 more: tagz)')
+
+    def test_an_accelerated_load_ignoring_by_default_is_unchanged(self, use_backend):
+        use_backend('refcore')
+        _, fast = _tier1()
+        assert fast.__seared_accel__.accelerated
+        assert fast.load({**PAYLOAD, 'extra': 1}) == fast.load(PAYLOAD)

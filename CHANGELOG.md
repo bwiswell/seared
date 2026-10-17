@@ -9,6 +9,32 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
+## 0.4.1 — unreleased
+
+**Refusing unknown keys, for config files.** A key a class doesn't declare is still dropped by default, which the
+wire depends on, but a class or a call can now refuse it instead.
+
+### Added
+
+- **`unknown=`, refusing a key a class doesn't declare.** `@s.seared(unknown='raise')` makes it the class's default,
+  and `load`, `loads` and the `from_json`, `from_toml`, `from_yaml` and `from_csv` readers take `unknown='ignore'`
+  or `'raise'` for one call, `None` meaning the class's own. A refusing load raises one `ValidationError` at the
+  first unknown key that names up to five more, and covers the whole input, nested classes included. It runs before
+  the load, so a misspelt required key reads as unknown rather than missing, and an accelerated class stays
+  accelerated. The default stays `'ignore'`, which a wire message depends on. A class records its option on
+  `__seared_unknown__`, and any other value raises `ValueError`.
+- **`s.unknown_keys(cls, data)`** reports the path of every unknown key without raising. It walks `T` targets,
+  `many` and `keyed` elements, `Tuple` slots and `Union` envelopes, and skips `Dict` values and a payload routed to
+  `fallback=`.
+- **Docs for config files:** `docs/overview/configuration.md`, and `docs/_core/unknown.md` for the new module. The
+  README gains *Configuration files*.
+
+### Changed
+
+- A nested `T` or `Union` loads its class through the class's own load, kept as `__seared_load__`, rather than its
+  public `load`. So a nested class's `unknown=` applies only when that class is loaded by itself, and each nested
+  object skips a call layer.
+
 ## 0.4.0 — 2026-10-17
 
 **Errors that say where they happened, `null` read as absent, lossless strict coercion, and `SPEC_ABI` 2.**

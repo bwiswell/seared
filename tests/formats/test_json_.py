@@ -86,3 +86,24 @@ class TestNull:
         text = Reading.to_json(Reading(sensor='t1', value=None))
         assert json.loads(text) == {'sensor': 't1', 'value': None, 'unit': 'C'}
         assert Reading.from_json(text) == Reading(sensor='t1', value=None)
+
+
+@s.seared(unknown='raise')
+class StrictTelemetry(s.Seared):
+    id: int = s.Int(required=True)
+
+
+class TestUnknownKeys:
+    """``from_json`` honours the class's ``unknown=`` and a call's own (0.4.1)."""
+
+    def test_the_class_default_refuses(self):
+        with pytest.raises(s.ValidationError, match=r'StrictTelemetry\.iid: unknown key'):
+            StrictTelemetry.from_json('{"id": 1, "iid": 2}')
+
+    def test_a_call_overrides_the_class(self):
+        assert StrictTelemetry.from_json('{"id": 1, "iid": 2}', unknown='ignore') == StrictTelemetry(id=1)
+        with pytest.raises(s.ValidationError, match='unknown key'):
+            Telemetry.from_json('{"id": 1, "x": 0, "y": 0, "z": 0}', unknown='raise')
+
+    def test_by_default_unknown_keys_are_ignored(self):
+        assert Telemetry.from_json('{"id": 1, "x": 0, "y": 0, "z": 0}') == Telemetry(id=1, x=0.0, y=0.0)

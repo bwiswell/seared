@@ -61,6 +61,18 @@ omitted one in a constructor call is `None`. So `default=`, and
 `default_factory=`, raise `TypeError` pointing at `fallback=`, rather
 than quietly change meaning. `default=None` is still accepted.
 
+## Unknown keys
+
+A variant loads through its own bare load, `Variant.__seared_load__`, with
+no `unknown=` in front of it: a flat envelope hands the variant its
+parent's keys too, so a variant that refused unknown keys would refuse its
+own envelope. An outer refusing load still checks the envelope: it knows
+the `tag_key`, the `payload_key` or the selected variant's keys, and walks
+a nested payload. Two cases report nothing, since no declared variant says
+which keys are expected: a payload routed to `fallback=`, and a flat
+envelope with a missing or unknown tag. See
+[`../_core/unknown.md`](../_core/unknown.md).
+
 ## Null
 
 A `null` tag is a missing one, and raises. A `null` payload under

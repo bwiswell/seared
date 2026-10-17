@@ -414,3 +414,39 @@ class TestErrorPaths:
             _FlatControl.load({'type': 'start', 'speed': 'fast'})
         assert info.value.path == ('speed',)
         assert str(info.value) == "_FlatControl.speed: cannot deserialize 'fast' as float"
+
+
+@s.seared(unknown='raise')
+class StrictStart(s.Seared):
+    speed: int = s.Int(default=0)
+
+
+@s.seared
+class FlatHost(s.Seared):
+    id: int = s.Int(required=True)
+    cmd: StrictStart | Stop = s.Union(variants={'start': StrictStart, 'stop': Stop})
+
+
+@s.seared
+class NestedHost(s.Seared):
+    id: int = s.Int(required=True)
+    cmd: StrictStart | Stop = s.Union(variants={'start': StrictStart, 'stop': Stop}, payload_key='args')
+
+
+class TestUnknownKeysInEnvelopes:
+    """A variant's own ``unknown=`` doesn't apply inside an envelope (0.4.1)."""
+
+    def test_a_refusing_variant_loads_in_a_flat_envelope_beside_its_parents_keys(self):
+        # The flat payload carries the parent's ``id``: refusing it would make the variant unusable here.
+        assert FlatHost.load({'id': 1, 'type': 'start', 'speed': 3}).cmd == StrictStart(speed=3)
+
+    def test_a_refusing_outer_load_refuses_a_flat_typo(self):
+        with pytest.raises(s.ValidationError, match=r'^FlatHost\.sped: unknown key$'):
+            FlatHost.load({'id': 1, 'type': 'start', 'sped': 3}, unknown='raise')
+
+    def test_a_refusing_outer_load_refuses_a_nested_payload_typo(self):
+        with pytest.raises(s.ValidationError, match=r'^NestedHost\.args\.sped: unknown key$'):
+            NestedHost.load({'id': 1, 'type': 'start', 'args': {'sped': 3}}, unknown='raise')
+
+    def test_an_ignoring_outer_load_ignores_a_nested_payload_typo(self):
+        assert NestedHost.load({'id': 1, 'type': 'start', 'args': {'sped': 3}}).cmd == StrictStart()
