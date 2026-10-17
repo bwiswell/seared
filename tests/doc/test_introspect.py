@@ -91,6 +91,18 @@ class TestDocstringCleanup:
         assert ':meth:' not in schema.doc
 
 
+class TestUndocumentedClass:
+    def test_has_no_summary_rather_than_the_dataclass_signature(self):
+        # Before 0.4.1 the page's summary was the signature ``dataclass()`` writes into ``__doc__``.
+        @s.seared
+        class NoDoc(s.Seared):
+            n: int = s.Int(default=0)
+
+        schema = introspect(NoDoc)
+        assert (schema.summary, schema.doc) == (None, None)
+        assert 'Int(' not in document(NoDoc)
+
+
 class TestIsSearedClass:
     def test_recognises_models(self):
         assert is_seared_class(Demo)

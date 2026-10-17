@@ -143,8 +143,14 @@ def _build(cls: type, *, slots: bool, validate: bool, accel: bool = True, unknow
     # moment the class as *written* is observable. The accelerator seam needs
     # it: a backend constructing via ``__new__`` would skip a hand-written one.
     custom_init = '__init__' in cls.__dict__
+    # The same goes for the docstring: ``dataclass()`` writes the generated
+    # signature into ``__doc__`` when the class has none, and ``seared.doc``
+    # and zeared's TypeScript emitter would read it as the class's own words.
+    # Restored below, so an undocumented class stays undocumented (0.4.1).
+    written_doc = cls.__dict__.get('__doc__')
 
     cls = dataclass(cls, slots=slots)
+    cls.__doc__ = written_doc
     specs: list[FieldSpec] = []
     unwrap_specs: list[tuple[str, Any]] = []
     for f in fields(cls):

@@ -1048,3 +1048,26 @@ class TestUnknownOption:
     def test_the_bare_load_sits_behind_the_option(self):
         # What a nested ``T`` or ``Union`` calls: the class's own load, no option in front.
         assert _Strict.__seared_load__({'n': 2, 'nn': 3}, 'json') == _Strict(n=2)
+
+
+class TestDocstring:
+    """The decorator keeps the class's own docstring, or its lack of one (0.4.1)."""
+
+    @pytest.mark.parametrize('slots', [True, False])
+    def test_an_undocumented_class_stays_undocumented(self, slots):
+        # ``dataclass()`` would write its generated signature here.
+        @s.seared(slots=slots)
+        class NoDoc(s.Seared):
+            n: int = s.Int(default=0)
+
+        assert NoDoc.__doc__ is None
+
+    @pytest.mark.parametrize('slots', [True, False])
+    def test_a_written_docstring_is_kept(self, slots):
+        @s.seared(slots=slots)
+        class Doc(s.Seared):
+            """Has words."""
+
+            n: int = s.Int(default=0)
+
+        assert Doc.__doc__ == 'Has words.'
