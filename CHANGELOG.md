@@ -9,6 +9,19 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
+## 0.4.2 — unreleased
+
+**A field's kind, for code that maps fields onto something else.**
+
+### Added
+
+- **`s.field_kind(field)` and `s.FieldKind`,** which built-in field a field is: `FieldKind.INT`, `FieldKind.NESTED`
+  for a `T`, and so on for all twenty, as a `StrEnum` whose values are the accelerator spec's kind names. A subclass
+  has its base's kind, where a table keyed on `type(field).__name__` missed it. A subclass that changes its base's
+  wire form names its own in a `KIND` class attribute, or `None`; a name that isn't a kind raises `TypeError` where
+  the class is defined. `seared.doc`'s `FieldDoc` gains `kind`. The accelerator still matches the exact class, so a
+  subclass declines it as before, and the spec it sees is unchanged.
+
 ## 0.4.1 — 2026-10-17
 
 **Refusing unknown keys, for config files.** A key a class doesn't declare is still dropped by default, which the

@@ -44,6 +44,11 @@ from being seared's problem.
 | 2 | `UUID`, `Date`, `DateTime`, `Time`, `TimeDelta`, `Decimal`, `Bytes`, `Enum`, `Path`, `Dict` | supported |
 | 3 | `Tuple`, `Union`, `NDArray`, `PandasFrame`, `PolarsFrame` | deferred |
 
+The kind names a backend sees are the classes' own `KIND`s, the names
+[`s.field_kind`](../fields/kind.md) reports (0.4.2). The lookup is by
+exact class, though: a subclass of `Int` has `Int`'s kind, but its override
+would never run on the compiled path, so it declines whatever its kind.
+
 The field *flags* — `many`, `keyed`, `required`, `nullable`, `default`,
 `default_factory`, `data_key`, `dump=False` — are all carried in Tier 1.
 

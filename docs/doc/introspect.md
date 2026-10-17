@@ -60,12 +60,13 @@ All four are frozen, slotted dataclasses.
 | `doc` | the field's `doc=` |
 | `nullable` | whether a wire `null` is a value (`nullable=True`), which the annotation can't show |
 | `dtype` | an `NDArray`'s declared element type as numpy names it (`'float32'`), or `None` (0.4.1) |
+| `kind` | the field's [`FieldKind`](../fields/kind.md), a subclass's being its base's, or `None` (0.4.2) |
 | `enum` | an `EnumDoc`, for an `Enum` field |
 | `nested` | the target class, for a `T` field |
 | `variants`, `envelope`, `fallback` | for a `Union`: its `VariantDoc`s, `'flat'` or `` 'nested under `args`' ``, and its fallback class |
 
-`nullable` and `dtype` come last, with defaults, so positional construction
-from before they were added still works.
+`nullable`, `dtype` and `kind` come last, with defaults, so positional
+construction from before they were added still works.
 
 ### `EnumDoc` and `VariantDoc`
 

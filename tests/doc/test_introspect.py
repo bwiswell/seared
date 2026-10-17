@@ -103,6 +103,27 @@ class TestDtype:
         assert 'the samples · dtype: `float32`' in document(Samples)
 
 
+class TestKind:
+    def test_each_field_carries_its_kind_a_subclass_its_bases(self):
+        class Trimmed(s.Str):
+            pass
+
+        @s.seared
+        class Kinds(s.Seared):
+            n: int = s.Int(default=0)
+            name: str = Trimmed(default='')
+            inner: Inner | None = s.T(Inner, default=None)
+            pair: tuple = s.Tuple(s.Int(), s.Str(), default=(0, ''))
+
+        fields = {f.attr: f.kind for f in introspect(Kinds).fields}
+        assert fields == {
+            'n': s.FieldKind.INT,
+            'name': s.FieldKind.STR,
+            'inner': s.FieldKind.NESTED,
+            'pair': s.FieldKind.TUPLE,
+        }
+
+
 class TestUndocumentedClass:
     def test_has_no_summary_rather_than_the_dataclass_signature(self):
         # Before 0.4.1 the page's summary was the signature ``dataclass()`` writes into ``__doc__``.

@@ -8,9 +8,12 @@ if TYPE_CHECKING:
 from seared._core.errors import ValidationError, add_location
 
 from .field import Field
+from .kind import FieldKind
 
 
 class Tuple(Field):
+    KIND = FieldKind.TUPLE
+
     __slots__ = ('tuple_fields',)
 
     def __init__(  # noqa: PLR0913 — mirrors the full Field option set

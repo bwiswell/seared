@@ -6,10 +6,13 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Float(Field):
+    KIND = FieldKind.FLOAT
+
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> float:
         """Python ``float`` / ``int`` → JSON number (rejects ``bool``)."""
         if validate and (isinstance(value, bool) or not isinstance(value, (int, float))):

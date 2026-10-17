@@ -344,6 +344,12 @@ spec = Outer.__seared_fields__[0]
 spec.attr, spec.wire, spec.field     # 'a', 'a', Int(...)
 ```
 
+`s.field_kind(field)` says which built-in field a field is, as an
+`s.FieldKind` (`FieldKind.INT`, `FieldKind.NESTED`, …), and a subclass of
+`Str` is still `FieldKind.STR`. Map fields by kind rather than by
+`type(field).__name__`, which misses a subclass. See
+[`docs/fields/kind.md`](docs/fields/kind.md).
+
 ## Schema docs
 
 `seared.doc` writes a Markdown page for every `@seared` class in a module or

@@ -6,6 +6,7 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 _TRUE = frozenset({'true', '1', 'yes', 'on'})
 _FALSE = frozenset({'false', '0', 'no', 'off'})
@@ -13,6 +14,8 @@ _FALSE = frozenset({'false', '0', 'no', 'off'})
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Bool(Field):
+    KIND = FieldKind.BOOL
+
     def serialize(self, value: bool, validate: bool = True, **kwargs: Any) -> bool:
         """Python ``bool`` → JSON boolean."""
         if validate and not isinstance(value, bool):

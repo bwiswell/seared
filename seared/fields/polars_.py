@@ -19,6 +19,7 @@ import polars as pl
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -28,6 +29,8 @@ class PolarsFrame(Field):
     ``many=True`` / ``keyed=True`` not supported (a field is one
     DataFrame). Wrap in a ``T(WrapperClass)`` for list-of-frames.
     """
+
+    KIND = FieldKind.POLARS
 
     def __post_init__(self) -> None:
         """Reject ``many`` / ``keyed`` — one field holds exactly one frame."""

@@ -7,10 +7,13 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class UUID(Field):
+    KIND = FieldKind.UUID
+
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> str:
         """``uuid.UUID`` → its canonical hyphenated string."""
         if isinstance(value, _uuid.UUID):

@@ -16,6 +16,7 @@ from dataclasses import field as _dc_field
 from typing import Any, TypeGuard, get_args, get_origin, get_type_hints
 
 from seared._core.base import Seared
+from seared.fields.kind import FieldKind, field_kind
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +54,9 @@ class FieldDoc:
     # An ``NDArray``'s declared element type, as numpy names it (``'float32'``),
     # or ``None`` (0.4.1). Appended for the same reason as ``nullable``.
     dtype: str | None = None
+    # Which built-in field this is, through the class hierarchy
+    # (``seared.field_kind``), or ``None`` (0.4.2). Appended likewise.
+    kind: FieldKind | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +159,7 @@ def _field_doc(attr: str, wire: str, f: Any, type_str: str) -> FieldDoc:
         fallback=fallback,
         nullable=bool(getattr(f, 'nullable', False)),
         dtype=str(f.dtype) if getattr(f, 'dtype', None) is not None else None,
+        kind=field_kind(f),
     )
 
 

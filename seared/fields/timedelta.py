@@ -7,10 +7,13 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class TimeDelta(Field):
+    KIND = FieldKind.TIMEDELTA
+
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> float:
         """``timedelta`` → total seconds as a JSON number."""
         if isinstance(value, timedelta):

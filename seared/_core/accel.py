@@ -135,6 +135,11 @@ def _reset() -> None:
 def _kinds() -> dict[Any, str]:
     """Exact field class → spec kind name.
 
+    The names are the classes' own ``KIND``s (``seared.field_kind``), but the
+    lookup is by exact class: a subclass inherits its base's kind, yet its
+    override would never run on the compiled path, so it declines whatever its
+    kind. The spec carries each name as a plain ``str``.
+
     Two groups, in the order accelerator backends implement them: the
     scalars plus nested ``T`` — cheap to coerce, and where the large speedups
     live — then the parse-and-construct types (``UUID``, the date-likes,
@@ -158,6 +163,7 @@ def _kinds() -> dict[Any, str]:
     from seared.fields.enum_ import Enum
     from seared.fields.float_ import Float
     from seared.fields.int_ import Int
+    from seared.fields.kind import field_kind
     from seared.fields.path import Path
     from seared.fields.str_ import Str
     from seared.fields.t import T
@@ -165,25 +171,27 @@ def _kinds() -> dict[Any, str]:
     from seared.fields.timedelta import TimeDelta
     from seared.fields.uuid_ import UUID
 
-    return {
+    accelerated = (
         # Tier 1
-        Int: 'int',
-        Float: 'float',
-        Str: 'str',
-        Bool: 'bool',
-        T: 'nested',
+        Int,
+        Float,
+        Str,
+        Bool,
+        T,
         # Tier 2 — parse-and-construct
-        UUID: 'uuid',
-        Date: 'date',
-        DateTime: 'datetime',
-        Time: 'time',
-        TimeDelta: 'timedelta',
-        Decimal: 'decimal',
-        Bytes: 'bytes',
-        Enum: 'enum',
-        Path: 'path',
-        Dict: 'dict',
-    }
+        UUID,
+        Date,
+        DateTime,
+        Time,
+        TimeDelta,
+        Decimal,
+        Bytes,
+        Enum,
+        Path,
+        Dict,
+    )
+    # ``str()`` of a kind is its plain name, which is what the spec carries.
+    return {cls: str(field_kind(cls)) for cls in accelerated}
 
 
 #: Per-kind configuration a backend needs beyond the universal flags, as

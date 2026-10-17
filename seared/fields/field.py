@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
+
+from .kind import FieldKind
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -9,6 +11,12 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Field:
+    #: Which built-in field this is (0.4.2), as ``seared.field_kind`` reads it:
+    #: ``None`` here, and a :class:`FieldKind` on each built-in field class,
+    #: which a subclass inherits. A subclass that changes its base's wire form
+    #: names its own, or ``None`` for no kind.
+    KIND: ClassVar[FieldKind | None] = None
+
     data_key: str | None = None
     keyed: bool = False
     many: bool = False
@@ -31,6 +39,24 @@ class Field:
     # replaced, was removed in 0.4.0.
     default: Any = None
     default_factory: Callable[[], Any] | None = None
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Check the ``KIND`` a subclass names, taking a kind's name as a string too.
+
+        Raises:
+            TypeError: If ``KIND`` is neither ``None``, a :class:`FieldKind`,
+                nor one's value, so a misspelt kind fails where it's declared.
+        """
+        super().__init_subclass__(**kwargs)
+        kind = cls.__dict__.get('KIND')
+        if kind is None or isinstance(kind, FieldKind):
+            return
+        try:
+            cls.KIND = FieldKind(kind)
+        except ValueError:
+            names = ', '.join(repr(k.value) for k in FieldKind)
+            msg = f'{cls.__name__}.KIND: {kind!r} is not a field kind; name one of {names}, or None'
+            raise TypeError(msg) from None
 
     def __post_init__(self) -> None:
         """Nothing to resolve; kept so a subclass's ``super().__post_init__()`` still works."""
