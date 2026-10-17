@@ -6,10 +6,13 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Str(Field):
+    KIND = FieldKind.STR
+
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> str:
         """Python ``str`` → JSON string."""
         if validate and not isinstance(value, str):

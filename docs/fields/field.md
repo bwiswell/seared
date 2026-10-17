@@ -65,6 +65,13 @@ nullable to keep it.
   an empty or missing cell as null (see
   [`../formats/csv_.md`](../formats/csv_.md#null-the-empty-cell)).
 
+## `KIND`
+
+A class attribute, not an option: which built-in field this is, as
+[`s.field_kind`](kind.md) reports it (0.4.2). It's `None` on `Field`, and
+each built-in field class sets its own, which a subclass inherits. A
+subclass that changes its base's wire form names its own kind, or `None`.
+
 ## `serialize(value, validate=True, **kwargs)`
 
 Python value → wire-safe value. `validate=True` raises

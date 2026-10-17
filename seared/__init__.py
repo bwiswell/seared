@@ -15,6 +15,7 @@ from .fields.enum_ import Enum
 from .fields.field import Field
 from .fields.float_ import Float
 from .fields.int_ import Int
+from .fields.kind import FieldKind, field_kind
 from .fields.path import Path
 from .fields.str_ import Str
 from .fields.t import T
@@ -71,6 +72,7 @@ __all__ = [
     'Dict',
     'Enum',
     'Field',
+    'FieldKind',
     'FieldSpec',
     'Float',
     'Int',
@@ -90,6 +92,7 @@ __all__ = [
     '__version__',
     'accel_status',
     'document',
+    'field_kind',
     'introspect',
     'seared',
     'unknown_keys',

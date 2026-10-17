@@ -10,10 +10,13 @@ from seared._core.errors import ValidationError
 
 from .field import Field
 from .int_ import coerce_int
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Enum(Field):
+    KIND = FieldKind.ENUM
+
     enum: type[PEnum]
 
     def __post_init__(self) -> None:

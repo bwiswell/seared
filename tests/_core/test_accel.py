@@ -254,6 +254,33 @@ class TestClassDecisions:
         assert 'LoudInt' in Custom.__seared_accel__.reason
         # The override still runs — falling back is what protects it.
         assert Custom.load({'x': 5}).x == 10
+        # Its kind is still its base's (0.4.2): the gate is the exact class,
+        # not the kind.
+        assert s.field_kind(LoudInt()) is s.FieldKind.INT
+
+    def test_the_spec_kinds_are_unchanged_by_the_public_kind(self):
+        # The names now come from each class's ``KIND`` (0.4.2). The spec a
+        # backend sees must not move: the same classes, the same plain strings.
+        from seared._core.accel import _kinds
+
+        assert {cls.__name__: kind for cls, kind in _kinds().items()} == {
+            'Int': 'int',
+            'Float': 'float',
+            'Str': 'str',
+            'Bool': 'bool',
+            'T': 'nested',
+            'UUID': 'uuid',
+            'Date': 'date',
+            'DateTime': 'datetime',
+            'Time': 'time',
+            'TimeDelta': 'timedelta',
+            'Decimal': 'decimal',
+            'Bytes': 'bytes',
+            'Enum': 'enum',
+            'Path': 'path',
+            'Dict': 'dict',
+        }
+        assert {type(kind) for kind in _kinds().values()} == {str}
 
     def test_post_init_declines(self, use_backend):
         use_backend('refcore')

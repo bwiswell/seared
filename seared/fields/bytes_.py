@@ -7,10 +7,13 @@ from typing import Any, Literal
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Bytes(Field):
+    KIND = FieldKind.BYTES
+
     encoding: Literal['base64', 'hex'] = 'base64'
 
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> bytes | str:
