@@ -6,6 +6,7 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 try:
     import numpy as np
@@ -17,6 +18,8 @@ except ImportError:
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class NDArray(Field):
+    KIND = FieldKind.NDARRAY
+
     #: The element type (0.4.1). ``None`` infers it from the values, so a
     #: ``float32`` array comes back ``float64``; anything ``numpy.dtype()``
     #: accepts casts each load to it and checks each strict dump against it.

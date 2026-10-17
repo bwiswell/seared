@@ -20,11 +20,14 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Path(Field):
     """``pathlib.Path`` serialised as a POSIX string."""
+
+    KIND = FieldKind.PATH
 
     concrete: type[PurePath] = _Path
 

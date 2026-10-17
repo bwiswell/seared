@@ -102,6 +102,11 @@ its bare load (`Cls.__seared_load__`, internal), with no option in front.
 That's also what lets a refusing class be a flat `Union` variant, whose
 payload carries its parent's keys.
 
+The same rule closes a JSON Schema (0.4.2): `seared.doc.json_schema`
+refuses keys no class declares exactly where a refusing load would, over
+the whole document, and leaves a fallback payload open. See
+[`../doc/json_schema.md`](../doc/json_schema.md#closed-or-open).
+
 ## Internals
 
 - `refuse_unknown_keys(cls, data)` — the refusal itself, raising as above.

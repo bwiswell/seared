@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 from seared._core.errors import ValidationError, add_location
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -39,6 +40,8 @@ class Union(Field):
     A value instance whose type isn't one of the declared variants
     also raises ``ValidationError`` on serialize (strict).
     """
+
+    KIND = FieldKind.UNION
 
     variants: dict[str, type[Seared]]
     tag_key: str = 'type'

@@ -1,6 +1,6 @@
 [project]
 name = "seared"
-version = "0.4.1"
+version = "0.4.2"
 description = "A lightweight Python serialization/deserialization tool"
 authors = [
     { name = "Benj Wiswell", email = "benjwiswell@gmail.com" },
@@ -34,6 +34,9 @@ bench  = [
 [dependency-groups]
 dev = [
     "deptry",
+    # Test-only: the JSON Schema emitter's tests validate against what it
+    # emits (seared.doc.json_schema). seared itself never validates a schema.
+    "jsonschema>=4.23",
     "prek",
     "pytest>=8.0,<10.0",
     "ruff",

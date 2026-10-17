@@ -21,6 +21,7 @@ import pandas as pd
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -30,6 +31,8 @@ class PandasFrame(Field):
     Use ``many=True`` is NOT supported — a field is one DataFrame.
     Wrap in a ``T(SomeWrapperClass)`` if you need a list-of-frames.
     """
+
+    KIND = FieldKind.PANDAS
 
     def __post_init__(self) -> None:
         """Reject ``many`` / ``keyed`` — one field holds exactly one frame."""

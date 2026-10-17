@@ -10,9 +10,12 @@ if TYPE_CHECKING:
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 class T(Field):
+    KIND = FieldKind.NESTED
+
     __slots__ = ('schema',)
 
     def __init__(  # noqa: PLR0913 — mirrors the full Field option set

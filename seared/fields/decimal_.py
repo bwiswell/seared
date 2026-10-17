@@ -15,6 +15,7 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -28,6 +29,8 @@ class Decimal(Field):
     via IEEE 754 double). Use the default unless you specifically need
     JSON-native numeric typing on the wire.
     """
+
+    KIND = FieldKind.DECIMAL
 
     as_number: bool = False
 

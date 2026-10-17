@@ -6,10 +6,13 @@ from typing import Any
 from seared._core.errors import ValidationError
 
 from .field import Field
+from .kind import FieldKind
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Dict(Field):
+    KIND = FieldKind.DICT
+
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> dict:
         """Python ``dict`` → JSON object (shallow copy; values pass through)."""
         if validate and not isinstance(value, dict):

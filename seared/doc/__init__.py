@@ -4,6 +4,9 @@
 - ``document(cls)`` → a Markdown page for one class.
 - ``build_docs(target)`` → ``{path: markdown}`` for a whole module/package.
 - ``undocumented(target)`` → each field with no ``doc=`` (0.4.1).
+- ``json_schema(cls, mode=)`` → a JSON Schema 2020-12 document for a class,
+  of its input (``'load'``) or its output (``'dump'``); ``field_schema`` is
+  the field-level unit it's built from (0.4.2).
 - CLI: ``python -m seared.doc <module-or-package> [-o docs] [--check] [--require-docs]``.
 
 The two stages are deliberately separate: ``introspect`` produces a
@@ -22,6 +25,7 @@ from .introspect import (
     introspect,
     is_seared_class,
 )
+from .json_schema import field_schema, json_schema
 from .render import (
     document,
     render_enums,
@@ -39,8 +43,10 @@ __all__ = [
     'build_docs',
     'collect',
     'document',
+    'field_schema',
     'introspect',
     'is_seared_class',
+    'json_schema',
     'main',
     'render_enums',
     'render_fields_table',

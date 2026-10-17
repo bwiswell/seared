@@ -31,22 +31,22 @@ for free.
 
 ## Setup
 
-Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.1`).
+Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.2`).
 Install one by its tag:
 
 ```sh
 # uv
-uv add git+https://github.com/bwiswell/seared --tag v0.4.1
+uv add git+https://github.com/bwiswell/seared --tag v0.4.2
 
 # pip
-pip install git+https://github.com/bwiswell/seared.git@v0.4.1
+pip install git+https://github.com/bwiswell/seared.git@v0.4.2
 ```
 
 `uv add` records the tag as the dependency's source:
 
 ```toml
 [tool.uv.sources]
-seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.1" }
+seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.2" }
 ```
 
 **The tag is the pin.** uv doesn't check a version specifier such as
@@ -119,11 +119,11 @@ cell raises. `to_csv` heads each column with its wire key and gives a
 **10. msgpack writes a `Tuple`'s `Bytes` slot as raw bytes**, as it writes a
 top-level `Bytes`, where it wrote base64. Payloads written before still load.
 
-**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.1` is the latest), and
-`rusted` to its `v0.4.0` with it: 0.4.1 changes nothing `rusted` sees. zeared
-pins seared by tag itself (zeared 0.4.1 pins `v0.4.0`), and uv refuses two
-tags for one package, so a project on both uses the seared tag its zeared
-pins.
+**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.2` is the latest), and
+`rusted` to its `v0.4.0` with it: 0.4.1 and 0.4.2 change nothing `rusted`
+sees. zeared pins seared by tag itself (zeared 0.4.1 pins `v0.4.0`), and uv
+refuses two tags for one package, so a project on both uses the seared tag
+its zeared pins.
 
 ## Quick start
 
@@ -344,6 +344,12 @@ spec = Outer.__seared_fields__[0]
 spec.attr, spec.wire, spec.field     # 'a', 'a', Int(...)
 ```
 
+`s.field_kind(field)` says which built-in field a field is, as an
+`s.FieldKind` (`FieldKind.INT`, `FieldKind.NESTED`, …), and a subclass of
+`Str` is still `FieldKind.STR`. Map fields by kind rather than by
+`type(field).__name__`, which misses a subclass. See
+[`docs/fields/kind.md`](docs/fields/kind.md).
+
 ## Schema docs
 
 `seared.doc` writes a Markdown page for every `@seared` class in a module or
@@ -368,6 +374,29 @@ then the enum members and `Union` variants. Pages mirror the package tree
 and link nested classes to each other. See
 [`docs/doc/index.md`](docs/doc/index.md).
 
+## JSON Schema
+
+`seared.doc.json_schema` (0.4.2) describes a class's JSON wire form as a JSON
+Schema 2020-12 document, for a tool's input and output, an API document, or a
+check in another language. It describes and never validates, so seared
+stays zero-dependency.
+
+```python
+from seared.doc import json_schema
+
+json_schema(Reading)                    # the input: what load takes
+json_schema(Reading, mode='dump')       # the output: what dump writes
+json_schema(Reading, unknown='raise')   # closed: keys no class declares are refused
+```
+
+The two modes make two promises: input valid against the load schema
+loads, and what `dump` writes validates against the dump schema. Nested
+classes go under `$defs`, a `Union` is an envelope on its parent, and a
+schema is closed exactly where `load` would refuse an unknown key, which by
+default is where the class says (`@s.seared(unknown='raise')`).
+`field_schema` gives one field's schema, for an object of your own. See
+[`docs/doc/json_schema.md`](docs/doc/json_schema.md).
+
 ## Documentation
 
 `docs/` mirrors the source layout exactly — namespace subdirs map to
@@ -380,7 +409,7 @@ namespace dirs in `docs/`, and each source file gets one `.md`.
 - [`docs/_core/`](docs/_core/) — `Seared` base class, `@seared` decorator, exception hierarchy, the accelerator seam (`accel.md`), unknown keys (`unknown.md`).
 - [`docs/fields/`](docs/fields/) — every Field subclass (one doc per file).
 - [`docs/formats/index.md`](docs/formats/index.md) — file-format codecs (JSON / TOML / YAML / CSV).
-- [`docs/doc/index.md`](docs/doc/index.md) — schema documentation generation (`seared.doc`).
+- [`docs/doc/index.md`](docs/doc/index.md) — schema documentation generation (`seared.doc`), Markdown and JSON Schema.
 
 ## Errors
 

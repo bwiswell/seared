@@ -9,6 +9,30 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
+## 0.4.2 — 2026-10-17
+
+**JSON Schema from a class, on a public field kind.** `seared.doc.json_schema` describes what a class's `load` takes
+and what its `dump` writes, and `s.field_kind` says which built-in field a field is, a subclass included. Neither
+changes what `load` or `dump` does.
+
+### Added
+
+- **`s.field_kind(field)` and `s.FieldKind`,** which built-in field a field is: `FieldKind.INT`, `FieldKind.NESTED`
+  for a `T`, and so on for all twenty, as a `StrEnum` whose values are the accelerator spec's kind names. A subclass
+  has its base's kind, where a table keyed on `type(field).__name__` missed it. A subclass that changes its base's
+  wire form names its own in a `KIND` class attribute, or `None`; a name that isn't a kind raises `TypeError` where
+  the class is defined. `seared.doc`'s `FieldDoc` gains `kind`. The accelerator still matches the exact class, so a
+  subclass declines it as before, and the spec it sees is unchanged.
+- **`seared.doc.json_schema(cls, mode=, unknown=)`,** a class's JSON wire form as a JSON Schema 2020-12 document, in
+  two modes. `mode='load'` describes the canonical input, and input valid against it loads; `mode='dump'` describes
+  what `dump` writes for a valid instance, and that output validates against it. The two differ on `dump=False`
+  fields, on what's required, on defaults and on a `Union`'s fallback. Nested classes go under `$defs`, a `Union` is
+  an envelope on its parent's object, and a `Tuple` is a fixed-length array. A schema is closed exactly where `load`
+  would refuse an unknown key: by default where the class says, over the whole document, with a fallback payload
+  left open. It describes the JSON carrier, and a field with no kind raises `TypeError` naming it.
+- **`seared.doc.field_schema(field, mode=, defs=)`,** the field-level unit `json_schema` is built from, for an
+  object of your own, such as a topic's slots alone.
+
 ## 0.4.1 — 2026-10-17
 
 **Refusing unknown keys, for config files.** A key a class doesn't declare is still dropped by default, which the
