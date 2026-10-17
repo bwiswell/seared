@@ -50,9 +50,12 @@ nullable to keep it.
   (`required` plus `type: [X, "null"]`). A nullable required field must be
   present, but may be `null`. Annotate a nullable field `X | None`.
 - **The same in lax mode.** `validate=False` relaxes coercion, not this.
-- **`null` elements** inside a `many` or `keyed` collection are still an
-  error. `nullable` is about the field's own value: a nullable list can be
-  `null`, but can't hold one.
+- **`null` elements** inside a `many` or `keyed` collection are an error
+  in strict mode. `nullable` is about the field's own value: a nullable
+  list can be `null`, but can't hold one. Lax mode hands the element to
+  the field's own coercion, which differs by kind: `Str` makes it
+  `'None'`, `Bool` makes it `False`, `Path` and `Decimal` keep `None`, and
+  the rest (`Int`, `Float`, `UUID`, the dates, …) still refuse it.
 - **`Union` refuses `nullable=`**: its envelope spans the parent's keys,
   so there is no one key to carry a `null`.
 - **Codecs:** YAML's `~` and msgpack's `nil` read as JSON's `null` does.
@@ -69,8 +72,8 @@ Python value → wire-safe value. `validate=True` raises
 best-effort coercion.
 
 `**kwargs` carries optional codec hints — most notably `format='json' |
-'msgpack'`. Fields with native binary representations (`Bytes`,
-`NDArray`) act on it; other fields ignore.
+'msgpack'`. `Bytes` acts on it, emitting raw bytes under msgpack, and `T`
+and `Tuple` pass it to what they hold; other fields ignore it.
 
 ## `deserialize(value, validate=True, **kwargs)`
 

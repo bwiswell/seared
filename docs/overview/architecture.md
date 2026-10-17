@@ -2,8 +2,10 @@
 
 `seared` is a hand-rolled `__slots__` dataclass library — declarative
 schemas with validate/coerce semantics on top of `dataclasses.dataclass`.
-Replaced marshmallow as the core in 0.1.x; zero runtime dependencies
-(`numpy` optional for `NDArray`).
+Replaced marshmallow as the core in 0.1.x; zero runtime dependencies.
+Extras add `numpy` (`NDArray`), `pyyaml` (YAML), `tomli-w` (writing
+TOML), and `pandas` / `polars` (the frame fields); `rusted`, installed
+alongside rather than as an extra, compiles `load` / `dump`.
 
 ## Decorator pipeline
 
@@ -39,13 +41,15 @@ When `@s.seared` runs:
 5. **Generate `dump` / `load`** — bound classmethods that walk the
    spec list, calling each field's `serialize` / `deserialize`. Both
    accept an optional `format='json'` kwarg (default JSON-safe wire
-   shape; `'msgpack'` opts into native binary for `Bytes` and
-   `NDArray`).
+   shape; `'msgpack'` opts into native binary for `Bytes`).
 6. **Offer the class to an accelerator backend** — when one is
-   installed and every field is a supported seared-native type, the
-   generated closures are replaced by compiled equivalents. Nothing is
-   paid, and nothing is emitted, when no backend is present. See
+   installed and every field is a supported seared-native type, a
+   compiled pair stands in for the Python closures. Nothing is paid, and
+   nothing is emitted, when no backend is present. See
    [`accel.md`](../_core/accel.md).
+7. **Attach the format codecs** — `to_json` / `from_json`, `to_toml` /
+   `from_toml`, `to_yaml` / `from_yaml` and `to_csv` / `from_csv`, from
+   `seared.formats`. See [`../formats/index.md`](../formats/index.md).
 
 ## Field interface
 
@@ -100,13 +104,15 @@ checked at class-definition time.
 
 `dump(obj, format='msgpack')` and `load(data, format='msgpack')` thread
 the carrier hint through `_apply` and into each field's `serialize` /
-`deserialize` via `**kwargs['format']`. `Bytes` and `NDArray` use it to
-emit native bytes (no base64 overhead) when the carrier supports them.
+`deserialize` via `**kwargs['format']`. `Bytes` uses it to emit native
+bytes (no base64 overhead) when the carrier supports them, and `T` and
+`Tuple` pass it on to what they hold.
 JSON callers pass `format='json'` (default) or omit the kwarg.
 
 ## Errors
 
-- `SearedError` — base.
+- `SearedError` — base; raised itself only at decoration time, by the
+  accelerator seam.
 - `ValidationError` — type / shape mismatch on serialize or deserialize.
 
 See [`../_core/errors.md`](../_core/errors.md) for the full hierarchy.
@@ -122,5 +128,7 @@ See [`../_core/errors.md`](../_core/errors.md) for the full hierarchy.
 - [`../fields/`](../fields/) — every Field subclass (one doc per file).
 - [`../formats/index.md`](../formats/index.md) — codec orchestrator +
   per-format pages.
+- [`../doc/index.md`](../doc/index.md) — schema documentation
+  generation (`seared.doc`).
 
 That's the entire surface. Everything else is field types.

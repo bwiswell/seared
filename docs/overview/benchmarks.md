@@ -158,13 +158,16 @@ on dump, and `rusted` is
   is a slot read.
 - **No schema class layer.** Field metadata is stored as `Field` defaults
   on the dataclass; no separate `Schema` object indirection on every call.
-- **Pre-baked spec tuple.** `__seared_fields__` is computed once at decorator
-  time; each `dump` / `load` walks the same `(attr, wire, Field)` triples.
+- **Pre-baked spec tuple.** The loop spec is computed once at decorator
+  time: `dump` / `load` walk plain `(attr, wire, field, unwrap)` tuples,
+  with each field's `UNWRAP` flag already resolved, rather than the
+  `FieldSpec` named tuples `__seared_fields__` exposes or a per-call
+  `UNWRAP` check.
 - **No Marshmallow `Meta` / `pre_load` / `post_dump` machinery.** The
   decorator does one simple pass per direction.
-- **`format=` kwarg threading is free.** `Bytes` / `NDArray` get their
-  carrier hint via `**kwargs`; other fields ignore — no per-call dispatch
-  overhead.
+- **`format=` kwarg threading is free.** `Bytes` gets its carrier hint
+  via `**kwargs` (`T` and `Tuple` pass it on); other fields ignore it — no
+  per-call dispatch overhead.
 
 ## Reproduction
 

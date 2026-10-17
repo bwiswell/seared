@@ -1,4 +1,4 @@
-# `_union.py` — `Union` (tagged-payload UNWRAP field)
+# `union.py` — `Union` (tagged-payload UNWRAP field)
 
 ```python
 @s.seared
@@ -12,6 +12,23 @@ Tagged-union field implementing the `{tag, payload}` envelope pattern.
 Marked `UNWRAP = True`, so the seared decorator merges its serialised
 form at the parent's top-level wire dict rather than nesting under one
 key.
+
+## Options
+
+| Option | Default | |
+|---|---|---|
+| `variants` | required | `{tag: VariantCls}`: the tags this union knows, each with its `@seared` class. Must be non-empty. |
+| `tag_key` | `'type'` | The wire key that holds the tag. |
+| `payload_key` | `None` | `None` merges the variant's fields beside the tag (flat); a string nests them under that key. |
+| `fallback` | `None` | The class an unknown tag loads as (see [Unknown tags](#unknown-tags)). |
+| `dump` | `True` | `False` leaves the whole envelope out of `dump`. |
+| `doc` | `None` | Text for generated schema pages. |
+
+`many`, `keyed`, `required` and `data_key` are accepted and ignored: the
+envelope is always one value spread over the parent's keys, and always
+required, since a missing tag raises. `default=` (other than `None`),
+`default_factory=` and `nullable=True` raise `TypeError`, for the reasons
+below.
 
 ## Two envelope shapes
 

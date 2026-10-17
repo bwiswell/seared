@@ -21,7 +21,7 @@ for free.
 - **Tagged unions.** `s.Union(variants=…)` decodes `{tag, payload}` envelopes to typed variant instances; pattern-match at the dispatch site. Multiple Unions per class as long as their wire keys are disjoint.
 - **Schema-evolution fallback.** `s.Union(fallback=Variant)` coerces unknown tags to a sentinel variant rather than raising — useful for older consumers receiving newer schemas.
 - **File-format codecs out of the box.** `Cls.to_json` / `Cls.from_json` / `Cls.to_toml` / `Cls.from_toml` / `Cls.to_yaml` / `Cls.from_yaml` / `Cls.to_csv` / `Cls.from_csv` are auto-attached at decorator time. JSON / TOML-read / CSV are stdlib; YAML / TOML-write / DataFrame fields are optional extras.
-- **`format=` carrier hint.** `Cls.dump(obj, format='msgpack')` threads the hint into each field; `Bytes` and `NDArray` switch to native binary, dropping the ~33% base64 overhead.
+- **`format=` carrier hint.** `Cls.dump(obj, format='msgpack')` threads the hint into each field; `Bytes` switches to native binary, dropping the ~33% base64 overhead, and `T` and `Tuple` pass the hint to what they hold.
 - **Typed & type-checker-friendly.** `@s.seared` is a PEP 681 `@dataclass_transform`, so `x: str = s.Str(...)` type-checks under `ty` / `pyright` / `mypy` — no `invalid-assignment`, and `.load()` results carry their annotated attribute types. See [Type checking](#type-checking).
 - **`null` is absent unless you say otherwise.** A wire `null` can't satisfy `required=True` or displace a default; `nullable=True` makes `None` a real value that `load` keeps and `dump` writes. See [`docs/fields/field.md`](docs/fields/field.md#null-on-the-wire).
 - **Mutable-default safety.** `default_factory=list` / `default_factory=dict` / `default_factory=set` build a fresh value per-instance — no shared-default footgun. (A mutable `default=[...]` is deep-copied per-instance as a fallback.)
@@ -31,26 +31,26 @@ for free.
 
 ## Setup
 
-Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`).
+Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.0`).
 Install one by its tag:
 
 ```sh
 # uv
-uv add git+https://github.com/bwiswell/seared --tag v0.3.4
+uv add git+https://github.com/bwiswell/seared --tag v0.4.0
 
 # pip
-pip install git+https://github.com/bwiswell/seared.git@v0.3.4
+pip install git+https://github.com/bwiswell/seared.git@v0.4.0
 ```
 
 `uv add` records the tag as the dependency's source:
 
 ```toml
 [tool.uv.sources]
-seared = { git = "https://github.com/bwiswell/seared", tag = "v0.3.4" }
+seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.0" }
 ```
 
 **The tag is the pin.** uv doesn't check a version specifier such as
-`seared>=0.3,<0.4` against a git source: it takes whatever the source points
+`seared>=0.4,<0.5` against a git source: it takes whatever the source points
 at, and a source without a tag points at the tip of `master`. Moving to a new
 release means moving the tag. What changed in each release, and what may
 break on the way, is in [`CHANGELOG.md`](CHANGELOG.md).
@@ -65,6 +65,63 @@ adding `seared` as a direct git reference may require enabling
 [tool.hatch.metadata]
 allow-direct-references = true
 ```
+
+## Upgrading to 0.4.0
+
+0.4.0 is seared's breaking release. Every break is listed here with what
+to do; the full list is in [`CHANGELOG.md`](CHANGELOG.md).
+
+**1. Error messages name their location.** A `ValidationError` reads
+`Cls.path: reason`, as in `Outer.items[1].n: cannot deserialize 'x' as int`.
+Match a pattern against `err.reason`, which keeps each field's text word for
+word. Two messages are reworded: `Outer.n is required` reads
+`Outer.n: required key missing` (naming the wire key), and
+`Outer.load expected dict, got list` reads `Outer: expected dict, got list`.
+
+**2. Install `rusted` 0.4.0 with it.** seared emits `SPEC_ABI` 2, so it
+declines `rusted` 0.3.x: every class runs the pure-Python path, correct but
+slower, and `SEARED_ACCEL=require` raises `SearedError` when a class is
+decorated. Install rusted by its `v0.4.0` tag (see [Accelerator](#accelerator)).
+
+**3. `Union(default=)` is `Union(fallback=)`.** On a `Union`, `default=`
+(anything but `None`) and `default_factory=` raise `TypeError` pointing at
+`fallback=`.
+
+**4. `missing=` is gone.** Use `default=`, or `default_factory=` for a
+mutable default. `Field.missing` goes with it; read `f.default`.
+
+**5. A wire `null` reads as absent** on a field that isn't `nullable=True`:
+a required field raises `required key missing`, and a defaulted one gets its
+default, where the `null` used to satisfy `required` and replace the default
+with `None`. seared's own `dump` never wrote those `null`s, so only `null`s
+from elsewhere are affected. Declare `nullable=True` where `null` is a real
+value (see [`field.md`](docs/fields/field.md#null-on-the-wire)).
+
+**6. Strict coercion no longer loses data.** A strict `Int` refuses `3.7`,
+which it truncated; a strict `Bool` refuses ints other than `0` and `1`; and
+a strict int-valued `Enum` refuses `2.9` and `True`. Lax mode is unchanged.
+Where such input loaded before, clean it, or declare the class
+`validate=False`.
+
+**7. `inf` into an `Int`, or an int-valued `Enum`, raises
+`ValidationError`** in both modes, where it raised a bare `OverflowError`.
+
+**8. Regenerate committed schema docs.** `seared.doc`'s fields table shows
+`None` defaults where it showed `null`, notes nullable fields, and marks a
+`Union` row required, so `--check` fails until a page is regenerated once
+(see [Schema docs](#schema-docs)).
+
+**9. CSV reads an empty cell as null**, by item 5's rule: a `Str` gets its
+default (or `None` when nullable) where it got `''`, and an empty required
+cell raises. `to_csv` heads each column with its wire key and gives a
+`dump=False` field no column.
+
+**10. msgpack writes a `Tuple`'s `Bytes` slot as raw bytes**, as it writes a
+top-level `Bytes`, where it wrote base64. Payloads written before still load.
+
+**11. Pins.** Move seared's source to `tag = "v0.4.0"`, and `rusted` to its
+`v0.4.0` with it. zeared 0.4.0 pins seared `v0.4.0` itself, so a project on
+both moves the two together.
 
 ## Quick start
 
@@ -120,12 +177,14 @@ also = Outer.from_json(raw)
 ```python
 @s.seared(slots=False)       # allow instance __dict__ (default: slots=True)
 @s.seared(validate=False)    # lax mode: skip type checks, coerce where obvious
+@s.seared(accel=False)       # keep the pure-Python load/dump (default: accel=True)
 ```
 
-Both flags are orthogonal. `validate=True` (the default) raises
+The three flags are orthogonal. `validate=True` (the default) raises
 `s.ValidationError` on type mismatches during load/dump; `validate=False`
 trusts the caller and is faster on hot paths where inputs are already
-known-good.
+known-good. `accel=False` keeps the class off the compiled accelerator even
+when `rusted` is installed (see [Accelerator](#accelerator)).
 
 See [`docs/_core/decorator.md`](docs/_core/decorator.md) for the full
 internals.
@@ -144,7 +203,7 @@ class Cfg(s.Seared):
 
 cfg = Cfg(port=7447)     # `name` optional, `port` required — enforced
 reveal_type(cfg.port)    # int
-reveal_type(Cfg.load({}).name)  # str  (.load() returns the concrete class)
+reveal_type(Cfg.load({'port': 7447}).name)  # str  (.load() returns the concrete class)
 ```
 
 - Use **`default=`** (static) or **`default_factory=`** (per-instance,
@@ -253,6 +312,28 @@ spec = Outer.__seared_fields__[0]
 spec.attr, spec.wire, spec.field     # 'a', 'a', Int(...)
 ```
 
+## Schema docs
+
+`seared.doc` writes a Markdown page for every `@seared` class in a module or
+package, from its fields, their `doc=` text and the class docstring, plus
+an index. `--check` turns it into a CI guard that fails when the committed
+pages have drifted from the code.
+
+```sh
+seared-doc mypkg.models -o docs/models            # or: python -m seared.doc …
+seared-doc mypkg.models -o docs/models --check    # exit 1 on drift
+```
+
+```python
+page = s.document(Reading)      # one class → Markdown
+model = s.introspect(Reading)   # the render-agnostic SchemaDoc behind it
+```
+
+Each page has a fields table (wire key, type, required, default, notes),
+then the enum members and `Union` variants. Pages mirror the package tree
+and link nested classes to each other. See
+[`docs/doc/index.md`](docs/doc/index.md).
+
 ## Documentation
 
 `docs/` mirrors the source layout exactly — namespace subdirs map to
@@ -261,16 +342,17 @@ namespace dirs in `docs/`, and each source file gets one `.md`.
 - [`docs/overview/architecture.md`](docs/overview/architecture.md) — decorator pipeline, `UNWRAP`, format hints.
 - [`docs/overview/benchmarks.md`](docs/overview/benchmarks.md) — full benchmark methodology, results, and reproduction steps.
 - [`docs/seared.md`](docs/seared.md) — package re-export module entry point.
-- [`docs/_core/`](docs/_core/) — `Seared` base class, `@seared` decorator, exception hierarchy.
+- [`docs/_core/`](docs/_core/) — `Seared` base class, `@seared` decorator, exception hierarchy, the accelerator seam (`accel.md`).
 - [`docs/fields/`](docs/fields/) — every Field subclass (one doc per file).
 - [`docs/formats/index.md`](docs/formats/index.md) — file-format codecs (JSON / TOML / YAML / CSV).
+- [`docs/doc/index.md`](docs/doc/index.md) — schema documentation generation (`seared.doc`).
 
 ## Errors
 
 | Exception | Raised when |
 |-----------|-------------|
 | `s.ValidationError` | Wire value fails type checks; required field missing; bad enum member; unknown `Union` tag without `fallback=`; CSV/Pandas/Polars shape mismatch. |
-| `s.SearedError`     | Base; `ValidationError` extends this. Also extends `ValueError` for downstream compatibility (`except ValueError:` catches seared errors). |
+| `s.SearedError`     | Base; `ValidationError` extends this. Also extends `ValueError` for downstream compatibility (`except ValueError:` catches seared errors). Raised itself at decoration time for an unrecognised `SEARED_ACCEL`, or `SEARED_ACCEL=require` with no backend that loads. |
 
 A `ValidationError` says where it happened. Its message reads
 `Outer.items[1].n: cannot deserialize 'x' as int`, and the parts are
@@ -361,9 +443,9 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 
 ## Limits
 
-- **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` and `NDArray` honour the hint; other fields are unaffected.
+- **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` honours the hint, and `T` and `Tuple` pass it on; other fields are unaffected.
 - **No async variants.** seared is pure CPU-bound transformation; no async path is planned.
-- **`nullable` is about a field's own value.** A `null` *element* inside a `many` / `keyed` collection is still an error, and a `Union` can't be nullable. TOML has no null, so `to_toml` leaves a nullable `None` out and it reads back as absent.
+- **`nullable` is about a field's own value.** A `null` *element* inside a `many` / `keyed` collection is an error in strict mode (lax mode coerces it per kind; see [`field.md`](docs/fields/field.md#null-on-the-wire)), and a `Union` can't be nullable. TOML has no null, so `to_toml` leaves a nullable `None` out and it reads back as absent.
 - **Construction doesn't check `required`.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises.
 - **Unknown wire keys are ignored** on `load`, by design: an older consumer can read a newer producer's payload.
 - **Strict mode still coerces, without losing data.** `Int` reads numeric strings (`'42'`) and integral floats (`3.0`), but refuses `3.7`, which lax mode truncates; `Bool` reads `'yes'` / `'off'` and the ints `0` / `1`; `Float` reads `'nan'`. String coercion is deliberate, since it is how string-only sources such as topic-key captures decode.
@@ -411,4 +493,4 @@ A sixth refuses any commit on `master`.
   publishes a GitHub release.
 
 Tests mirror the source layout exactly — one `test_*.py` per source file,
-including subdir structure (`tests/_core/`, `tests/fields/`, `tests/formats/`).
+including subdir structure (`tests/_core/`, `tests/doc/`, `tests/fields/`, `tests/formats/`).

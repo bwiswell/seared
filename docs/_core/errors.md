@@ -2,7 +2,7 @@
 
 ```
 ValueError                       # stdlib
-└── SearedError                  # seared base; not raised directly
+└── SearedError                  # seared base; raised directly for accelerator setup
     └── ValidationError          # type / shape mismatch on load or dump
 ```
 
@@ -11,8 +11,7 @@ Both exceptions are re-exported at the package root: `s.SearedError`,
 
 ## When each is raised
 
-`ValidationError` is the only concrete error seared raises today.
-Sources:
+`ValidationError` is what `load` and `dump` raise. Sources:
 
 - **`load`** — required field absent (or `null`, unless nullable); type mismatch on a wire value;
   unknown `Union` tag without a `fallback=` variant; CSV/Pandas/Polars
@@ -20,10 +19,19 @@ Sources:
 - **`dump`** — strict `validate=True` produces a `ValidationError`
   when an instance attribute doesn't match the declared field type.
 
-`SearedError` is the catch-all base — handy for `except SearedError:`
-without naming `ValidationError` directly. Future error types (for
-codec failures, schema-version mismatches, etc.) would extend
-`SearedError` rather than `ValidationError`.
+`SearedError` itself is raised at decoration time by the accelerator seam
+([`accel.md`](accel.md)), never by `load` or `dump`:
+
+- **`SEARED_ACCEL` set to anything unrecognised.** A typo that silently
+  disabled acceleration would defeat the `require` mode.
+- **`SEARED_ACCEL=require` with no backend that loads,** whether none is
+  installed or the installed one declares another `SPEC_ABI`. A class that
+  declines on its own merits is not an error in any mode.
+
+It is also the catch-all base, handy for `except SearedError:` without
+naming `ValidationError`. Future error types (for codec failures,
+schema-version mismatches, etc.) would extend `SearedError` rather than
+`ValidationError`.
 
 ## Where it happened (0.4.0)
 

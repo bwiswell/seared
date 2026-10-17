@@ -11,7 +11,7 @@ zero-dependency and pure Python, and any platform without a wheel simply
 runs the Python path.
 
 ```sh
-uv add git+https://www.github.com/bwiswell/rusted.git   # nothing in your code changes
+uv add git+https://github.com/bwiswell/rusted --tag v0.4.0   # nothing in your code changes
 ```
 
 There is no `seared[core]` extra: seared declares no dependency on the
