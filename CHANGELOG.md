@@ -9,7 +9,7 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
-## 0.4.0 — unreleased
+## 0.4.0 — 2026-10-16
 
 **Errors that say where they happened, `null` read as absent, lossless strict coercion, and `SPEC_ABI` 2.**
 The breaking release: the README's *Upgrading to 0.4.0* lists every break with what to do.
@@ -111,8 +111,9 @@ The breaking release: the README's *Upgrading to 0.4.0* lists every break with w
   gain what they lacked: the date and time `format=` option, coercion for `Float` and `Str`, an exact `Enum`
   lookup, `Union`'s options.
 - The README gains *Upgrading to 0.4.0*, and installs seared by its `v0.4.0` tag.
-- **Dependencies:** the dev group's `pytest` range lifts to `>=8.0,<10.0`. The lockfile stays on 8.4.2 until the
-  release's relock; the suite passes on 9.1.1.
+- **Dependencies:** the dev group's `pytest` range lifts to `>=8.0,<10.0`, and the refreshed lockfile resolves
+  pytest 9.1.1, ruff 0.17.1 and ty 0.0.89, and polars 2.0 for the frame tests, which the `polars` extra's `>=1.0`
+  already allowed. seared itself still has no runtime dependencies.
 
 ### Fixed
 
