@@ -26,6 +26,10 @@ wire depends on, but a class or a call can now refuse it instead.
 - **`s.unknown_keys(cls, data)`** reports the path of every unknown key without raising. It walks `T` targets,
   `many` and `keyed` elements, `Tuple` slots and `Union` envelopes, and skips `Dict` values and a payload routed to
   `fallback=`.
+- **`--require-docs`**, a flag for `python -m seared.doc`: before writing or checking anything, it lists each field
+  without a `doc=` as `module.Class.attr` and fails with exit status 1, so with `--check` CI fails on missing docs
+  as well as drift. `seared.doc.undocumented(target)` returns the same list. `python -m zeared.doc` runs the same
+  CLI, so it gains the flag with this version.
 - **Docs for config files:** `docs/overview/configuration.md`, and `docs/_core/unknown.md` for the new module. The
   README gains *Configuration files*.
 

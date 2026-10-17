@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from seared.doc.generate import build_docs, check_docs, collect, write_docs
+import seared as s
+from seared.doc import generate
+from seared.doc.generate import build_docs, check_docs, collect, main, undocumented, write_docs
 
 TARGET = 'doc.sample'
 
@@ -78,3 +80,47 @@ class TestWriteAndCheck:
         sentinel.write_text('keep', encoding='utf-8')
         write_docs(docs, str(tmp_path))
         assert sentinel.read_text(encoding='utf-8') == 'keep'
+
+
+class TestUndocumented:
+    def test_each_field_without_a_doc_in_collects_order(self):
+        # Widget's ``name`` comes from its private base, and is reported on the page that shows it.
+        assert undocumented(TARGET) == [
+            'doc.sample.shared.Geo.lon',
+            'doc.sample.shared.Widget.name',
+            'doc.sample.shared.Widget.size',
+            'doc.sample.telemetry.reading.Reading.source',
+            'doc.sample.telemetry.reading.Reading.value',
+            'doc.sample.telemetry.reading.Reading.where',
+        ]
+
+    def test_a_fully_documented_set_has_none(self):
+        assert undocumented('doc.documented') == []
+
+    def test_a_doc_of_only_whitespace_counts_as_missing(self, monkeypatch):
+        @s.seared
+        class Blank(s.Seared):
+            n: int = s.Int(default=0, doc='   ')
+
+        monkeypatch.setattr(generate, 'collect', lambda _target: [Blank])
+        assert undocumented('anything') == [f'{__name__}.{Blank.__qualname__}.n']
+
+
+class TestRequireDocs:
+    def test_a_missing_doc_fails_before_anything_is_written(self, tmp_path, capsys):
+        assert main([TARGET, '-o', str(tmp_path), '--require-docs']) == 1
+        assert list(tmp_path.iterdir()) == []
+        err = capsys.readouterr().err
+        assert "6 field(s) without doc= under 'doc.sample':" in err
+        assert '  doc.sample.shared.Geo.lon\n' in err
+
+    def test_it_fails_before_a_check_too(self, tmp_path, capsys):
+        assert main([TARGET, '-o', str(tmp_path), '--check', '--require-docs']) == 1
+        assert 'without doc=' in capsys.readouterr().err
+
+    def test_with_every_field_documented_it_generates_as_usual(self, tmp_path):
+        assert main(['doc.documented', '-o', str(tmp_path), '--require-docs']) == 0
+        assert (tmp_path / 'index.md').exists()
+
+    def test_without_the_flag_a_missing_doc_is_fine(self, tmp_path):
+        assert main([TARGET, '-o', str(tmp_path)]) == 0

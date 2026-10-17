@@ -7,6 +7,7 @@ beyond the standard library.
 ```sh
 seared-doc mypkg.models -o docs/models            # write the pages
 seared-doc mypkg.models -o docs/models --check    # CI: fail if they've drifted
+seared-doc mypkg.models -o docs/models --check --require-docs   # …or a field has no doc=
 python -m seared.doc mypkg.models -o docs/models  # the same, without the script
 ```
 
@@ -45,6 +46,7 @@ same pipeline.
 | `render_header`, `render_fields_table`, `render_enums`, `render_variants` | [`render`](render.md) | the page's sections |
 | `collect(target)` | [`generate`](generate.md) | every class reachable from a module or package |
 | `build_docs(target, *, render_one=None)` | [`generate`](generate.md) | the whole doc set, in memory |
+| `undocumented(target)` | [`generate`](generate.md) | every field with no `doc=`, as `module.Class.attr` |
 | `main(argv=None, *, render_one=None, prog=None)` | [`generate`](generate.md) | the CLI |
 
 `document` and `introspect` are also re-exported at the package root, as

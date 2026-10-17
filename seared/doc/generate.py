@@ -1,7 +1,8 @@
 """Doc-set generation.
 
 Discover models, mirror the package tree, cross-link, build the index,
-and diff for ``--check``.
+diff for ``--check``, and list the fields without a ``doc=`` for
+``--require-docs`` (0.4.1).
 
 Factored apart from any single renderer so zeared reuses the whole pipeline
 (discovery / pathing / links / index / check) with its own Message-aware
@@ -136,6 +137,27 @@ def build_docs(target: str, *, render_one: RenderOne | None = None) -> dict[str,
     return out
 
 
+def undocumented(target: str) -> list[str]:
+    """Every field of the doc set's classes that has no ``doc=``, as ``module.Class.attr``.
+
+    The classes are :func:`collect`'s, so the check covers what the doc set
+    documents: a referenced class from another package included, a private
+    base's fields reported on the public class whose page shows them. Classes
+    come in ``collect``'s order, fields in declaration order. A ``doc`` that is
+    only whitespace counts as missing.
+
+    A field's ``doc`` is the notes column of its page, and whatever a downstream
+    tool reads as the field's description, such as an MCP tool's input schema.
+    """
+    missing = []
+    for cls in collect(target):
+        for spec in cls.__seared_fields__:
+            doc = spec.field.doc
+            if not (doc and doc.strip()):
+                missing.append(f'{cls.__module__}.{cls.__qualname__}.{spec.attr}')
+    return missing
+
+
 def write_docs(docs: dict[str, str], outdir: str) -> tuple[int, int]:
     """Write pages under ``outdir`` (create/overwrite ``.md`` only).
 
@@ -175,7 +197,20 @@ def main(argv: list[str] | None = None, *, render_one: RenderOne | None = None, 
     parser.add_argument('target', help='module or package to scan (dotted path)')
     parser.add_argument('-o', '--output', default='docs', help='output directory (default: ./docs)')
     parser.add_argument('--check', action='store_true', help='verify docs are up to date; exit 1 on drift (no writes)')
+    parser.add_argument(
+        '--require-docs',
+        action='store_true',
+        help='exit 1, before writing or checking anything, if a field has no doc=',
+    )
     args = parser.parse_args(argv)
+
+    if args.require_docs:
+        missing = undocumented(args.target)
+        if missing:
+            print(f'{len(missing)} field(s) without doc= under {args.target!r}:', file=sys.stderr)
+            for name in missing:
+                print(f'  {name}', file=sys.stderr)
+            return 1
 
     docs = build_docs(args.target, render_one=render_one)
 
