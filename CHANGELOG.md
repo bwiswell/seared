@@ -9,7 +9,7 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
-## 0.4.0 — 2026-10-16
+## 0.4.0 — 2026-10-17
 
 **Errors that say where they happened, `null` read as absent, lossless strict coercion, and `SPEC_ABI` 2.**
 The breaking release: the README's *Upgrading to 0.4.0* lists every break with what to do.
