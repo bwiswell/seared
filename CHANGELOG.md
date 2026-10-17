@@ -9,10 +9,11 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
-## 0.4.1 — unreleased
+## 0.4.1 — 2026-10-17
 
 **Refusing unknown keys, for config files.** A key a class doesn't declare is still dropped by default, which the
-wire depends on, but a class or a call can now refuse it instead.
+wire depends on, but a class or a call can now refuse it. `seared.doc` gains a coverage check and documents every
+class the decorator built, and `NDArray` gains a `dtype`.
 
 ### Added
 
