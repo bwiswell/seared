@@ -13,6 +13,18 @@
 :func:`field_schema` is the unit both are built from: one field's schema, for a
 caller composing an object of its own.
 
+**Nested classes** go under ``$defs`` and are reached by ``$ref``. Each
+definition is open, and a closed schema closes each object where it's used:
+``unevaluatedProperties: false`` on the root and beside each ``$ref``. A flat
+``Union`` variant shares its parent's object, so it can't be closed alone; this
+way one definition serves a flat variant, a nested target, an open schema and
+a closed one.
+
+**Closed** means refusing a key the class doesn't declare, exactly where
+``load`` would: ``unknown='raise'`` closes every object in the document, as a
+refusing load walks the whole input. What ``load`` never checks stays open: a
+payload routed to a ``Union``'s ``fallback=``, and a ``Dict``'s keys.
+
 It describes the JSON carrier. Under msgpack a ``Bytes`` field travels as raw
 bytes, which no schema here describes. And it only describes: seared validates
 by loading, so nothing here validates against a schema.
@@ -23,9 +35,11 @@ from __future__ import annotations
 import annotationlib
 import types
 import typing
+from dataclasses import dataclass, field
 from typing import Any, Literal, get_args, get_origin
 
 from seared._core.errors import ValidationError
+from seared._core.unknown import check_unknown
 from seared.fields.kind import FieldKind, field_kind
 
 from .introspect import introspect, is_seared_class
@@ -46,37 +60,56 @@ _JSON_TYPES: tuple[tuple[type, str], ...] = (
 )
 
 
-def json_schema(cls: type, *, mode: Mode = 'load') -> dict[str, Any]:
+@dataclass
+class _Emission:
+    """What one emission shares: its mode, whether it's closed, and the definitions so far."""
+
+    mode: Mode
+    closed: bool
+    defs: dict[str, Any]
+    #: Each class already defined in this emission, and its name under ``$defs``.
+    names: dict[type, str] = field(default_factory=dict)
+
+
+def json_schema(cls: type, *, mode: Mode = 'load', unknown: Literal['ignore', 'raise'] | None = None) -> dict[str, Any]:
     """The JSON Schema of ``cls``'s wire form, as a whole document.
 
     Args:
         cls: A ``@seared`` class.
         mode: ``'load'`` for the canonical input, ``'dump'`` for what ``dump``
             writes (see the module docstring for what each promises).
+        unknown: ``'raise'`` to refuse keys the classes don't declare,
+            ``'ignore'`` to allow them, or ``None`` for ``cls``'s own
+            ``unknown=``, as ``load`` reads it.
 
     Returns:
         A JSON Schema 2020-12 document: ``$schema``, ``title`` (the class
-        name), ``description`` (its docstring, when it has one), and the
-        object schema.
+        name), ``description`` (its docstring, when it has one), the object
+        schema, and ``$defs`` for the classes it refers to.
 
     Raises:
         TypeError: If ``cls`` isn't a ``@seared`` class, or a field has no JSON
             Schema (a field class with no kind, or an enum value JSON can't
             hold); the message names the field.
-        ValueError: If ``mode`` is neither ``'load'`` nor ``'dump'``.
+        ValueError: If ``mode`` or ``unknown`` isn't one of its values.
     """
     _check_mode(mode)
+    if unknown is None:
+        unknown = getattr(cls, '__seared_unknown__', 'ignore')
+    check_unknown(unknown, 'json_schema()')
     if not is_seared_class(cls):
         msg = f'json_schema() takes a @seared class, got {cls!r}'
         raise TypeError(msg)
-    defs: dict[str, Any] = {}
+    emission = _Emission(mode=mode, closed=unknown == 'raise', defs={})
     out: dict[str, Any] = {'$schema': DIALECT, 'title': cls.__name__}
     doc = introspect(cls).doc
     if doc:
         out['description'] = doc
-    out.update(_object_schema(cls, mode, defs))
-    if defs:
-        out['$defs'] = dict(sorted(defs.items()))
+    out.update(_object_schema(cls, emission))
+    if emission.closed:
+        out['unevaluatedProperties'] = False
+    if emission.defs:
+        out['$defs'] = dict(sorted(emission.defs.items()))
     return out
 
 
@@ -86,6 +119,7 @@ def field_schema(
     mode: Mode = 'load',
     defs: dict[str, Any],
     annotation: Any = None,
+    unknown: Literal['ignore', 'raise'] = 'ignore',
 ) -> dict[str, Any]:
     """The JSON Schema of one field's value.
 
@@ -93,34 +127,27 @@ def field_schema(
         field: A field, such as one from ``Cls.__seared_fields__``.
         mode: ``'load'`` or ``'dump'``, as for :func:`json_schema`.
         defs: Where the schemas of the classes the field refers to go, keyed by
-            name, for the caller to place under ``$defs``.
+            name, for the caller to place under ``$defs``; its references
+            point there (``#/$defs/Name``). Share one across the fields of one
+            document, emitted with the same ``mode`` and ``unknown``.
         annotation: The field's annotation, which refines a ``Dict``'s values
             (``dict[str, int]``); optional.
+        unknown: ``'raise'`` closes the objects the field holds, as a refusing
+            ``load`` would check them.
 
     Returns:
         The field's schema, its ``doc=`` as ``description`` and, in load mode,
-        its static default as ``default``.
+        its static default as ``default``. A ``Union``'s is its envelope: an
+        object schema for the tag and the payload, which shares its parent's
+        object.
 
     Raises:
         TypeError: If the field has no JSON Schema.
-        ValueError: If ``mode`` is neither ``'load'`` nor ``'dump'``.
+        ValueError: If ``mode`` or ``unknown`` isn't one of its values.
     """
     _check_mode(mode)
-    schema = _kind_schema(field, mode, defs, _element_annotation(field, annotation))
-    # ``keyed`` before ``many``, as ``load`` applies them. Elements are never null.
-    if field.keyed:
-        schema = {'type': 'object', 'additionalProperties': schema}
-    elif field.many:
-        schema = {'type': 'array', 'items': schema}
-    if field.nullable:
-        schema = _or_null(schema)
-    if field.doc:
-        schema['description'] = field.doc
-    if mode == 'load':
-        default = _wire_default(field)
-        if default is not _NO_DEFAULT:
-            schema['default'] = default
-    return schema
+    check_unknown(unknown, 'field_schema()')
+    return _field(field, _Emission(mode=mode, closed=unknown == 'raise', defs=defs), annotation)
 
 
 def _check_mode(mode: object) -> None:
@@ -129,25 +156,56 @@ def _check_mode(mode: object) -> None:
         raise ValueError(msg)
 
 
-def _object_schema(cls: Any, mode: Mode, defs: dict[str, Any]) -> dict[str, Any]:
-    """A class's object schema: its properties by wire key, and which are required."""
+def _field(field: Any, emission: _Emission, annotation: Any) -> dict[str, Any]:
+    """A field's schema: its kind's, wrapped for ``keyed``, ``many`` and ``nullable``, with its notes."""
+    if field_kind(field) is FieldKind.UNION:
+        # An envelope at its parent's level, which ``many``, ``keyed`` and
+        # ``nullable`` don't reach (``load`` passes it the parent's own dict).
+        schema = _union(field, emission)
+    else:
+        schema = _kind_schema(field, emission, _element_annotation(field, annotation))
+        # ``keyed`` before ``many``, as ``load`` applies them. Elements are never null.
+        if field.keyed:
+            schema = {'type': 'object', 'additionalProperties': schema}
+        elif field.many:
+            schema = {'type': 'array', 'items': schema}
+        if field.nullable:
+            schema = _or_null(schema)
+    if field.doc:
+        schema['description'] = field.doc
+    if emission.mode == 'load':
+        default = _wire_default(field)
+        if default is not _NO_DEFAULT:
+            schema['default'] = default
+    return schema
+
+
+def _object_schema(cls: Any, emission: _Emission) -> dict[str, Any]:
+    """A class's object schema, open: its properties by wire key, which are required, and its envelopes."""
     hints = _hints(cls)
     properties: dict[str, Any] = {}
     required: list[str] = []
+    envelopes: list[dict[str, Any]] = []
     for attr, wire, f in cls.__seared_fields__:
-        if mode == 'dump' and not f.dump:
+        if emission.mode == 'dump' and not f.dump:
             continue
         try:
-            properties[wire] = field_schema(f, mode=mode, defs=defs, annotation=hints.get(attr))
+            schema = _field(f, emission, hints.get(attr))
         except TypeError as exc:
             msg = f'{cls.__name__}.{attr}: {exc}'
             raise TypeError(msg) from None
-        if _always_present(f, mode):
+        if field_kind(f) is FieldKind.UNION:
+            envelopes.append(schema)
+            continue
+        properties[wire] = schema
+        if _always_present(f, emission.mode):
             required.append(wire)
-    schema: dict[str, Any] = {'type': 'object', 'properties': properties}
+    out: dict[str, Any] = {'type': 'object', 'properties': properties}
     if required:
-        schema['required'] = required
-    return schema
+        out['required'] = required
+    if envelopes:
+        out['allOf'] = envelopes
+    return out
 
 
 def _always_present(f: Any, mode: Mode) -> bool:
@@ -162,7 +220,39 @@ def _always_present(f: Any, mode: Mode) -> bool:
     return bool(f.required or f.nullable or f.default_factory is not None or f.default is not None)
 
 
-def _kind_schema(field: Any, mode: Mode, defs: dict[str, Any], annotation: Any) -> dict[str, Any]:
+def _ref(cls: Any, emission: _Emission, *, close: bool | None = None) -> dict[str, Any]:
+    """A reference to ``cls``'s definition, defining it first; closed where the emission is, unless ``close`` says.
+
+    A definition is named for its class, and qualified with its module (then
+    numbered) only when another class has taken the name, so output stays stable.
+    """
+    name = emission.names.get(cls)
+    if name is None:
+        schema: dict[str, Any] = {'title': cls.__name__}
+        doc = introspect(cls).doc
+        if doc:
+            schema['description'] = doc
+        schema.update(_object_schema(cls, emission))
+        name = next(c for c in _names(cls) if c not in emission.defs or emission.defs[c] == schema)
+        emission.defs[name] = schema
+        emission.names[cls] = name
+    ref: dict[str, Any] = {'$ref': f'#/$defs/{name}'}
+    if emission.closed if close is None else close:
+        ref['unevaluatedProperties'] = False
+    return ref
+
+
+def _names(cls: type) -> typing.Iterator[str]:
+    yield cls.__name__
+    qualified = f'{cls.__module__}.{cls.__name__}'
+    yield qualified
+    n = 2
+    while True:
+        yield f'{qualified}.{n}'
+        n += 1
+
+
+def _kind_schema(field: Any, emission: _Emission, annotation: Any) -> dict[str, Any]:
     """The schema of one element of the field, by its kind."""
     kind = field_kind(field)
     if kind is None:
@@ -171,15 +261,11 @@ def _kind_schema(field: Any, mode: Mode, defs: dict[str, Any], annotation: Any) 
             'a field class names one with KIND (see seared.fields.kind)'
         )
         raise TypeError(msg)
-    build = _BUILDERS.get(kind)
-    if build is None:
-        msg = f'no JSON Schema for a {kind} field'
-        raise TypeError(msg)
-    return build(field, mode, defs, annotation)
+    return _BUILDERS[kind](field, emission, annotation)
 
 
 def _scalar(json_type: str, **extra: Any) -> Any:
-    def build(_field: Any, _mode: Mode, _defs: dict[str, Any], _annotation: Any) -> dict[str, Any]:
+    def build(_field: Any, _emission: _Emission, _annotation: Any) -> dict[str, Any]:
         return {'type': json_type, **extra}
 
     return build
@@ -193,23 +279,23 @@ def _temporal(json_format: str, *, load_only: bool) -> Any:
     ``time``: input in that form loads, but output can't promise it.
     """
 
-    def build(field: Any, mode: Mode, _defs: dict[str, Any], _annotation: Any) -> dict[str, Any]:
-        if field.format is not None or (load_only and mode == 'dump'):
+    def build(field: Any, emission: _Emission, _annotation: Any) -> dict[str, Any]:
+        if field.format is not None or (load_only and emission.mode == 'dump'):
             return {'type': 'string'}
         return {'type': 'string', 'format': json_format}
 
     return build
 
 
-def _decimal(field: Any, _mode: Mode, _defs: dict[str, Any], _annotation: Any) -> dict[str, Any]:
+def _decimal(field: Any, _emission: _Emission, _annotation: Any) -> dict[str, Any]:
     return {'type': 'number'} if field.as_number else {'type': 'string'}
 
 
-def _bytes(field: Any, _mode: Mode, _defs: dict[str, Any], _annotation: Any) -> dict[str, Any]:
+def _bytes(field: Any, _emission: _Emission, _annotation: Any) -> dict[str, Any]:
     return {'type': 'string', 'contentEncoding': 'base16' if field.encoding == 'hex' else 'base64'}
 
 
-def _enum(field: Any, _mode: Mode, _defs: dict[str, Any], _annotation: Any) -> dict[str, Any]:
+def _enum(field: Any, _emission: _Emission, _annotation: Any) -> dict[str, Any]:
     values = []
     kinds = set()
     for member in field.enum:
@@ -226,7 +312,7 @@ def _enum(field: Any, _mode: Mode, _defs: dict[str, Any], _annotation: Any) -> d
     return {'enum': values}
 
 
-def _dict(_field: Any, _mode: Mode, _defs: dict[str, Any], annotation: Any) -> dict[str, Any]:
+def _dict(_field: Any, _emission: _Emission, annotation: Any) -> dict[str, Any]:
     """An object; its values typed when the annotation is ``dict[str, X]`` for a JSON scalar ``X``.
 
     seared passes a ``Dict``'s values through unchecked, so the annotation is
@@ -242,12 +328,79 @@ def _dict(_field: Any, _mode: Mode, _defs: dict[str, Any], annotation: Any) -> d
     return schema
 
 
-def _opaque(_field: Any, _mode: Mode, _defs: dict[str, Any], _annotation: Any) -> dict[str, Any]:
+def _nested(field: Any, emission: _Emission, _annotation: Any) -> dict[str, Any]:
+    return _ref(field.schema, emission)
+
+
+def _tuple(field: Any, emission: _Emission, _annotation: Any) -> dict[str, Any]:
+    """A fixed-length array, one schema per slot.
+
+    A slot is its field's kind alone: ``Tuple`` hands each value to its slot
+    field directly, so a slot's ``many``, ``keyed`` and ``nullable`` never apply.
+    """
+    slots = []
+    for slot in field.tuple_fields:
+        schema = _kind_schema(slot, emission, None)
+        if slot.doc:
+            schema['description'] = slot.doc
+        slots.append(schema)
+    n = len(slots)
+    return {'type': 'array', 'prefixItems': slots, 'items': False, 'minItems': n, 'maxItems': n}
+
+
+def _union(field: Any, emission: _Emission) -> dict[str, Any]:
+    """The envelope: the tag, then one branch per variant, at the parent's level.
+
+    A flat variant's branch is the variant itself, whose keys share the
+    parent's object; a nested one's is the payload under ``payload_key``. On
+    input, a ``fallback=`` takes any other tag, and its payload stays open, as
+    ``load`` never checks it. ``dump`` writes only the declared tags.
+    """
+    tag = field.tag_key
+    tags = list(field.variants)
+    fallback = field.fallback if emission.mode == 'load' else None
+    tag_schema: dict[str, Any] = {'type': 'string'} if fallback is not None else {'type': 'string', 'enum': tags}
+    branches: list[dict[str, Any]] = []
+    for name, variant in field.variants.items():
+        selects = {'properties': {tag: {'const': name}}, 'required': [tag]}
+        branches.append({'if': selects, 'then': _payload(field, variant, emission, close=None)})
+    if fallback is not None:
+        declared = {'properties': {tag: {'enum': tags}}}
+        branches.append({'if': declared, 'else': _payload(field, fallback, emission, close=False)})
+    return {'type': 'object', 'properties': {tag: tag_schema}, 'required': [tag], 'allOf': branches}
+
+
+def _payload(field: Any, variant: type, emission: _Emission, *, close: bool | None) -> dict[str, Any]:
+    """One variant's branch: the variant at the parent's level (flat), or under ``payload_key`` (nested).
+
+    A flat variant isn't closed here: its keys share the parent's object, which
+    is closed where it's used. A fallback payload is marked as all evaluated,
+    so a closed parent lets its keys through.
+    """
+    if field.payload_key is None:
+        ref = _ref(variant, emission, close=False)
+        if close is False:
+            ref['unevaluatedProperties'] = True
+        return ref
+    branch: dict[str, Any] = {'properties': {field.payload_key: _ref(variant, emission, close=close)}}
+    # An absent payload loads as ``{}``, which only a variant needing nothing
+    # accepts; ``dump`` always writes it.
+    if emission.mode == 'dump' or _needs_a_key(variant):
+        branch['required'] = [field.payload_key]
+    return branch
+
+
+def _needs_a_key(cls: Any) -> bool:
+    """Whether ``{}`` fails to load as ``cls``: it has a required field, or a ``Union``, whose tag is."""
+    return any(f.required or field_kind(f) is FieldKind.UNION for _, _, f in cls.__seared_fields__)
+
+
+def _opaque(_field: Any, _emission: _Emission, _annotation: Any) -> dict[str, Any]:
     """An array: its nested lists hold any shape, and a 0-d one dumps as a scalar."""
     return {}
 
 
-def _records(_field: Any, _mode: Mode, _defs: dict[str, Any], _annotation: Any) -> dict[str, Any]:
+def _records(_field: Any, _emission: _Emission, _annotation: Any) -> dict[str, Any]:
     """A frame: the list of row records both frame fields write and a strict load requires."""
     return {'type': 'array', 'items': {'type': 'object'}}
 
@@ -267,6 +420,8 @@ _BUILDERS: dict[FieldKind, Any] = {
     FieldKind.BYTES: _bytes,
     FieldKind.ENUM: _enum,
     FieldKind.DICT: _dict,
+    FieldKind.NESTED: _nested,
+    FieldKind.TUPLE: _tuple,
     FieldKind.NDARRAY: _opaque,
     FieldKind.PANDAS: _records,
     FieldKind.POLARS: _records,

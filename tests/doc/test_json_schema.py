@@ -17,6 +17,7 @@ import dataclasses
 import datetime as dt
 import decimal
 import enum
+import json
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -35,6 +36,14 @@ if TYPE_CHECKING:
 def _validator(schema: dict[str, Any]) -> Draft202012Validator:
     Draft202012Validator.check_schema(schema)
     return Draft202012Validator(schema, format_checker=Draft202012Validator.FORMAT_CHECKER)
+
+
+def _written(cls: Any, data: dict[str, Any]) -> Any:
+    """What ``dumps`` writes for ``data``'s instance, read back: the JSON carrier the dump schema describes.
+
+    ``dump`` alone hands back a ``Tuple`` as a Python tuple, which JSON writes as an array.
+    """
+    return json.loads(cls.dumps(cls.load(data)))
 
 
 def _one(field: Any, mode: str = 'load', annotation: Any = None) -> dict[str, Any]:
@@ -392,11 +401,279 @@ class TestThePromises:
 
     @pytest.mark.parametrize('data', _VALID, ids=lambda d: str(d['id']))
     def test_what_dump_writes_validates_against_the_dump_schema(self, data):
-        dumped = Everything.dump(Everything.load(data))
-        _validator(json_schema(Everything, mode='dump')).validate(dumped)
+        _validator(json_schema(Everything, mode='dump')).validate(_written(Everything, data))
 
     def test_the_dump_schema_requires_what_dump_always_writes(self):
-        dumped = Everything.dump(Everything.load(_VALID[0]))
+        dumped = _written(Everything, _VALID[0])
         schema = json_schema(Everything, mode='dump')
         assert set(schema['required']) <= set(dumped)
         assert not _validator(schema).is_valid({k: v for k, v in dumped.items() if k != 'note'})
+
+
+# --- Nested classes, tuples, unions and closedness (plan 05 §1.6, §1.7) ----------------------
+
+
+@s.seared
+class Point(s.Seared):
+    """A point on the floor."""
+
+    x: float = s.Float(required=True)
+    y: float = s.Float(required=True)
+
+
+@s.seared
+class Start(s.Seared):
+    speed: int = s.Int(required=True)
+
+
+@s.seared
+class Stop(s.Seared):
+    reason: str | None = s.Str(default=None)
+
+
+@s.seared
+class Other(s.Seared):
+    pass
+
+
+@s.seared
+class Command(s.Seared):
+    """A flat union, nested classes and a tuple."""
+
+    id: int = s.Int(required=True)
+    at: Point = s.T(Point, required=True)
+    path: list[Point] = s.T(Point, many=True, default_factory=list)
+    pair: tuple = s.Tuple(s.Int(), s.Str(doc='its label'), default=(0, ''))
+    action: object = s.Union(variants={'start': Start, 'stop': Stop}, doc='what to do')
+
+
+@s.seared
+class Envelope(s.Seared):
+    """A nested union with a fallback."""
+
+    id: int = s.Int(required=True)
+    task: object = s.Union(variants={'start': Start, 'stop': Stop}, tag_key='kind', payload_key='args', fallback=Other)
+
+
+class TestNested:
+    def test_a_nested_class_is_a_reference_to_its_definition(self):
+        schema = json_schema(Command)
+        assert schema['properties']['at'] == {'$ref': '#/$defs/Point'}
+        assert schema['$defs']['Point'] == {
+            'title': 'Point',
+            'description': 'A point on the floor.',
+            'type': 'object',
+            'properties': {'x': {'type': 'number'}, 'y': {'type': 'number'}},
+            'required': ['x', 'y'],
+        }
+
+    def test_a_class_used_twice_is_defined_once(self):
+        schema = json_schema(Command)
+        assert schema['properties']['path'] == {'type': 'array', 'items': {'$ref': '#/$defs/Point'}}
+        assert sorted(schema['$defs']) == ['Point', 'Start', 'Stop']
+
+    def test_a_nullable_nested_class_is_a_reference_or_null(self):
+        @s.seared
+        class Maybe(s.Seared):
+            at: Point | None = s.T(Point, default=None, nullable=True)
+
+        assert json_schema(Maybe)['properties']['at'] == {'anyOf': [{'$ref': '#/$defs/Point'}, {'type': 'null'}]}
+
+    def test_two_classes_of_one_name_get_two_definitions(self):
+        def make(field_name):
+            @s.seared
+            class Inner(s.Seared):
+                n: int = s.Int(default=0, data_key=field_name)
+
+            return Inner
+
+        first, second = make('a'), make('b')
+
+        @s.seared
+        class Both(s.Seared):
+            one: object = s.T(first, required=True)
+            two: object = s.T(second, required=True)
+
+        schema = json_schema(Both)
+        refs = [schema['properties'][key]['$ref'] for key in ('one', 'two')]
+        assert refs == ['#/$defs/Inner', f'#/$defs/{__name__}.Inner']
+        validator = _validator(schema)
+        assert validator.is_valid({'one': {'a': 1}, 'two': {'b': 2}})
+        assert not validator.is_valid({'one': {'a': 1}, 'two': {'b': 'x'}})
+
+    def test_field_schema_fills_the_callers_defs_and_shares_them(self):
+        defs: dict[str, Any] = {}
+        assert field_schema(s.T(Point), defs=defs) == {'$ref': '#/$defs/Point'}
+        assert field_schema(s.T(Point, many=True), defs=defs) == {'type': 'array', 'items': {'$ref': '#/$defs/Point'}}
+        assert list(defs) == ['Point']
+
+
+class TestTuple:
+    def test_a_tuple_is_a_fixed_length_array_one_schema_per_slot(self):
+        assert json_schema(Command)['properties']['pair'] == {
+            'type': 'array',
+            'prefixItems': [{'type': 'integer'}, {'type': 'string', 'description': 'its label'}],
+            'items': False,
+            'minItems': 2,
+            'maxItems': 2,
+            'default': [0, ''],
+        }
+
+    def test_a_slots_own_options_dont_apply(self):
+        # Tuple hands each value to its slot field directly.
+        assert _one(s.Tuple(s.Int(many=True, nullable=True)))['prefixItems'] == [{'type': 'integer'}]
+
+
+class TestUnion:
+    def test_a_flat_union_is_an_envelope_beside_the_parents_keys(self):
+        schema = json_schema(Command)
+        assert 'action' not in schema['properties']
+        assert schema['allOf'] == [
+            {
+                'type': 'object',
+                'properties': {'type': {'type': 'string', 'enum': ['start', 'stop']}},
+                'required': ['type'],
+                'allOf': [
+                    {
+                        'if': {'properties': {'type': {'const': 'start'}}, 'required': ['type']},
+                        'then': {'$ref': '#/$defs/Start'},
+                    },
+                    {
+                        'if': {'properties': {'type': {'const': 'stop'}}, 'required': ['type']},
+                        'then': {'$ref': '#/$defs/Stop'},
+                    },
+                ],
+                'description': 'what to do',
+            }
+        ]
+
+    def test_a_nested_payload_is_required_only_where_an_empty_one_wont_load(self):
+        branches = json_schema(Envelope)['allOf'][0]['allOf']
+        start, stop = branches[0]['then'], branches[1]['then']
+        assert start == {'properties': {'args': {'$ref': '#/$defs/Start'}}, 'required': ['args']}
+        assert stop == {'properties': {'args': {'$ref': '#/$defs/Stop'}}}
+
+    def test_a_dump_always_writes_the_payload(self):
+        branches = json_schema(Envelope, mode='dump')['allOf'][0]['allOf']
+        assert all(branch['then']['required'] == ['args'] for branch in branches)
+
+    def test_a_fallback_takes_any_other_tag_on_input(self):
+        envelope = json_schema(Envelope)['allOf'][0]
+        assert envelope['properties']['kind'] == {'type': 'string'}
+        assert envelope['allOf'][-1] == {
+            'if': {'properties': {'kind': {'enum': ['start', 'stop']}}},
+            'else': {'properties': {'args': {'$ref': '#/$defs/Other'}}},
+        }
+
+    def test_a_dump_writes_only_the_declared_tags(self):
+        envelope = json_schema(Envelope, mode='dump')['allOf'][0]
+        assert envelope['properties']['kind'] == {'type': 'string', 'enum': ['start', 'stop']}
+        assert len(envelope['allOf']) == 2
+
+
+class TestClosed:
+    def test_a_refusing_class_is_closed_by_default(self):
+        @s.seared(unknown='raise')
+        class Strict(s.Seared):
+            at: Point = s.T(Point, required=True)
+
+        schema = json_schema(Strict)
+        assert schema['unevaluatedProperties'] is False
+        assert schema['properties']['at'] == {'$ref': '#/$defs/Point', 'unevaluatedProperties': False}
+        assert 'unevaluatedProperties' not in json_schema(Strict, unknown='ignore')
+
+    def test_closing_reaches_every_object_but_not_a_definition(self):
+        schema = json_schema(Command, unknown='raise')
+        assert schema['unevaluatedProperties'] is False
+        assert schema['properties']['path']['items'] == {'$ref': '#/$defs/Point', 'unevaluatedProperties': False}
+        # A flat variant shares its parent's object, which is closed already.
+        assert schema['allOf'][0]['allOf'][0]['then'] == {'$ref': '#/$defs/Start'}
+        assert all('unevaluatedProperties' not in d for d in schema['$defs'].values())
+
+    def test_a_fallback_payload_stays_open(self):
+        envelope = json_schema(Envelope, unknown='raise')['allOf'][0]
+        assert envelope['allOf'][0]['then']['properties']['args']['unevaluatedProperties'] is False
+        assert envelope['allOf'][-1]['else'] == {'properties': {'args': {'$ref': '#/$defs/Other'}}}
+
+    def test_a_flat_fallback_marks_its_keys_as_evaluated(self):
+        @s.seared
+        class Flat(s.Seared):
+            task: object = s.Union(variants={'start': Start}, fallback=Other)
+
+        envelope = json_schema(Flat, unknown='raise')['allOf'][0]
+        assert envelope['allOf'][-1]['else'] == {'$ref': '#/$defs/Other', 'unevaluatedProperties': True}
+
+    def test_only_the_two_values(self):
+        with pytest.raises(ValueError, match=r"json_schema\(\): unknown= takes 'ignore' or 'raise', got 'deny'"):
+            json_schema(Command, unknown='deny')  # ty: ignore[invalid-argument-type]
+
+
+_NESTED_VALID = [
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'start', 'speed': 3}),
+    (Command, {'id': 2, 'at': {'x': 0, 'y': 1}, 'path': [{'x': 1, 'y': 1}], 'pair': [5, 'five'], 'type': 'stop'}),
+    (Envelope, {'id': 1, 'kind': 'start', 'args': {'speed': 2}}),
+    (Envelope, {'id': 2, 'kind': 'stop'}),
+    (Envelope, {'id': 3, 'kind': 'jump', 'args': {'height': 9}}),
+]
+
+_NESTED_INVALID = [
+    (Command, {'id': 1, 'type': 'start', 'speed': 3}),
+    (Command, {'id': 1, 'at': {'x': 0}, 'type': 'start', 'speed': 3}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'start'}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'jump'}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'stop', 'pair': [1]}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'stop', 'pair': ['one', 'a']}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'stop', 'path': [{'x': 'a', 'y': 1}]}),
+    (Envelope, {'id': 1, 'kind': 'start'}),
+    (Envelope, {'id': 1, 'kind': 'start', 'args': {'speed': 'fast'}}),
+    (Envelope, {'id': 1}),
+]
+
+#: Otherwise valid inputs, some carrying keys no class declares.
+_CLOSED = [
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'start', 'speed': 3}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'start', 'speed': 3, 'extra': 1}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1, 'z': 2}, 'type': 'start', 'speed': 3}),
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'path': [{'x': 1, 'y': 1}, {'x': 1, 'y': 1, 'w': 0}], 'type': 'stop'}),
+    # A key that only the other variant declares.
+    (Command, {'id': 1, 'at': {'x': 0, 'y': 1}, 'type': 'start', 'speed': 3, 'reason': 'x'}),
+    (Envelope, {'id': 1, 'kind': 'start', 'args': {'speed': 2}}),
+    (Envelope, {'id': 1, 'kind': 'start', 'args': {'speed': 2, 'sped': 3}}),
+    (Envelope, {'id': 1, 'kind': 'stop', 'extra': True}),
+    # A fallback payload is never checked.
+    (Envelope, {'id': 1, 'kind': 'jump', 'args': {'height': 9}}),
+    (Envelope, {'id': 1, 'kind': 'jump', 'args': {'height': 9}, 'extra': True}),
+]
+
+
+def _case_id(case):
+    return f'{case[0].__name__}:{case[1]}'
+
+
+class TestThePromisesNested:
+    @pytest.mark.parametrize('case', _NESTED_VALID, ids=_case_id)
+    def test_input_valid_against_the_load_schema_loads(self, case):
+        cls, data = case
+        assert _validator(json_schema(cls)).is_valid(data)
+        cls.load(data)
+
+    @pytest.mark.parametrize('case', _NESTED_INVALID, ids=_case_id)
+    def test_input_the_load_schema_refuses_load_refuses_too(self, case):
+        cls, data = case
+        assert not _validator(json_schema(cls)).is_valid(data)
+        with pytest.raises(s.ValidationError):
+            cls.load(data)
+
+    @pytest.mark.parametrize('case', [c for c in _NESTED_VALID if c[1]['id'] != 3 or c[0] is Command], ids=_case_id)
+    def test_what_dump_writes_validates_against_the_dump_schema(self, case):
+        # Not the fallback case: ``dump`` writes only a declared variant.
+        cls, data = case
+        _validator(json_schema(cls, mode='dump')).validate(_written(cls, data))
+
+    @pytest.mark.parametrize('case', _CLOSED, ids=_case_id)
+    def test_a_closed_schema_refuses_exactly_what_unknown_keys_reports(self, case):
+        cls, data = case
+        refused = not _validator(json_schema(cls, unknown='raise')).is_valid(data)
+        assert refused == bool(s.unknown_keys(cls, data))
+        assert _validator(json_schema(cls, unknown='ignore')).is_valid(data)
