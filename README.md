@@ -347,11 +347,13 @@ spec.attr, spec.wire, spec.field     # 'a', 'a', Int(...)
 `seared.doc` writes a Markdown page for every `@seared` class in a module or
 package, from its fields, their `doc=` text and the class docstring, plus
 an index. `--check` turns it into a CI guard that fails when the committed
-pages have drifted from the code.
+pages have drifted from the code, and `--require-docs` (0.4.1) one that
+fails when a field has no `doc=`.
 
 ```sh
 seared-doc mypkg.models -o docs/models            # or: python -m seared.doc …
 seared-doc mypkg.models -o docs/models --check    # exit 1 on drift
+seared-doc mypkg.models -o docs/models --check --require-docs   # …or on a field without doc=
 ```
 
 ```python

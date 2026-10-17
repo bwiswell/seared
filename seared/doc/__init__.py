@@ -3,7 +3,8 @@
 - ``introspect(cls)`` → a structured :class:`SchemaDoc` (render-agnostic).
 - ``document(cls)`` → a Markdown page for one class.
 - ``build_docs(target)`` → ``{path: markdown}`` for a whole module/package.
-- CLI: ``python -m seared.doc <module-or-package> [-o docs] [--check]``.
+- ``undocumented(target)`` → each field with no ``doc=`` (0.4.1).
+- CLI: ``python -m seared.doc <module-or-package> [-o docs] [--check] [--require-docs]``.
 
 The two stages are deliberately separate: ``introspect`` produces a
 render-agnostic :class:`SchemaDoc` tree, and renderers consume *that* rather
@@ -12,7 +13,7 @@ own renderer (zeared's wire-aware one) on the same intermediate, and what
 would let a JSON-Schema or HTML output land without touching introspection.
 """
 
-from .generate import build_docs, collect, main
+from .generate import build_docs, collect, main, undocumented
 from .introspect import (
     EnumDoc,
     FieldDoc,
@@ -46,4 +47,5 @@ __all__ = [
     'render_header',
     'render_schema',
     'render_variants',
+    'undocumented',
 ]
