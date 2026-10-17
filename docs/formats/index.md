@@ -10,13 +10,18 @@ behind optional extras.
 | Method | Returns / accepts | Extra |
 |--------|-------------------|-------|
 | `Cls.to_json(obj, indent=None, **kwargs)` | string content | — (stdlib) |
-| `Cls.from_json(source)` | `Cls` instance | — (stdlib) |
+| `Cls.from_json(source, unknown=None)` | `Cls` instance | — (stdlib) |
 | `Cls.to_toml(obj)` | string content | `seared[toml]` |
-| `Cls.from_toml(source)` | `Cls` instance | — (stdlib `tomllib`) |
+| `Cls.from_toml(source, unknown=None)` | `Cls` instance | — (stdlib `tomllib`) |
 | `Cls.to_yaml(obj)` | string content | `seared[yaml]` |
-| `Cls.from_yaml(source)` | `Cls` instance | `seared[yaml]` |
+| `Cls.from_yaml(source, unknown=None)` | `Cls` instance | `seared[yaml]` |
 | `Cls.to_csv(items)` | string content | — (stdlib) |
-| `Cls.from_csv(source)` | `list[Cls]` | — (stdlib) |
+| `Cls.from_csv(source, unknown=None)` | `list[Cls]` | — (stdlib) |
+
+Each `from_*` loads through `Cls.load`, and takes its `unknown=`: `'raise'`
+refuses a key the class doesn't declare (in CSV, an extra column), and
+`None` takes the class's own `@seared(unknown=…)`. That's the switch a
+config file wants; see [`../overview/configuration.md`](../overview/configuration.md).
 
 ## `_attach_format_methods(cls)`
 

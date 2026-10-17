@@ -66,7 +66,7 @@ def refuse_unknown_keys(cls: type, data: Any) -> None:
 
     One error for every typo, so a config with three is fixed in one pass: its
     ``path`` is the first unknown key's, and its reason counts and names the
-    others (``unknown key (2 more: streams[0].retension, zenoh.mdoe)``).
+    others (``unknown key (2 more: streams[0].retension, streams[1].clss)``).
 
     Raises:
         ValidationError: If any key in ``data`` is unknown.

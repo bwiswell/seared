@@ -17,6 +17,7 @@ rest of the user-facing API. `import seared as s` gives:
 | The model | `Seared`, `seared`, `FieldSpec` |
 | Fields | `Field`, `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, and the optional `NDArray`, `PandasFrame`, `PolarsFrame` (each needs its extra only when used) |
 | Errors | `SearedError`, `ValidationError` |
+| Unknown keys | `unknown_keys` (see [`_core/unknown.md`](_core/unknown.md)) |
 | The accelerator | `AccelInfo`, `accel_status` (see [`_core/accel.md`](_core/accel.md)) |
 | Schema docs | `document`, `introspect` (see [`doc/index.md`](doc/index.md)) |
 | Version | `__version__` |
@@ -36,7 +37,11 @@ class Telemetry(s.Seared):
 - [`_core/decorator.md`](_core/decorator.md) — `@seared` decorator
   internals.
 - [`_core/errors.md`](_core/errors.md) — exception hierarchy.
+- [`_core/unknown.md`](_core/unknown.md) — unknown keys: the report and
+  the `unknown=` option.
 - [`fields/`](fields/) — every Field subclass (one doc per file).
 - [`formats/index.md`](formats/index.md) — file-format codecs.
 - [`overview/architecture.md`](overview/architecture.md) —
   cross-cutting design notes.
+- [`overview/configuration.md`](overview/configuration.md) — seared for
+  config files.

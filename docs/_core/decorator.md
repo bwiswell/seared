@@ -20,6 +20,7 @@ class Foo(s.Seared): ...
 | `slots` | `True` | Pass-through to `@dataclass(slots=...)` |
 | `validate` | `True` | `dump` / `load` raise on type mismatch when `True`; best-effort coerce when `False` |
 | `accel` | `True` | `False` keeps the class on the pure-Python path even when an accelerator is installed (see [`accel.md`](accel.md)) |
+| `unknown` | `'ignore'` | `'raise'` refuses a key the class doesn't declare, wherever it's the class loaded; a call's own `unknown=` overrides it. For configs, never wire messages (see [`unknown.md`](unknown.md)). Anything but the two values is a `ValueError` |
 
 ## What `_build` does
 
@@ -52,7 +53,11 @@ class Foo(s.Seared): ...
 6. **Generate `dump` / `load`** — the compiled pair, or else bound
    classmethods that walk the spec list, calling each field's
    `serialize` / `deserialize`. Both accept an optional `format=` kwarg
-   threaded through to the field methods.
+   threaded through to the field methods. The public `load` takes
+   `unknown=` too, in front of the class's own load: one of two shapes,
+   picked by the class's default, so an ignoring class pays one `is None`
+   test per call. The own load is kept as `__seared_load__`, which nested
+   `T` and `Union` fields call (see [`unknown.md`](unknown.md)).
 7. **Attach format codecs** — calls `_attach_format_methods` (from
    `seared.formats`) to wire `to_json` / `from_json` / `to_csv` /
    etc. onto the class.
@@ -75,8 +80,10 @@ What the generated `load` does with each declared field, in order:
 
 Then `cls(**kwargs)` builds the instance. Three more rules round it out:
 
-- **Unknown wire keys are ignored**, so an older consumer can read a newer
-  producer's payload. The family relies on it to remove fields outright.
+- **Unknown wire keys are ignored** by default, so an older consumer can
+  read a newer producer's payload. The family relies on it to remove fields
+  outright. `unknown='raise'` refuses them instead, checking the whole input
+  before this load runs (see [`unknown.md`](unknown.md)).
 - **Construction doesn't check `required`.** `Cls()` runs the dataclass
   `__init__`, which leaves an omitted required field as `None`; the type
   checker flags the call, and only `load` raises.

@@ -5,7 +5,7 @@ per dataclass instance), so the API is class-level rather than per-
 instance:
 
 ```python
-rows = Row.from_csv(source)            # → list[Row]
+rows = Row.from_csv(source)            # → list[Row]; unknown= as in load
 text = Row.to_csv([row1, row2, row3])  # → str
 ```
 
