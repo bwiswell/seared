@@ -120,3 +120,13 @@ def test_every_scalar_kind_has_a_case():
     covered = {type(field).__name__ for _, field, _ in CASES}
     assert not covered & NON_SCALAR
     assert covered | NON_SCALAR == set(fields.__all__)
+
+
+@pytest.mark.parametrize('name', sorted(fields.__all__))
+def test_every_field_classs_annotations_resolve(name):
+    # 0.4.3: `typing.get_type_hints` raised `NameError` on every field class,
+    # since `default_factory`'s annotation names `Callable`, imported only for
+    # type checking (and `Enum`'s and `Union`'s named their own such types).
+    import typing
+
+    typing.get_type_hints(getattr(fields, name))

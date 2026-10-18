@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+# At runtime, not under ``TYPE_CHECKING``: ``default_factory``'s annotation
+# names it, and ``typing.get_type_hints`` evaluates that on every field class
+# (0.4.3; it raised ``NameError`` on every one before).
+from collections.abc import Callable  # noqa: TC003
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar
 
 from .kind import FieldKind
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)

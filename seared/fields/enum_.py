@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:
-    from enum import Enum as PEnum
+# At runtime, not under ``TYPE_CHECKING``: the ``enum`` field's annotation names
+# it, and ``typing.get_type_hints`` evaluates that (0.4.3).
+from enum import Enum as PEnum  # noqa: TC003
+from typing import Any
 
 from seared._core.errors import ValidationError
 

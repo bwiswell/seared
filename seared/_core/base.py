@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import json
+
+# At runtime, not under ``TYPE_CHECKING``: ``__seared_load__``'s annotation
+# below names it, and ``typing.get_type_hints`` evaluates that on every
+# subclass. In 0.4.1 and 0.4.2 it was imported for type checking only, and
+# ``get_type_hints`` raised ``NameError`` on every seared class.
+from collections.abc import Callable  # noqa: TC003
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Self
 
 from .accel import AccelInfo
 
 if TYPE_CHECKING:
     import os
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     from seared.fields.field import Field
 
