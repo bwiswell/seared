@@ -9,7 +9,7 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
-## 0.4.3 — unreleased
+## 0.4.3 — 2026-10-17
 
 **Type hints resolve on seared classes again.**
 
