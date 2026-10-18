@@ -10,6 +10,7 @@ from __future__ import annotations
 import inspect
 import json
 import math
+import typing
 
 import pytest
 
@@ -227,3 +228,36 @@ class TestFieldSpec:
         f = s.Str()
         spec = s.FieldSpec(attr='name', wire='n', field=f)
         assert (spec.attr, spec.wire, spec.field) == ('name', 'n', f)
+
+
+class TestTypeHintsResolve:
+    """0.4.3: ``typing.get_type_hints`` works on the base and every class built on it.
+
+    In 0.4.1 and 0.4.2 the base annotated ``__seared_load__`` with ``Callable``,
+    imported only for type checking, so ``get_type_hints`` raised ``NameError``
+    on every seared class (zeared's Messages included), and ``seared.doc``'s
+    type strings fell back to raw annotation text.
+    """
+
+    def test_on_the_base(self):
+        assert '__seared_load__' in typing.get_type_hints(Seared)
+
+    def test_on_a_decorated_class(self):
+        @s.seared
+        class Reading(s.Seared):
+            n: int = s.Int(default=0)
+            label: str | None = s.Str(default=None)
+
+        hints = typing.get_type_hints(Reading)
+        assert (hints['n'], hints['label']) == (int, str | None)
+
+    def test_on_a_subclass_of_a_decorated_class(self):
+        @s.seared
+        class Base(s.Seared):
+            n: int = s.Int(default=0)
+
+        @s.seared
+        class Child(Base):
+            m: float = s.Float(default=0.0)
+
+        assert {'n', 'm', '__seared_fields__'} <= set(typing.get_type_hints(Child))

@@ -9,6 +9,21 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
+## 0.4.3 — 2026-10-17
+
+**Type hints resolve on seared classes again.**
+
+### Fixed
+
+- **`typing.get_type_hints()` works on a seared class again.** The `Seared` base annotated `__seared_load__` with
+  `Callable`, imported only for type checking, so `get_type_hints` raised `NameError` on every class subclassing it,
+  zeared's Messages included. `seared.doc`'s type strings fell back to raw annotation text with it, so a
+  `typing.Optional[int]` field showed that rather than `int | None`. Since 0.4.1.
+- **`typing.get_type_hints()` works on a field class.** `default_factory`'s annotation names `Callable`, and
+  `Enum`'s and `Union`'s name their enum and `Seared` types, each imported only for type checking, so
+  `get_type_hints` raised `NameError` on every field class. `FieldSpec` still can't resolve its `Field`, which the
+  core can't import at load. Since before 0.3.4.
+
 ## 0.4.2 — 2026-10-17
 
 **JSON Schema from a class, on a public field kind.** `seared.doc.json_schema` describes what a class's `load` takes

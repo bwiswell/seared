@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import typing
+
 import seared as s
 from doc.models import Band, Demo, Inner, StartCmd
 from seared.doc import FieldDoc, document, introspect, is_seared_class
@@ -122,6 +124,20 @@ class TestKind:
             'inner': s.FieldKind.NESTED,
             'pair': s.FieldKind.TUPLE,
         }
+
+
+class TestTypeStrings:
+    def test_annotations_resolve_rather_than_falling_back_to_their_text(self):
+        # 0.4.3: in 0.4.1 and 0.4.2 `get_type_hints` failed on every seared class,
+        # so the type column showed raw annotation text: `typing.Optional[int]`.
+        # (`typing` is imported at module level: the annotations are evaluated there.)
+        @s.seared
+        class Legacy(s.Seared):
+            n: typing.Optional[int] = s.Int(default=None)  # noqa: UP045 — the old spelling, on purpose
+            tags: typing.List[str] = s.Str(many=True, default_factory=list)  # noqa: UP006 — likewise
+
+        fields = {f.attr: f.type_str for f in introspect(Legacy).fields}
+        assert fields == {'n': 'int | None', 'tags': 'list[str]'}
 
 
 class TestUndocumentedClass:

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar
 
-if TYPE_CHECKING:
-    from seared._core.base import Seared
-
+# At runtime, not under ``TYPE_CHECKING``: ``variants`` and ``fallback`` name it,
+# and ``typing.get_type_hints`` evaluates them (0.4.3). Loading ``seared._core``
+# for its errors loads the base anyway, so this adds no import.
+from seared._core.base import Seared  # noqa: TC001
 from seared._core.errors import ValidationError, add_location
 
 from .field import Field

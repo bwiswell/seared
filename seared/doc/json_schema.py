@@ -469,10 +469,10 @@ def _strip_none(annotation: Any) -> Any:
 def _hints(cls: type) -> dict[str, Any]:
     """The class's field annotations, each resolved on its own; one that won't resolve is left out.
 
-    ``get_type_hints`` resolves a class's whole hierarchy or nothing, and the
-    ``Seared`` base names types imported only for type checking, so it fails
-    for every ``@seared`` class. Annotations only refine a schema, so each is
-    taken where it resolves.
+    ``get_type_hints`` resolves a class's whole hierarchy or nothing, so one
+    annotation it can't resolve (a name imported only for type checking, in
+    the class or any base) fails them all. Annotations only refine a schema,
+    so each is taken where it resolves.
     """
     hints: dict[str, Any] = {}
     for klass in reversed(cls.__mro__):
