@@ -54,6 +54,13 @@ payload sits under `payload_key` for a nested envelope
 evolution: old consumers receive new variants as a generic fallback
 variant rather than crashing.
 
+A tag that isn't a string (`5`, `["start"]`) raises `ValidationError` at
+the tag key, with or without a fallback, in lax mode too
+(`Control.action: Union: tag must be a string, got list`). Every declared
+tag is a string, so such a tag is malformed rather than a newer variant,
+and a fallback would only hide it. Before 0.4.4 a list or a dict raised
+`TypeError` instead, and a fallback took any other.
+
 Before 0.4.0 this option was spelled `default=`. From 0.4.0 `default=`
 means what it means on every other field, the value an absent key gets, and
 a `Union` has none: its envelope is always populated on load, and an

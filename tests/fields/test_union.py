@@ -273,6 +273,41 @@ class TestWithFallback:
             Cmd.load({'type': 'reboot'})
 
 
+class TestTagType:
+    """A tag that isn't a string is malformed: it raises, fallback or not (0.4.4)."""
+
+    @pytest.mark.parametrize(
+        ('tag', 'type_name'),
+        [(['start'], 'list'), ({'start': 1}, 'dict'), (5, 'int'), (True, 'bool'), (1.5, 'float')],
+    )
+    def test_it_raises_naming_its_type(self, tag, type_name):
+        # A list or a dict used to raise ``TypeError`` from the variant lookup.
+        @s.seared
+        class Cmd(s.Seared):
+            action: object = s.Union(variants={'start': _StartInt, 'stop': _StopReason})
+
+        with pytest.raises(s.ValidationError, match=rf'^Cmd\.type: Union: tag must be a string, got {type_name}$'):
+            Cmd.load({'type': tag})
+
+    @pytest.mark.parametrize('tag', [['reboot'], {'reboot': 1}, 5])
+    def test_a_fallback_doesnt_take_it(self, tag):
+        # ``5`` used to load as the fallback variant.
+        @s.seared
+        class Cmd(s.Seared):
+            action: object = s.Union(variants={'start': _StartInt, 'stop': _StopReason}, fallback=Unknown)
+
+        with pytest.raises(s.ValidationError, match='tag must be a string'):
+            Cmd.load({'type': tag})
+
+    def test_lax_mode_refuses_it_too(self):
+        @s.seared(validate=False)
+        class Cmd(s.Seared):
+            action: object = s.Union(variants={'start': _StartInt}, fallback=Unknown)
+
+        with pytest.raises(s.ValidationError, match='tag must be a string'):
+            Cmd.load({'type': ['start']})
+
+
 class TestDefaultIsRefused:
     """Pin: ``default=`` no longer names the fallback, and is refused rather than silently reinterpreted.
 
@@ -397,6 +432,12 @@ class TestErrorPaths:
         assert info.value.path == ('action',)
         assert str(info.value).startswith("_NestedControl.action: Union: unknown tag 'halt'")
 
+    def test_a_tag_that_isnt_a_string_points_at_the_tag(self):
+        with pytest.raises(s.ValidationError) as info:
+            _NestedControl.load({'action': ['start'], 'args': {'speed': 1.0}})
+        assert info.value.path == ('action',)
+        assert str(info.value) == '_NestedControl.action: Union: tag must be a string, got list'
+
     def test_a_missing_tag_points_at_the_tag(self):
         with pytest.raises(s.ValidationError) as info:
             _FlatControl.load({'speed': 1.0})
@@ -447,6 +488,11 @@ class TestUnknownKeysInEnvelopes:
     def test_a_refusing_outer_load_refuses_a_nested_payload_typo(self):
         with pytest.raises(s.ValidationError, match=r'^NestedHost\.args\.sped: unknown key$'):
             NestedHost.load({'id': 1, 'type': 'start', 'args': {'sped': 3}}, unknown='raise')
+
+    def test_a_refusing_outer_load_raises_the_tag_error_for_a_tag_that_isnt_a_string(self):
+        # The refusal's walk selects no variant for it, so the load reports the tag.
+        with pytest.raises(s.ValidationError, match=r'^FlatHost\.type: Union: tag must be a string, got list$'):
+            FlatHost.load({'id': 1, 'type': ['start'], 'speed': 3}, unknown='raise')
 
     def test_an_ignoring_outer_load_ignores_a_nested_payload_typo(self):
         assert NestedHost.load({'id': 1, 'type': 'start', 'args': {'sped': 3}}).cmd == StrictStart()

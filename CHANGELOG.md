@@ -9,6 +9,23 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
+## 0.4.4 — unreleased
+
+**A `Union` tag must be a string.**
+
+### Changed
+
+- **Breaking:** a `Union` tag that isn't a string raises `ValidationError` (`Union: tag must be a string, got int`),
+  with or without a `fallback=`, in lax mode too. Under a fallback, a numeric tag such as `5` loaded as the fallback
+  variant; without one, it raised `unknown tag 5`. Every declared tag is a string, so such a tag is malformed rather
+  than a newer variant, and a fallback would only hide it.
+
+### Fixed
+
+- **A list or dict `Union` tag raises `ValidationError`, not `TypeError`.** The variant lookup hashed the tag, so
+  `{"type": ["start"]}` raised `TypeError: cannot use 'list' as a dict key` where a `ValidationError` at the tag's
+  path belonged, with or without a fallback. Since before 0.3.4.
+
 ## 0.4.3 — 2026-10-17
 
 **Type hints resolve on seared classes again.**
