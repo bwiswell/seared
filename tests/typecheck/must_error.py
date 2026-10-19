@@ -53,3 +53,16 @@ class _Start(s.Seared):
 @s.seared
 class Envelope(s.Seared):
     action: object = s.Union(variants={'start': _Start}, nullable=True)
+
+
+# ERROR[invalid-argument-type]: an `Int`'s bounds are `int`s (0.4.4); it raises
+# at runtime too.
+@s.seared
+class HalfBound(s.Seared):
+    x: int = s.Int(ge=0.5, default=1)
+
+
+# ERROR[unknown-argument]: the option is `ge=`, not `gte=`.
+@s.seared
+class Misspelt(s.Seared):
+    x: int = s.Int(gte=0, default=1)
