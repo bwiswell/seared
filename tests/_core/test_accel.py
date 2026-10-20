@@ -258,6 +258,41 @@ class TestClassDecisions:
         # not the kind.
         assert s.field_kind(LoudInt()) is s.FieldKind.INT
 
+    @pytest.mark.parametrize(
+        ('field', 'outside', 'reason'),
+        [
+            (s.Int(ge=0, lt=10), 99, 'Bounded.n: Int with ge= is not accelerated yet'),
+            (s.Float(le=1.0), 99, 'Bounded.n: Float with le= is not accelerated yet'),
+            (s.Str(max_length=4, min_length=1), 'abcde', 'Bounded.n: Str with min_length= is not accelerated yet'),
+            (s.Str(pattern='^[a-z]+$'), 'ABC', 'Bounded.n: Str with pattern= is not accelerated yet'),
+        ],
+    )
+    def test_a_constrained_field_declines_and_names_its_first_option(self, use_backend, field, outside, reason):
+        # A ``SPEC_ABI`` 2 backend would ignore the bounds and skip the check (0.4.4).
+        use_backend('refcore')
+
+        @s.seared
+        class Bounded(s.Seared):
+            n: float = field
+
+        assert Bounded.__seared_accel__ == s.AccelInfo(accelerated=False, reason=reason)
+        # The Python path checks them.
+        with pytest.raises(s.ValidationError, match=r'^Bounded\.n: must '):
+            Bounded.load({'n': outside})
+
+    def test_a_bounded_nested_class_declines_its_parent(self, use_backend):
+        use_backend('refcore')
+
+        @s.seared
+        class Leaf(s.Seared):
+            n: int = s.Int(gt=0, default=1)
+
+        @s.seared
+        class Root(s.Seared):
+            leaf: Leaf = s.T(Leaf, required=True)
+
+        assert Root.__seared_accel__.reason == 'Root.leaf → Leaf.n: Int with gt= is not accelerated yet'
+
     def test_the_spec_kinds_are_unchanged_by_the_public_kind(self):
         # The names now come from each class's ``KIND`` (0.4.2). The spec a
         # backend sees must not move: the same classes, the same plain strings.
@@ -405,6 +440,20 @@ class TestSpecEmission:
         assert by_attr['tags']['default_factory'] is list
         assert by_attr['items']['kind'] == 'nested'
         assert by_attr['items']['schema']['name'] == 'Inner'
+
+    def test_an_unconstrained_scalars_spec_is_unchanged(self, use_backend):
+        # Constraints (0.4.4) add no key to the spec: an unconstrained field
+        # emits exactly what ``SPEC_ABI`` 2 always has.
+        use_backend('refcore')
+
+        @s.seared
+        class Plain(s.Seared):
+            i: int = s.Int(default=0)
+            f: float = s.Float(default=0.0)
+            t: str = s.Str(default='')
+
+        keys = {'attr', 'wire', 'kind', 'required', 'nullable', 'many', 'keyed', 'dump', 'default', 'default_factory'}
+        assert [set(f) for f in Plain.__seared_spec__['fields']] == [keys, keys, keys]
 
     def test_data_key_becomes_the_wire_key(self, use_backend):
         use_backend('refcore')

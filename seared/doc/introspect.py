@@ -16,6 +16,7 @@ from dataclasses import field as _dc_field
 from typing import Any, TypeGuard, get_args, get_origin, get_type_hints
 
 from seared._core.base import Seared
+from seared.fields.constraints import declared_constraints
 from seared.fields.kind import FieldKind, field_kind
 
 
@@ -57,6 +58,10 @@ class FieldDoc:
     # Which built-in field this is, through the class hierarchy
     # (``seared.field_kind``), or ``None`` (0.4.2). Appended likewise.
     kind: FieldKind | None = None
+    # The constraints the field declares, as ``(option, value)`` pairs in a
+    # fixed order, such as ``(('ge', 0), ('lt', 10))``; empty for none (0.4.4,
+    # ``seared.fields.constraints``). Appended likewise.
+    constraints: tuple[tuple[str, Any], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,6 +165,7 @@ def _field_doc(attr: str, wire: str, f: Any, type_str: str) -> FieldDoc:
         nullable=bool(getattr(f, 'nullable', False)),
         dtype=str(f.dtype) if getattr(f, 'dtype', None) is not None else None,
         kind=field_kind(f),
+        constraints=tuple(declared_constraints(f).items()),
     )
 
 

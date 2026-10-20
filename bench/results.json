@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-17T03:55:18+00:00",
+  "timestamp": "2026-10-20T01:04:45+00:00",
   "python": "3.14.3",
   "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
   "iterations": 20000,
@@ -8,73 +8,73 @@
     {
       "library": "seared",
       "variant": "strict",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "load",
-      "ops_per_s": 32413.33059145662,
-      "us_per_op": 30.851504049496725,
+      "ops_per_s": 34976.126246887514,
+      "us_per_op": 28.590930651989765,
       "run": 0
     },
     {
       "library": "seared",
       "variant": "strict",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "dump",
-      "ops_per_s": 50138.77045413199,
-      "us_per_op": 19.944645449868403,
+      "ops_per_s": 54358.39199655721,
+      "us_per_op": 18.396423500962555,
       "run": 0
     },
     {
       "library": "seared",
       "variant": "lax",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "load",
-      "ops_per_s": 32700.852518777774,
-      "us_per_op": 30.580242500582244,
+      "ops_per_s": 35442.804401580615,
+      "us_per_op": 28.214471650426276,
       "run": 0
     },
     {
       "library": "seared",
       "variant": "lax",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "dump",
-      "ops_per_s": 55742.77572181555,
-      "us_per_op": 17.939544399268925,
+      "ops_per_s": 55751.149011900496,
+      "us_per_op": 17.93685005104635,
       "run": 0
     },
     {
       "library": "seared+rusted",
       "variant": "strict",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "load",
-      "ops_per_s": 354950.807738319,
-      "us_per_op": 2.8172917998745106,
+      "ops_per_s": 332330.3435116582,
+      "us_per_op": 3.0090541520621628,
       "run": 0
     },
     {
       "library": "seared+rusted",
       "variant": "strict",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "dump",
-      "ops_per_s": 404854.2837507847,
-      "us_per_op": 2.4700245005078614,
+      "ops_per_s": 403431.922967643,
+      "us_per_op": 2.4787329486571252,
       "run": 0
     },
     {
       "library": "seared+rusted",
       "variant": "lax",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "load",
-      "ops_per_s": 350158.5632721289,
-      "us_per_op": 2.855849049228709,
+      "ops_per_s": 337346.2298493247,
+      "us_per_op": 2.9643135494552553,
       "run": 0
     },
     {
       "library": "seared+rusted",
       "variant": "lax",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "dump",
-      "ops_per_s": 472310.90326276486,
-      "us_per_op": 2.1172494496568106,
+      "ops_per_s": 471834.4222851665,
+      "us_per_op": 2.119387549464591,
       "run": 0
     },
     {
@@ -82,8 +82,8 @@
       "variant": "default",
       "version": "4.3.1",
       "op": "load",
-      "ops_per_s": 8695.160575995264,
-      "us_per_op": 115.00650175003102,
+      "ops_per_s": 8477.639996835494,
+      "us_per_op": 117.95735610066913,
       "run": 0
     },
     {
@@ -91,8 +91,8 @@
       "variant": "default",
       "version": "4.3.1",
       "op": "dump",
-      "ops_per_s": 24886.96957495644,
-      "us_per_op": 40.1816700497875,
+      "ops_per_s": 25235.645091335326,
+      "us_per_op": 39.62648849992547,
       "run": 0
     },
     {
@@ -100,8 +100,8 @@
       "variant": "default",
       "version": "2.14.1",
       "op": "load",
-      "ops_per_s": 151904.70423312372,
-      "us_per_op": 6.583074599620886,
+      "ops_per_s": 150013.4521003243,
+      "us_per_op": 6.666068849153817,
       "run": 0
     },
     {
@@ -109,80 +109,80 @@
       "variant": "default",
       "version": "2.14.1",
       "op": "dump",
-      "ops_per_s": 175408.97237744092,
-      "us_per_op": 5.700962650007568,
+      "ops_per_s": 170781.0992352789,
+      "us_per_op": 5.855448902002536,
       "run": 0
     },
     {
       "library": "seared",
       "variant": "strict",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "load",
-      "ops_per_s": 32764.53215297961,
-      "us_per_op": 30.520808151050005,
+      "ops_per_s": 34956.86056054613,
+      "us_per_op": 28.606687899446115,
       "run": 1
     },
     {
       "library": "seared",
       "variant": "strict",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "dump",
-      "ops_per_s": 50420.60592193669,
-      "us_per_op": 19.83316109981388,
+      "ops_per_s": 56092.112762031684,
+      "us_per_op": 17.827818400110118,
       "run": 1
     },
     {
       "library": "seared",
       "variant": "lax",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "load",
-      "ops_per_s": 32964.57060513617,
-      "us_per_op": 30.33559914911166,
+      "ops_per_s": 35391.74876252594,
+      "us_per_op": 28.255173450452276,
       "run": 1
     },
     {
       "library": "seared",
       "variant": "lax",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "dump",
-      "ops_per_s": 57560.916160361754,
-      "us_per_op": 17.37289929878898,
+      "ops_per_s": 55807.46471801949,
+      "us_per_op": 17.918749849195592,
       "run": 1
     },
     {
       "library": "seared+rusted",
       "variant": "strict",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "load",
-      "ops_per_s": 355749.9309935909,
-      "us_per_op": 2.810963299998548,
+      "ops_per_s": 338343.05476022616,
+      "us_per_op": 2.955580101115629,
       "run": 1
     },
     {
       "library": "seared+rusted",
       "variant": "strict",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "dump",
-      "ops_per_s": 413413.6609973732,
-      "us_per_op": 2.418884749931749,
+      "ops_per_s": 413257.06337922515,
+      "us_per_op": 2.419801350333728,
       "run": 1
     },
     {
       "library": "seared+rusted",
       "variant": "lax",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "load",
-      "ops_per_s": 351825.7522633656,
-      "us_per_op": 2.8423160998499952,
+      "ops_per_s": 340250.51291224384,
+      "us_per_op": 2.939010999398306,
       "run": 1
     },
     {
       "library": "seared+rusted",
       "variant": "lax",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "dump",
-      "ops_per_s": 476713.2945326501,
-      "us_per_op": 2.0976968997274525,
+      "ops_per_s": 478761.41372382967,
+      "us_per_op": 2.088723049382679,
       "run": 1
     },
     {
@@ -190,8 +190,8 @@
       "variant": "default",
       "version": "4.3.1",
       "op": "load",
-      "ops_per_s": 8731.934306294803,
-      "us_per_op": 114.52216254983796,
+      "ops_per_s": 8883.128531324875,
+      "us_per_op": 112.57295180112123,
       "run": 1
     },
     {
@@ -199,8 +199,8 @@
       "variant": "default",
       "version": "4.3.1",
       "op": "dump",
-      "ops_per_s": 24554.652331605983,
-      "us_per_op": 40.72547990072053,
+      "ops_per_s": 25281.210648757453,
+      "us_per_op": 39.55506774946116,
       "run": 1
     },
     {
@@ -208,8 +208,8 @@
       "variant": "default",
       "version": "2.14.1",
       "op": "load",
-      "ops_per_s": 138228.33791170584,
-      "us_per_op": 7.234406599309295,
+      "ops_per_s": 150474.4893240688,
+      "us_per_op": 6.645644750096835,
       "run": 1
     },
     {
@@ -217,80 +217,80 @@
       "variant": "default",
       "version": "2.14.1",
       "op": "dump",
-      "ops_per_s": 159247.83552625202,
-      "us_per_op": 6.279520200041588,
+      "ops_per_s": 173354.2969381552,
+      "us_per_op": 5.768533100490458,
       "run": 1
     },
     {
       "library": "seared",
       "variant": "strict",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "load",
-      "ops_per_s": 29270.88920959206,
-      "us_per_op": 34.163635851291474,
+      "ops_per_s": 35420.19411847283,
+      "us_per_op": 28.232482200837694,
       "run": 2
     },
     {
       "library": "seared",
       "variant": "strict",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "dump",
-      "ops_per_s": 45604.37198523025,
-      "us_per_op": 21.927722200052813,
+      "ops_per_s": 56529.33666046045,
+      "us_per_op": 17.689929850166664,
       "run": 2
     },
     {
       "library": "seared",
       "variant": "lax",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "load",
-      "ops_per_s": 29443.72803761458,
-      "us_per_op": 33.96309050003765,
+      "ops_per_s": 35309.39920352021,
+      "us_per_op": 28.321070948732086,
       "run": 2
     },
     {
       "library": "seared",
       "variant": "lax",
-      "version": "0.4.0",
+      "version": "0.4.4",
       "op": "dump",
-      "ops_per_s": 51870.55599085661,
-      "us_per_op": 19.27875999972457,
+      "ops_per_s": 55987.44300156268,
+      "us_per_op": 17.861147900111973,
       "run": 2
     },
     {
       "library": "seared+rusted",
       "variant": "strict",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "load",
-      "ops_per_s": 321399.357416302,
-      "us_per_op": 3.1113938995986246,
+      "ops_per_s": 338930.72916916764,
+      "us_per_op": 2.950455399695784,
       "run": 2
     },
     {
       "library": "seared+rusted",
       "variant": "strict",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "dump",
-      "ops_per_s": 370553.4238598754,
-      "us_per_op": 2.6986661992850713,
+      "ops_per_s": 406966.97334937175,
+      "us_per_op": 2.4572018504841253,
       "run": 2
     },
     {
       "library": "seared+rusted",
       "variant": "lax",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "load",
-      "ops_per_s": 317104.94345646794,
-      "us_per_op": 3.153530150302686,
+      "ops_per_s": 336626.4375710374,
+      "us_per_op": 2.970651999930851,
       "run": 2
     },
     {
       "library": "seared+rusted",
       "variant": "lax",
-      "version": "0.4.0/rusted 0.4.0",
+      "version": "0.4.4/rusted 0.4.0",
       "op": "dump",
-      "ops_per_s": 427770.36444182415,
-      "us_per_op": 2.3377028497634456,
+      "ops_per_s": 473019.1200974225,
+      "us_per_op": 2.1140794473467395,
       "run": 2
     },
     {
@@ -298,8 +298,8 @@
       "variant": "default",
       "version": "4.3.1",
       "op": "load",
-      "ops_per_s": 8764.498602269508,
-      "us_per_op": 114.09665804967517,
+      "ops_per_s": 8829.83933040107,
+      "us_per_op": 113.25234385149088,
       "run": 2
     },
     {
@@ -307,8 +307,8 @@
       "variant": "default",
       "version": "4.3.1",
       "op": "dump",
-      "ops_per_s": 25269.76452764785,
-      "us_per_op": 39.5729845011374,
+      "ops_per_s": 24643.026964159824,
+      "us_per_op": 40.579430499929,
       "run": 2
     },
     {
@@ -316,8 +316,8 @@
       "variant": "default",
       "version": "2.14.1",
       "op": "load",
-      "ops_per_s": 152506.8841320549,
-      "us_per_op": 6.557081050414126,
+      "ops_per_s": 145496.89935933877,
+      "us_per_op": 6.872998698963784,
       "run": 2
     },
     {
@@ -325,8 +325,8 @@
       "variant": "default",
       "version": "2.14.1",
       "op": "dump",
-      "ops_per_s": 178093.54316250794,
-      "us_per_op": 5.615026700252201,
+      "ops_per_s": 173510.00689695915,
+      "us_per_op": 5.763356349780224,
       "run": 2
     }
   ]

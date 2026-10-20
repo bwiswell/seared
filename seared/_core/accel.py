@@ -238,6 +238,15 @@ def _field_spec(owner: str, attr: str, wire: str, f: Field) -> dict[str, Any]:
     if kind is None:
         msg = f'{owner}.{attr}: {type(f).__name__} is not an accelerated field type'
         raise _NotAccelerableError(msg)
+    # A constrained field (0.4.4) isn't emitted: a ``SPEC_ABI`` 2 backend
+    # ignores options it doesn't know, so it would accelerate the field and
+    # skip the check. The spec of an unconstrained one is unchanged.
+    from seared.fields.constraints import declared_constraints
+
+    declared = declared_constraints(f)
+    if declared:
+        msg = f'{owner}.{attr}: {type(f).__name__} with {next(iter(declared))}= is not accelerated yet'
+        raise _NotAccelerableError(msg)
     spec: dict[str, Any] = {
         'attr': attr,
         'wire': wire,

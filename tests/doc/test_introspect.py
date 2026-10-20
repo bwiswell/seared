@@ -126,6 +126,48 @@ class TestKind:
         }
 
 
+class TestConstraints:
+    def test_each_fields_bounds_reach_the_model_and_the_notes(self):
+        # 0.4.4: as ``(option, value)`` pairs, in a fixed order whatever the declaration's.
+        @s.seared
+        class Limits(s.Seared):
+            count: int = s.Int(lt=10, ge=0, default=0, doc='how many')
+            share: float = s.Float(gt=0, default=1.0)
+            free: int = s.Int(default=0)
+
+        fields = {f.attr: f.constraints for f in introspect(Limits).fields}
+        assert fields == {'count': (('ge', 0), ('lt', 10)), 'share': (('gt', 0),), 'free': ()}
+        page = document(Limits)
+        assert 'how many · bounds: `>= 0`, `< 10` |' in page
+        assert '| bounds: `> 0` |' in page
+
+    def test_a_strs_lengths_reach_the_model_and_the_notes(self):
+        @s.seared
+        class Names(s.Seared):
+            code: str = s.Str(min_length=2, max_length=4, default='ab')
+            label: str = s.Str(max_length=64, default='')
+            first: str = s.Str(min_length=1, default='a')
+            pin: str = s.Str(min_length=4, max_length=4, default='0000')
+
+        fields = {f.attr: f.constraints for f in introspect(Names).fields}
+        assert fields['code'] == (('min_length', 2), ('max_length', 4))
+        page = document(Names)
+        for note in ('length: 2 to 4', 'length: at most 64', 'length: at least 1', 'length: 4 |'):
+            assert note in page, note
+
+    def test_a_strs_pattern_reaches_the_notes_as_code(self):
+        @s.seared
+        class Patterns(s.Seared):
+            plain: str = s.Str(pattern='^[a-z]+$', default='a')
+            either: str = s.Str(pattern='^(a|b)$', default='a')
+            ticked: str = s.Str(pattern='^`a`$', default='`a`')
+
+        page = document(Patterns)
+        assert '| pattern: `^[a-z]+$` |' in page
+        assert r'| pattern: `^(a\|b)$` |' in page
+        assert '| pattern: `` ^`a`$ `` |' in page
+
+
 class TestTypeStrings:
     def test_annotations_resolve_rather_than_falling_back_to_their_text(self):
         # 0.4.3: in 0.4.1 and 0.4.2 `get_type_hints` failed on every seared class,

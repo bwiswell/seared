@@ -60,3 +60,14 @@ def test_a_nullable_union_is_flagged() -> None:
     # Every other field's stub takes ``nullable``; ``Union``'s doesn't.
     result = _run_ty('must_error.py')
     assert 'Argument `nullable` does not match any known parameter' in result.stdout, result.stdout
+
+
+def test_a_float_bound_on_an_int_is_flagged() -> None:
+    # The stubs type an ``Int``'s bounds as ``int`` (0.4.4).
+    result = _run_ty('must_error.py')
+    assert 'Expected `int | None`, found `float' in result.stdout, result.stdout
+
+
+def test_a_misspelt_bound_is_flagged() -> None:
+    result = _run_ty('must_error.py')
+    assert 'Argument `gte` does not match any known parameter' in result.stdout, result.stdout

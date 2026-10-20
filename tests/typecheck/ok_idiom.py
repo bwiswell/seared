@@ -91,3 +91,18 @@ class Nulls(s.Seared):
 nulls = Nulls(must=None)
 assert_type(nulls.must, int | None)
 assert_type(nulls.fallback, int | None)
+
+
+# Bounds (0.4.4) are keyword options on `Int` and `Float`: an `int` bound on a
+# `Float` is a `float` to the checker, as the numeric tower has it.
+@s.seared
+class Bounded(s.Seared):
+    count: int = s.Int(ge=0, lt=10, default=0)
+    ratio: float = s.Float(gt=0, le=1.0, required=True)
+    scores: list[int] = s.Int(le=100, many=True, default_factory=list)
+    code: str = s.Str(min_length=2, max_length=4, default='ab')
+    slug: str = s.Str(pattern='^[a-z0-9-]+$', default='a')
+
+
+bounded = Bounded(ratio=0.5)
+assert_type(bounded.count, int)

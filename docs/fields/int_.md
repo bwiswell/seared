@@ -25,3 +25,15 @@ topic captures, decode through them.
 Before 0.4.0, strict mode truncated `3.7` to `3`, and `inf` raised a bare
 `OverflowError` in both modes, which `except s.ValidationError` didn't
 catch. An int-valued [`Enum`](enum_.md) follows the same rules.
+
+## Bounds
+
+```python
+retries: int = s.Int(ge=0, lt=10, default=3)
+```
+
+`ge=`, `gt=`, `le=` and `lt=` bound the value (0.4.4), each an `int`. A
+strict `load` checks them after the coercion above, so `'42'` and `42.0`
+are checked as `42`, and a strict `dump` checks them too; lax mode skips
+them. `json_schema` writes them as `minimum` and the rest. See
+[`constraints.md`](constraints.md).

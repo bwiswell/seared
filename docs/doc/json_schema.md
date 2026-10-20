@@ -123,9 +123,9 @@ travels as raw bytes, which no schema here describes.
 | Field | Schema |
 |---|---|
 | `Bool` | `{"type": "boolean"}` |
-| `Int` | `{"type": "integer"}` |
-| `Float` | `{"type": "number"}`. A `NaN` or infinity isn't JSON, and no schema has a word for one |
-| `Str`, `Path` | `{"type": "string"}` |
+| `Int` | `{"type": "integer"}`, with a keyword for each bound (below) |
+| `Float` | `{"type": "number"}`, with a keyword for each bound. A `NaN` or infinity isn't JSON, and no schema has a word for one |
+| `Str`, `Path` | `{"type": "string"}`; a `Str`'s lengths and pattern add keywords (below) |
 | `UUID` | `{"type": "string", "format": "uuid"}` |
 | `Date` | `{"type": "string", "format": "date"}`; with `format=` set, a plain string |
 | `DateTime`, `Time` | a string, with `format: date-time` / `time` on input only (above); with `format=` set, a plain string |
@@ -146,15 +146,26 @@ Around each kind:
   object of it (`additionalProperties`). Elements are never `null`.
 - **`nullable`** adds `null` to the whole value: `["integer", "null"]`, or
   an `anyOf` where there's no single `type`.
+- **Constraints** (0.4.4) become keywords on the element, in both modes,
+  since `load` and a strict `dump` both check them. An `Int`'s or a
+  `Float`'s `ge=` is `minimum`, `gt=` `exclusiveMinimum`, `le=` `maximum`
+  and `lt=` `exclusiveMaximum`; a `Str`'s `min_length=` and `max_length=`
+  are `minLength` and `maxLength`, and its `pattern=` is `pattern`, as
+  declared. A pattern is ECMA-262, as JSON Schema's always is, and seared
+  takes only one that Python's `re` reads the same way, so a JavaScript
+  validator and `load` agree on it. A `null` still satisfies a nullable
+  field's. See [`../fields/constraints.md`](../fields/constraints.md).
 - **`doc=`** becomes `description`. A class's docstring becomes its
   `description` and its name its `title`, at the root and under `$defs`.
-- **A `Tuple` slot** is its field's kind alone. `Tuple` hands each value to
-  its slot field directly, so a slot's `many` and `nullable` never apply.
+- **A `Tuple` slot** is its field's kind and constraints alone. `Tuple` hands
+  each value to its slot field directly, so a slot's `many` and `nullable`
+  never apply.
 
 The kind comes from [`s.field_kind`](../fields/kind.md), so a subclass of
-`Str` is described as a string. A subclass that narrows its values (a
-pattern it checks, say) is described by its base, so its load schema is
-wider than its `load`. A field with no kind can't be described, and
+`Str` is described as a string. A subclass that narrows its values in an
+override is described by its base, so its load schema is wider than its
+`load`; one that narrows with the options (a bound, a length, a pattern) is
+described by them. A field with no kind can't be described, and
 `json_schema` raises `TypeError` naming it (`Reading.raw: Raw has no field
 kind, …`), as it does for an enum value JSON can't hold.
 

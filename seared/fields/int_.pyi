@@ -3,6 +3,10 @@ from typing import Any
 
 def Int(
     *,
+    ge: int | None = ...,
+    gt: int | None = ...,
+    le: int | None = ...,
+    lt: int | None = ...,
     data_key: str | None = ...,
     keyed: bool = ...,
     many: bool = ...,

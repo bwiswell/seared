@@ -13,8 +13,8 @@ for free.
 ## Why seared
 
 - **Zero runtime dependencies.** Pure stdlib core. Numpy / pandas / polars / PyYAML / tomli-w live behind opt-in extras.
-- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~3.7×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~2.0×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
-- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
+- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~4.0×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~2.2×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
+- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~10×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~7×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
 - **Compact.** `@s.seared` classes are `__slots__` dataclasses by default — lower memory per instance, faster attribute access.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
 - **Typed-callable fields.** `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, plus optional `NDArray`, `PandasFrame`, `PolarsFrame`.
@@ -31,22 +31,22 @@ for free.
 
 ## Setup
 
-Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.3`).
+Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.4`).
 Install one by its tag:
 
 ```sh
 # uv
-uv add git+https://github.com/bwiswell/seared --tag v0.4.3
+uv add git+https://github.com/bwiswell/seared --tag v0.4.4
 
 # pip
-pip install git+https://github.com/bwiswell/seared.git@v0.4.3
+pip install git+https://github.com/bwiswell/seared.git@v0.4.4
 ```
 
 `uv add` records the tag as the dependency's source:
 
 ```toml
 [tool.uv.sources]
-seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.3" }
+seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.4" }
 ```
 
 **The tag is the pin.** uv doesn't check a version specifier such as
@@ -119,9 +119,9 @@ cell raises. `to_csv` heads each column with its wire key and gives a
 **10. msgpack writes a `Tuple`'s `Bytes` slot as raw bytes**, as it writes a
 top-level `Bytes`, where it wrote base64. Payloads written before still load.
 
-**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.3` is the latest), and
-`rusted` to its `v0.4.0` with it: 0.4.1 to 0.4.3 change nothing `rusted`
-sees. zeared pins seared by tag itself (zeared 0.4.2 pins `v0.4.2`), and uv
+**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.4` is the latest), and
+`rusted` to its `v0.4.0` with it: 0.4.1 to 0.4.4 change nothing `rusted`
+sees. zeared pins seared by tag itself (zeared 0.4.3 pins `v0.4.3`), and uv
 refuses two tags for one package, so a project on both uses the seared tag
 its zeared pins.
 
@@ -234,6 +234,39 @@ their `tag_key` / `payload_key` strings don't collide. Set `fallback=Variant`
 to coerce unknown tags to a sentinel variant rather than raising. Full
 details — flat vs. nested envelopes, schema-evolution fallback,
 disjoint-key validation — in [`docs/fields/union.md`](docs/fields/union.md).
+
+## Constraints
+
+`Int` and `Float` take bounds (`ge=`, `gt=`, `le=`, `lt=`), and `Str` takes
+lengths (`min_length=`, `max_length=`) and a pattern (`pattern=`). New in
+0.4.4.
+
+```python
+@s.seared
+class Sampling(s.Seared):
+    interval_s: float = s.Float(ge=5, le=3600, default=60.0)
+    retries: int = s.Int(ge=0, lt=10, default=3)
+
+@s.seared
+class Account(s.Seared):
+    handle: str = s.Str(min_length=3, max_length=32, pattern=r'^[a-z0-9_]+$', required=True)
+
+Sampling.load({'interval_s': 2})
+# ValidationError: Sampling.interval_s: must be >= 5, got 2.0
+Account.load({'handle': 'Ana Lee'})
+# ValidationError: Account.handle: must match the pattern '^[a-z0-9_]+$'
+```
+
+A strict `load` checks them after coercing a value, and a strict `dump`
+checks them too; a lax class skips them. A declaration that can't hold, such
+as `ge=5, le=1` or a default that fails them, raises `TypeError` where it's
+written. `json_schema` writes each as its keyword (`minimum`, `maxLength`,
+`pattern`, …), and the docs pages list them. A pattern is JSON Schema's, an
+ECMA-262 regex, and seared takes only one Python's `re` reads the same way
+(`\d` is refused, with `[0-9]` suggested), so `load` and a JavaScript
+validator agree on every value. A class with a constrained field keeps the
+pure-Python path for now. See
+[`docs/fields/constraints.md`](docs/fields/constraints.md).
 
 ## File-format codecs
 
@@ -393,7 +426,8 @@ The two modes make two promises: input valid against the load schema
 loads, and what `dump` writes validates against the dump schema. Nested
 classes go under `$defs`, a `Union` is an envelope on its parent, and a
 schema is closed exactly where `load` would refuse an unknown key, which by
-default is where the class says (`@s.seared(unknown='raise')`).
+default is where the class says (`@s.seared(unknown='raise')`). A field's
+constraints become their keywords (`minimum`, `maxLength`, `pattern`, …).
 `field_schema` gives one field's schema, for an object of your own. See
 [`docs/doc/json_schema.md`](docs/doc/json_schema.md).
 
@@ -429,14 +463,14 @@ path rules.
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
 a list of strings) on an idle machine. Recorded
-<!-- bench:run -->2026-10-17, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.0, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run -->;
+<!-- bench:run -->2026-10-20, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.4, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run -->;
 ratios are versus marshmallow:
 
 <!-- bench:ops -->
 | Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
 |------|---------------|----------------------|----------------------|---------------|-----------------|
-| load | 8,732 ops/s   | 32,413 ops/s (~3.7×) | 32,701 ops/s (~3.7×) | 151,905 ops/s | 354,951 ops/s   |
-| dump | 24,887 ops/s  | 50,139 ops/s (~2.0×) | 55,743 ops/s (~2.2×) | 175,409 ops/s | 404,854 ops/s   |
+| load | 8,830 ops/s   | 34,976 ops/s (~4.0×) | 35,392 ops/s (~4.0×) | 150,013 ops/s | 338,343 ops/s   |
+| dump | 25,236 ops/s  | 56,092 ops/s (~2.2×) | 55,807 ops/s (~2.2×) | 173,354 ops/s | 406,967 ops/s   |
 <!-- /bench:ops -->
 
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
@@ -460,8 +494,8 @@ seared is pure Python and zero-dependency, and stays that way. When the
 optional compiled core [`rusted`](https://github.com/bwiswell/rusted) is
 installed, `@s.seared` swaps its generated `load` / `dump` for compiled
 equivalents — same classes, same API, same error messages,
-<!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> on `load` and
-<!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> on `dump`.
+<!-- bench:rusted-load -->~10×<!-- /bench:rusted-load --> on `load` and
+<!-- bench:rusted-dump -->~7×<!-- /bench:rusted-dump --> on `dump`.
 
 ```sh
 uv add git+https://github.com/bwiswell/rusted --tag v0.4.0   # nothing in your code changes
@@ -478,8 +512,9 @@ Python path: correct, just not accelerated.
 
 Acceleration is **per class, all or nothing**: a class qualifies only if
 every field, recursively through `T`, is a seared-native type the backend
-implements — today that is everything except `Tuple`, `Union`, and the
-`NDArray` / DataFrame fields. Classes with a hand-written `__init__`, a
+implements — today that is everything except `Tuple`, `Union`, the
+`NDArray` / DataFrame fields, and a constrained field (until a backend checks
+constraints). Classes with a hand-written `__init__`, a
 `__post_init__`, or a plain dataclass attribute that isn't a seared field
 (`b: int = 5`) are also declined, since a compiled core builds instances
 through `__new__` and only `__init__` would ever set those.
@@ -510,7 +545,7 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 - **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` honours the hint, and `T` and `Tuple` pass it on; other fields are unaffected.
 - **No async variants.** seared is pure CPU-bound transformation; no async path is planned.
 - **`nullable` is about a field's own value.** A `null` *element* inside a `many` / `keyed` collection is an error in strict mode (lax mode coerces it per kind; see [`field.md`](docs/fields/field.md#null-on-the-wire)), and a `Union` can't be nullable. TOML has no null, so `to_toml` leaves a nullable `None` out and it reads back as absent.
-- **Construction doesn't check `required`.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises.
+- **Construction doesn't check `required`, or a field's constraints.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises. A value that fails a constraint builds too, and a strict `dump` refuses it.
 - **Unknown wire keys are ignored** on `load`, by design: an older consumer can read a newer producer's payload.
 - **Strict mode still coerces, without losing data.** `Int` reads numeric strings (`'42'`) and integral floats (`3.0`), but refuses `3.7`, which lax mode truncates; `Bool` reads `'yes'` / `'off'` and the ints `0` / `1`; `Float` reads `'nan'`. String coercion is deliberate, since it is how string-only sources such as topic-key captures decode.
 - **NaN dumps as bare `NaN`**, which is Python's `json` default but not standard JSON. Pass `allow_nan=False` to `Cls.dumps` or `Cls.to_json` to refuse it, as JSON bound for a browser should.

@@ -9,6 +9,57 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
+## 0.4.4 — 2026-10-19
+
+**Constraints on fields, and a `Union` tag must be a string.** `Int` and `Float` take bounds, and `Str` lengths
+and a pattern: `load` and `dump` check them, and `json_schema` writes them.
+
+### Added
+
+- **Bounds on `Int` and `Float`: `ge=`, `gt=`, `le=` and `lt=`,** at most one lower and one upper; an `Int`'s are
+  `int`s, a `Float`'s finite numbers. A strict `load` checks them after coercing a value, and a strict `dump` checks
+  them too, element by element under `many` and `keyed` with the index or key in the path
+  (`Sampling.gains[1]: must be > 0, got 0.0`). A lax class skips them, and a bounded `Float` refuses `NaN`. A
+  declaration that can't hold raises `TypeError` where it's written: a bound of the wrong type, two on one side, a
+  range with no value in it, or a static `default` outside it. A class with a bounded field keeps the pure-Python
+  path: a `SPEC_ABI` 2 backend would skip the check, so a bounded field isn't emitted, and an unbounded one's spec
+  is unchanged.
+- **Lengths and a pattern on `Str`: `min_length=`, `max_length=` and `pattern=`.** A length counts code points, as
+  JSON Schema counts characters. A pattern is JSON Schema's, an ECMA-262 regex searched for rather than anchored,
+  and must stay within the subset Python's `re` reads the same way; anything else raises `TypeError` where it's
+  declared, naming the construct, where it is and its portable spelling (`\d at 1 isn't portable; write [0-9]`).
+  `load` checks a translation of it, so `$` doesn't match before a final newline and `.` doesn't match a line
+  terminator, as in ECMA-262, and a JavaScript validator and `load` agree on every value. A pattern's message never
+  shows the value, which may be a secret pasted where a name belongs. They're checked where bounds are, the lengths
+  first, and a class with one keeps the pure-Python path too.
+- **Constraints in `json_schema` and `seared.doc`.** Each becomes its keyword on the element's schema, in both
+  modes: `minimum`, `exclusiveMinimum`, `maximum`, `exclusiveMaximum`, `minLength`, `maxLength`, and `pattern` as
+  declared. `FieldDoc` gains `constraints`, and a page's notes read ``bounds: `>= 0`, `< 10` ``, `length: 3 to 32`
+  and ``pattern: `^[a-z]+$` ``.
+- **`seared.fields.constraints`, for tooling:** `declared_constraints(field)`, the constraints a field declares, and
+  `portable_regex(pattern)`, a pattern compiled as a `Str` checks it, with `OPTIONS` and `SYMBOLS`.
+
+### Changed
+
+- **Breaking:** a `Union` tag that isn't a string raises `ValidationError` (`Union: tag must be a string, got int`),
+  with or without a `fallback=`, in lax mode too. Under a fallback, a numeric tag such as `5` loaded as the fallback
+  variant; without one, it raised `unknown tag 5`. Every declared tag is a string, so such a tag is malformed rather
+  than a newer variant, and a fallback would only hide it.
+- **`Int`, `Float` and `Str` are faster on the pure-Python path.** An exact `int`, `float` or `str`, or an `int` on
+  a `Float`, on an unconstrained field returns before the type checks, with the same answer as before. On a class of
+  numbers, `load` is about 10% faster and `dump` about 20%, and a `Str`'s `dump` skips a `str()` call; a numeric
+  string on an `Int`, such as a topic capture, is about 9% slower. Accelerated classes are unchanged.
+- **The benchmarks are re-recorded** with seared 0.4.4 and rusted 0.4.0. Against marshmallow, seared loads ~4.0× and
+  dumps ~2.2× faster, up from ~3.7× and ~2.0×, and a strict `dump` now runs as fast as a lax one. rusted reads ~10×
+  on `load` and ~7× on `dump`, down from ~11× and ~8×, because the pure-Python path it's measured against got
+  faster.
+
+### Fixed
+
+- **A list or dict `Union` tag raises `ValidationError`, not `TypeError`.** The variant lookup hashed the tag, so
+  `{"type": ["start"]}` raised `TypeError: cannot use 'list' as a dict key` where a `ValidationError` at the tag's
+  path belonged, with or without a fallback. Since before 0.3.4.
+
 ## 0.4.3 — 2026-10-17
 
 **Type hints resolve on seared classes again.**

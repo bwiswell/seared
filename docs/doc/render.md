@@ -31,7 +31,7 @@ the package tree.
 | `type` | the annotation; a `T` field's links to its class's page |
 | `required` | ✓ for `required=True`, and for every `Union`, since a missing or `null` tag always raises |
 | `default` | the Python value an omitted field gets (`` `None` ``, never `` `null` ``), or `—` |
-| `notes` | the field's `doc=`, then an `NDArray`'s "dtype: `float32`", then "nullable: `null` loads as `None`", then "not emitted (`dump=False`)", joined with `·` |
+| `notes` | the field's `doc=`, then an `NDArray`'s "dtype: `float32`", then an `Int`'s or a `Float`'s "bounds: `>= 0`, `< 10`", then a `Str`'s "length: 3 to 32" and "pattern: `^[a-z0-9_]+$`", then "nullable: `null` loads as `None`", then "not emitted (`dump=False`)", joined with `·` |
 
 `|` is escaped in every cell, code included, so a `str | None` type
 doesn't break the table, and a newline in a `doc=` becomes a space.

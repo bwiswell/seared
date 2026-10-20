@@ -36,7 +36,8 @@ class Union(Field):
     fallback: unknown tags coerce to the named variant rather
     than raising. Useful when older consumers may receive newer
     schemas — they decode what they can recognise and route the rest
-    to a generic / sentinel variant.
+    to a generic / sentinel variant. A tag that isn't a string raises
+    ``ValidationError`` either way: it's malformed, not a newer variant.
 
     A value instance whose type isn't one of the declared variants
     also raises ``ValidationError`` on serialize (strict).
@@ -117,6 +118,14 @@ class Union(Field):
         tag = value.get(self.tag_key)
         if tag is None:
             msg = f'Union: missing tag {self.tag_key!r} in envelope'
+            raise ValidationError(msg, path=(self.tag_key,))
+        # Every declared tag is a string (``__post_init__``), so any other tag
+        # is malformed, not a newer publisher's: a fallback would only hide it.
+        # Checked before the lookup, which raises ``TypeError`` on a list or a
+        # dict. The message names the type, since the value could be a whole
+        # object.
+        if not isinstance(tag, str):
+            msg = f'Union: tag must be a string, got {type(tag).__name__}'
             raise ValidationError(msg, path=(self.tag_key,))
         variant_cls = self.variants.get(tag)
         if variant_cls is None:
