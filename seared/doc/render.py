@@ -11,6 +11,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from seared.fields.constraints import SYMBOLS
+
 from .introspect import SchemaDoc, introspect
 
 if TYPE_CHECKING:
@@ -51,8 +53,9 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
     its ``required`` says: a missing or ``null`` tag always raises. ``default``
     is the Python value an omitted field gets (`` `None` ``, never
     `` `null` ``), or ``—`` when there is none. ``notes`` carries the field's
-    ``doc``, then an ``NDArray``'s declared dtype, whether it is nullable and
-    whether ``dump`` skips it.
+    ``doc``, then an ``NDArray``'s declared dtype, an ``Int``'s or a ``Float``'s
+    bounds (``bounds: `>= 0`, `< 10` ``), whether it is nullable and whether
+    ``dump`` skips it.
     """
     if not schema.fields:
         return ''
@@ -71,6 +74,9 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
             notes.append(_cell(f.doc))
         if f.dtype is not None:
             notes.append(f'dtype: `{f.dtype}`')
+        bounds = [f'`{SYMBOLS[option]} {value!r}`' for option, value in f.constraints if option in SYMBOLS]
+        if bounds:
+            notes.append(f'bounds: {", ".join(bounds)}')
         if f.nullable:
             notes.append('nullable: `null` loads as `None`')
         if not f.dump:

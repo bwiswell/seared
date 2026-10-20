@@ -120,6 +120,12 @@ class TestErrorPaths:
             Obj.load({'pair': ['x', 'y']})
         assert str(info.value) == "Obj.pair[0]: cannot deserialize 'x' as int"
 
+    def test_a_slots_bounds_are_checked(self):
+        # 0.4.4: a slot is its field, options and all.
+        with pytest.raises(s.ValidationError) as info:
+            s.Tuple(s.Int(ge=0), s.Float(le=1)).deserialize([0, 1.5])
+        assert str(info.value) == '[1]: must be <= 1, got 1.5'
+
 
 @s.seared
 class _Blob(s.Seared):

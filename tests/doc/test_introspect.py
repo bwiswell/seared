@@ -126,6 +126,22 @@ class TestKind:
         }
 
 
+class TestConstraints:
+    def test_each_fields_bounds_reach_the_model_and_the_notes(self):
+        # 0.4.4: as ``(option, value)`` pairs, in a fixed order whatever the declaration's.
+        @s.seared
+        class Limits(s.Seared):
+            count: int = s.Int(lt=10, ge=0, default=0, doc='how many')
+            share: float = s.Float(gt=0, default=1.0)
+            free: int = s.Int(default=0)
+
+        fields = {f.attr: f.constraints for f in introspect(Limits).fields}
+        assert fields == {'count': (('ge', 0), ('lt', 10)), 'share': (('gt', 0),), 'free': ()}
+        page = document(Limits)
+        assert 'how many · bounds: `>= 0`, `< 10` |' in page
+        assert '| bounds: `> 0` |' in page
+
+
 class TestTypeStrings:
     def test_annotations_resolve_rather_than_falling_back_to_their_text(self):
         # 0.4.3: in 0.4.1 and 0.4.2 `get_type_hints` failed on every seared class,
