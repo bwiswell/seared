@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from seared._core.errors import ValidationError
 
+# ``StrChecks`` at runtime: ``_checks``'s annotation names it, and
+# ``typing.get_type_hints`` evaluates that (0.4.3).
+from .constraints import StrChecks, check_default, check_string, string_checks
 from .field import Field
 from .kind import FieldKind
 
@@ -13,18 +16,46 @@ from .kind import FieldKind
 class Str(Field):
     KIND = FieldKind.STR
 
+    # Lengths (0.4.4), in code points, checked on a strict load and dump
+    # (``seared.fields.constraints``).
+    min_length: int | None = None
+    max_length: int | None = None
+    # The checks, reduced once at declaration, or ``None``.
+    _checks: StrChecks | None = field(default=None, init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        """Reduce the checks to one record, refusing a declaration they can't hold."""
+        super().__post_init__()
+        checks = string_checks(self)
+        object.__setattr__(self, '_checks', checks)
+        if checks is not None:
+            check_default(self, lambda value: check_string(value, checks))
+
     def serialize(self, value: Any, validate: bool = True, **kwargs: Any) -> str:
-        """Python ``str`` → JSON string."""
+        """Python ``str`` → JSON string, passing its checks."""
+        # The common case first, and without the slower checks: an exact
+        # ``str`` on an unchecked field is its own wire form.
+        if type(value) is str and self._checks is None:
+            return value
         if validate and not isinstance(value, str):
             msg = f'expected str, got {type(value).__name__}'
             raise ValidationError(msg)
-        return str(value)
+        text = str(value)
+        if self._checks is not None and validate:
+            check_string(text, self._checks)
+        return text
 
     def deserialize(self, value: Any, validate: bool = True, **kwargs: Any) -> str:
-        """JSON string → ``str``."""
-        if isinstance(value, str):
+        """JSON string → ``str``; strict mode then runs its checks."""
+        if type(value) is str and self._checks is None:
             return value
-        if validate:
+        if isinstance(value, str):
+            text = value
+        elif validate:
             msg = f'expected str, got {type(value).__name__}'
             raise ValidationError(msg)
-        return str(value)
+        else:
+            text = str(value)
+        if self._checks is not None and validate:
+            check_string(text, self._checks)
+        return text

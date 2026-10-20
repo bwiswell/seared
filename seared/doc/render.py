@@ -9,7 +9,7 @@ assembles the core (Message-agnostic) page.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from seared.fields.constraints import SYMBOLS
 
@@ -54,8 +54,8 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
     is the Python value an omitted field gets (`` `None` ``, never
     `` `null` ``), or ``—`` when there is none. ``notes`` carries the field's
     ``doc``, then an ``NDArray``'s declared dtype, an ``Int``'s or a ``Float``'s
-    bounds (``bounds: `>= 0`, `< 10` ``), whether it is nullable and whether
-    ``dump`` skips it.
+    bounds (``bounds: `>= 0`, `< 10` ``), a ``Str``'s lengths (``length: 1 to
+    64``), whether it is nullable and whether ``dump`` skips it.
     """
     if not schema.fields:
         return ''
@@ -77,6 +77,9 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
         bounds = [f'`{SYMBOLS[option]} {value!r}`' for option, value in f.constraints if option in SYMBOLS]
         if bounds:
             notes.append(f'bounds: {", ".join(bounds)}')
+        length = _length_note(dict(f.constraints))
+        if length is not None:
+            notes.append(f'length: {length}')
         if f.nullable:
             notes.append('nullable: `null` loads as `None`')
         if not f.dump:
@@ -90,6 +93,18 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
             f'| {" · ".join(notes)} |'
         )
     return '\n'.join(rows)
+
+
+def _length_note(declared: dict[str, Any]) -> str | None:
+    """A ``Str``'s lengths as its notes say them (``1 to 64``, ``at least 3``, ``at most 64``), or ``None``."""
+    lo, hi = declared.get('min_length'), declared.get('max_length')
+    if lo is not None and hi is not None:
+        return str(lo) if lo == hi else f'{lo} to {hi}'
+    if lo is not None:
+        return f'at least {lo}'
+    if hi is not None:
+        return f'at most {hi}'
+    return None
 
 
 def render_enums(schema: SchemaDoc) -> str:

@@ -3,6 +3,8 @@ from typing import Any
 
 def Str(
     *,
+    min_length: int | None = ...,
+    max_length: int | None = ...,
     data_key: str | None = ...,
     keyed: bool = ...,
     many: bool = ...,
