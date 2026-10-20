@@ -22,8 +22,10 @@ a closed one.
 
 **Constraints** a field declares become their keywords, the same in both
 modes: an ``Int``'s or a ``Float``'s ``ge=`` is ``minimum``, ``gt=``
-``exclusiveMinimum``, ``le=`` ``maximum`` and ``lt=`` ``exclusiveMaximum``
-(0.4.4). ``load`` and a strict ``dump`` both check them.
+``exclusiveMinimum``, ``le=`` ``maximum`` and ``lt=`` ``exclusiveMaximum``, and
+a ``Str``'s ``min_length=``, ``max_length=`` and ``pattern=`` are
+``minLength``, ``maxLength`` and ``pattern`` (0.4.4), the pattern as declared.
+``load`` and a strict ``dump`` both check them.
 
 **Closed** means refusing a key the class doesn't declare, exactly where
 ``load`` would: ``unknown='raise'`` closes every object in the document, as a
@@ -278,8 +280,18 @@ def _scalar(json_type: str, **extra: Any) -> Any:
 
 
 #: Each constraint option's keyword (0.4.4): the bounds on an ``Int`` or a
-#: ``Float`` (``seared.fields.constraints``).
-_KEYWORDS: dict[str, str] = {'ge': 'minimum', 'gt': 'exclusiveMinimum', 'le': 'maximum', 'lt': 'exclusiveMaximum'}
+#: ``Float``, and a ``Str``'s lengths and pattern (``seared.fields.constraints``).
+#: A pattern is written as declared: ``load`` checks a translation of it that
+#: matches as the ECMA-262 regex JSON Schema reads does.
+_KEYWORDS: dict[str, str] = {
+    'ge': 'minimum',
+    'gt': 'exclusiveMinimum',
+    'le': 'maximum',
+    'lt': 'exclusiveMaximum',
+    'min_length': 'minLength',
+    'max_length': 'maxLength',
+    'pattern': 'pattern',
+}
 
 
 def _constraints(field: Any) -> dict[str, Any]:

@@ -70,10 +70,12 @@ A class is also declined when it defines its own `__init__`, a
 attribute assignment, which would skip all three — and a plain attribute
 never reaches the spec, so nothing but `__init__` would ever set it.
 
-A field with bounds (`ge=`, `gt=`, `le=`, `lt=`, 0.4.4) declines too, with
+A constrained field (0.4.4: bounds on an `Int` or a `Float`, lengths or a
+pattern on a `Str`) declines too, with
 `Sampling.interval_s: Float with ge= is not accelerated yet`. A `SPEC_ABI`
 2 backend doesn't know the options, so it would check the type and skip the
-bound; they aren't emitted, and an unbounded field's spec is unchanged. See
+constraint; they aren't emitted, and an unconstrained field's spec is
+unchanged. See
 [`../fields/constraints.md`](../fields/constraints.md).
 
 ## `SPEC_ABI` 2

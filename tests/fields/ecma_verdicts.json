@@ -1,0 +1,1053 @@
+{
+  "_about": "ECMA-262 verdicts for seared's pattern tests: recorded with Node v24.15.0 (V8 13.6.233.17-node.48), each pattern compiled as new RegExp(pattern, 'u'), as JSON Schema validators compile one, and each input tested with .test(input).",
+  "accepted": [
+    {
+      "pattern": "^a$",
+      "ecma": "compiles",
+      "inputs": [
+        "a",
+        "a\n",
+        "\na",
+        "ba",
+        ""
+      ],
+      "matches": [
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "a$",
+      "ecma": "compiles",
+      "inputs": [
+        "a",
+        "ba",
+        "a\n",
+        "ab"
+      ],
+      "matches": [
+        true,
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^a",
+      "ecma": "compiles",
+      "inputs": [
+        "a",
+        "ba",
+        "\na"
+      ],
+      "matches": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "b",
+      "ecma": "compiles",
+      "inputs": [
+        "abc",
+        "",
+        "B"
+      ],
+      "matches": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "",
+      "ecma": "compiles",
+      "inputs": [
+        "",
+        "x"
+      ],
+      "matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "pattern": "x$",
+      "ecma": "compiles",
+      "inputs": [
+        "x",
+        "x\r",
+        "x\u2028"
+      ],
+      "matches": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^.$",
+      "ecma": "compiles",
+      "inputs": [
+        "a",
+        "\n",
+        "\r",
+        "\u2028",
+        "\u2029",
+        "😀",
+        "",
+        "ab"
+      ],
+      "matches": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^a.c$",
+      "ecma": "compiles",
+      "inputs": [
+        "abc",
+        "a\rc",
+        "a\nc",
+        "a.c"
+      ],
+      "matches": [
+        true,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "pattern": "^.{2}$",
+      "ecma": "compiles",
+      "inputs": [
+        "😀😀",
+        "ab",
+        "a"
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[abc]+$",
+      "ecma": "compiles",
+      "inputs": [
+        "abc",
+        "abd",
+        ""
+      ],
+      "matches": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^[^abc]$",
+      "ecma": "compiles",
+      "inputs": [
+        "\n",
+        "d",
+        "a",
+        "😀"
+      ],
+      "matches": [
+        true,
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "pattern": "^[^\\n]*$",
+      "ecma": "compiles",
+      "inputs": [
+        "abc",
+        "a\nb",
+        "a\rb"
+      ],
+      "matches": [
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "pattern": "^[a-z0-9-]+$",
+      "ecma": "compiles",
+      "inputs": [
+        "slug-1",
+        "Slug",
+        "a_b"
+      ],
+      "matches": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^[-a]$",
+      "ecma": "compiles",
+      "inputs": [
+        "-",
+        "a",
+        "b"
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[a-]$",
+      "ecma": "compiles",
+      "inputs": [
+        "-",
+        "a"
+      ],
+      "matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "pattern": "^[\\-a]$",
+      "ecma": "compiles",
+      "inputs": [
+        "-",
+        "a"
+      ],
+      "matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "pattern": "^[a\\-z]$",
+      "ecma": "compiles",
+      "inputs": [
+        "-",
+        "m"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[\\]]$",
+      "ecma": "compiles",
+      "inputs": [
+        "]",
+        "["
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[\\\\]$",
+      "ecma": "compiles",
+      "inputs": [
+        "\\",
+        "/"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[.$^(){}|*+?/]+$",
+      "ecma": "compiles",
+      "inputs": [
+        ".$^(){}|*+?/",
+        "a"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[\\^\\[\\/]$",
+      "ecma": "compiles",
+      "inputs": [
+        "^",
+        "[",
+        "/",
+        "a"
+      ],
+      "matches": [
+        true,
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[😀-😎]$",
+      "ecma": "compiles",
+      "inputs": [
+        "😃",
+        "😏",
+        "a"
+      ],
+      "matches": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^[\\x41-\\x43]$",
+      "ecma": "compiles",
+      "inputs": [
+        "A",
+        "C",
+        "D"
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[\\u2028]$",
+      "ecma": "compiles",
+      "inputs": [
+        "\u2028",
+        "\n"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[&|~]$",
+      "ecma": "compiles",
+      "inputs": [
+        "&",
+        "|",
+        "~"
+      ],
+      "matches": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "pattern": "^a{2}$",
+      "ecma": "compiles",
+      "inputs": [
+        "aa",
+        "a",
+        "aaa"
+      ],
+      "matches": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^a{2,}$",
+      "ecma": "compiles",
+      "inputs": [
+        "aa",
+        "aaaa",
+        "a"
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^a{1,3}$",
+      "ecma": "compiles",
+      "inputs": [
+        "a",
+        "aaa",
+        "aaaa",
+        ""
+      ],
+      "matches": [
+        true,
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^a{2,3}?$",
+      "ecma": "compiles",
+      "inputs": [
+        "aa",
+        "aaa",
+        "a"
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "a{0}",
+      "ecma": "compiles",
+      "inputs": [
+        "",
+        "a"
+      ],
+      "matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "pattern": "^a+?$",
+      "ecma": "compiles",
+      "inputs": [
+        "a",
+        "aa",
+        ""
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^a??b$",
+      "ecma": "compiles",
+      "inputs": [
+        "b",
+        "ab",
+        "aab"
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^(ab)*$",
+      "ecma": "compiles",
+      "inputs": [
+        "",
+        "abab",
+        "aba"
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^(?:ab)+$",
+      "ecma": "compiles",
+      "inputs": [
+        "ab",
+        "abab",
+        ""
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^(?:)$",
+      "ecma": "compiles",
+      "inputs": [
+        ""
+      ],
+      "matches": [
+        true
+      ]
+    },
+    {
+      "pattern": "^(a)?b$",
+      "ecma": "compiles",
+      "inputs": [
+        "b",
+        "ab",
+        "aab"
+      ],
+      "matches": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^(?=a)[a-z]+$",
+      "ecma": "compiles",
+      "inputs": [
+        "abc",
+        "bcd"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^(?!b)[a-z]$",
+      "ecma": "compiles",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^a(?=b)",
+      "ecma": "compiles",
+      "inputs": [
+        "ab",
+        "ac"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^(?=.*\\.)[a-z.]+$",
+      "ecma": "compiles",
+      "inputs": [
+        "a.b",
+        "ab",
+        "a\n.b"
+      ],
+      "matches": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^(a|b)$",
+      "ecma": "compiles",
+      "inputs": [
+        "a",
+        "b",
+        "ab",
+        "c"
+      ],
+      "matches": [
+        true,
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "a|",
+      "ecma": "compiles",
+      "inputs": [
+        "",
+        "x"
+      ],
+      "matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "pattern": "^\\.$",
+      "ecma": "compiles",
+      "inputs": [
+        ".",
+        "a"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^a\\/b$",
+      "ecma": "compiles",
+      "inputs": [
+        "a/b",
+        "ab"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^a/b$",
+      "ecma": "compiles",
+      "inputs": [
+        "a/b"
+      ],
+      "matches": [
+        true
+      ]
+    },
+    {
+      "pattern": "^\\n$",
+      "ecma": "compiles",
+      "inputs": [
+        "\n",
+        "n"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^\\t\\r\\f\\v$",
+      "ecma": "compiles",
+      "inputs": [
+        "\t\r\f\u000b",
+        "trfv"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^\\x41$",
+      "ecma": "compiles",
+      "inputs": [
+        "A",
+        "a"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^\\u00e9$",
+      "ecma": "compiles",
+      "inputs": [
+        "é",
+        "e"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^\\u2028$",
+      "ecma": "compiles",
+      "inputs": [
+        "\u2028",
+        "\n"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^😀$",
+      "ecma": "compiles",
+      "inputs": [
+        "😀",
+        "😀😀"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^\\^\\$\\*\\+\\?\\(\\)\\[\\]\\{\\}\\|\\\\$",
+      "ecma": "compiles",
+      "inputs": [
+        "^$*+?()[]{}|\\",
+        "x"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    },
+    {
+      "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$",
+      "ecma": "compiles",
+      "inputs": [
+        "relay/rtls-bridge-bearer",
+        "relay/x\n",
+        "Relay/x",
+        "relay/",
+        "relay/x/y"
+      ],
+      "matches": [
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^[A-Za-z][A-Za-z0-9+_-]*(/[A-Za-z0-9+_-]+)*$",
+      "ecma": "compiles",
+      "inputs": [
+        "America/New_York",
+        "UTC",
+        "Etc/GMT+5",
+        "bad zone",
+        "UTC\n"
+      ],
+      "matches": [
+        true,
+        true,
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "ecma": "compiles",
+      "inputs": [
+        "12345678-1234-5678-1234-567812345678",
+        "12345678-1234-5678-1234-56781234567"
+      ],
+      "matches": [
+        true,
+        false
+      ]
+    }
+  ],
+  "refused": [
+    {
+      "pattern": "\\d",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\D",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\w",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\W",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\s",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\S",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\b",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\B",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\A",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\Z",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\z",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\1",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\0",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\k<a>",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\p{L}",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\cA",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\u{1F600}",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\uD83D",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "\\:",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\,",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\-",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\q",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\\",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "\ud83d",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "(?P<n>a)",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "(?<n>a)",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "(?<=a)b",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "(?<!a)b",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "(?i)a",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "(?i:a)",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "(?>a)",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "(?#c)",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "(?(1)a)",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a*+",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a++",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a?+",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a{2}+",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a**",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a*??",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a{,3}",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a{",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a}",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "]",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "}",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "{",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a{1, 2}",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a{3,2}",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a{99999999999}",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[]a]",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "[^]a]",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "[]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[^]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[[a]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[a[]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[a&&b]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[a||b]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[a~~b]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[a--]",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "[--a]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[a-b-c]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[z-a]",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "[\\d-z]",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "[\\b]",
+      "ecma": "compiles"
+    },
+    {
+      "pattern": "[a",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "*a",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "+",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "(*)",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a|*",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "^*",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "$+",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "(?=a)*",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "x(?!a)+",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "(a",
+      "ecma": "SyntaxError"
+    },
+    {
+      "pattern": "a)",
+      "ecma": "SyntaxError"
+    }
+  ]
+}

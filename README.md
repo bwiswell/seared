@@ -237,8 +237,9 @@ disjoint-key validation — in [`docs/fields/union.md`](docs/fields/union.md).
 
 ## Constraints
 
-`Int` and `Float` take bounds (0.4.4): `ge=`, `gt=`, `le=` and `lt=`, at
-most one lower and one upper.
+`Int` and `Float` take bounds (`ge=`, `gt=`, `le=`, `lt=`), and `Str` takes
+lengths (`min_length=`, `max_length=`) and a pattern (`pattern=`). New in
+0.4.4.
 
 ```python
 @s.seared
@@ -246,16 +247,25 @@ class Sampling(s.Seared):
     interval_s: float = s.Float(ge=5, le=3600, default=60.0)
     retries: int = s.Int(ge=0, lt=10, default=3)
 
+@s.seared
+class Account(s.Seared):
+    handle: str = s.Str(min_length=3, max_length=32, pattern=r'^[a-z0-9_]+$', required=True)
+
 Sampling.load({'interval_s': 2})
 # ValidationError: Sampling.interval_s: must be >= 5, got 2.0
+Account.load({'handle': 'Ana Lee'})
+# ValidationError: Account.handle: must match the pattern '^[a-z0-9_]+$'
 ```
 
 A strict `load` checks them after coercing a value, and a strict `dump`
 checks them too; a lax class skips them. A declaration that can't hold, such
-as `ge=5, le=1` or a default outside the range, raises `TypeError` where
-it's written. `json_schema` writes each bound as its keyword (`minimum`,
-`exclusiveMaximum`, …), and the docs pages list them. A class with a bounded
-field keeps the pure-Python path for now. See
+as `ge=5, le=1` or a default that fails them, raises `TypeError` where it's
+written. `json_schema` writes each as its keyword (`minimum`, `maxLength`,
+`pattern`, …), and the docs pages list them. A pattern is JSON Schema's, an
+ECMA-262 regex, and seared takes only one Python's `re` reads the same way
+(`\d` is refused, with `[0-9]` suggested), so `load` and a JavaScript
+validator agree on every value. A class with a constrained field keeps the
+pure-Python path for now. See
 [`docs/fields/constraints.md`](docs/fields/constraints.md).
 
 ## File-format codecs
@@ -417,7 +427,7 @@ loads, and what `dump` writes validates against the dump schema. Nested
 classes go under `$defs`, a `Union` is an envelope on its parent, and a
 schema is closed exactly where `load` would refuse an unknown key, which by
 default is where the class says (`@s.seared(unknown='raise')`). A field's
-bounds become their keywords (`minimum`, `exclusiveMaximum`, …).
+constraints become their keywords (`minimum`, `maxLength`, `pattern`, …).
 `field_schema` gives one field's schema, for an object of your own. See
 [`docs/doc/json_schema.md`](docs/doc/json_schema.md).
 
@@ -503,8 +513,8 @@ Python path: correct, just not accelerated.
 Acceleration is **per class, all or nothing**: a class qualifies only if
 every field, recursively through `T`, is a seared-native type the backend
 implements — today that is everything except `Tuple`, `Union`, the
-`NDArray` / DataFrame fields, and a field with bounds (until a backend checks
-them). Classes with a hand-written `__init__`, a
+`NDArray` / DataFrame fields, and a constrained field (until a backend checks
+constraints). Classes with a hand-written `__init__`, a
 `__post_init__`, or a plain dataclass attribute that isn't a seared field
 (`b: int = 5`) are also declined, since a compiled core builds instances
 through `__new__` and only `__init__` would ever set those.
@@ -535,7 +545,7 @@ for CI that needs to assert the wheel is actually engaged. Full details in
 - **JSON-by-default wire format** via `dumps` / `loads`. Binary carriers (msgpack, etc.) opt in via `Cls.dump(obj, format='msgpack')` — `Bytes` honours the hint, and `T` and `Tuple` pass it on; other fields are unaffected.
 - **No async variants.** seared is pure CPU-bound transformation; no async path is planned.
 - **`nullable` is about a field's own value.** A `null` *element* inside a `many` / `keyed` collection is an error in strict mode (lax mode coerces it per kind; see [`field.md`](docs/fields/field.md#null-on-the-wire)), and a `Union` can't be nullable. TOML has no null, so `to_toml` leaves a nullable `None` out and it reads back as absent.
-- **Construction doesn't check `required`, or a field's bounds.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises. An out-of-range value builds too, and a strict `dump` refuses it.
+- **Construction doesn't check `required`, or a field's constraints.** `Cls()` without a required field builds an instance holding `None` there. The type checker flags the call; only `load` raises. A value that fails a constraint builds too, and a strict `dump` refuses it.
 - **Unknown wire keys are ignored** on `load`, by design: an older consumer can read a newer producer's payload.
 - **Strict mode still coerces, without losing data.** `Int` reads numeric strings (`'42'`) and integral floats (`3.0`), but refuses `3.7`, which lax mode truncates; `Bool` reads `'yes'` / `'off'` and the ints `0` / `1`; `Float` reads `'nan'`. String coercion is deliberate, since it is how string-only sources such as topic-key captures decode.
 - **NaN dumps as bare `NaN`**, which is Python's `json` default but not standard JSON. Pass `allow_nan=False` to `Cls.dumps` or `Cls.to_json` to refuse it, as JSON bound for a browser should.
