@@ -13,8 +13,8 @@ for free.
 ## Why seared
 
 - **Zero runtime dependencies.** Pure stdlib core. Numpy / pandas / polars / PyYAML / tomli-w live behind opt-in extras.
-- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~3.7×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~2.0×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
-- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
+- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~4.0×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~2.2×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
+- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~10×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~7×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
 - **Compact.** `@s.seared` classes are `__slots__` dataclasses by default — lower memory per instance, faster attribute access.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
 - **Typed-callable fields.** `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, plus optional `NDArray`, `PandasFrame`, `PolarsFrame`.
@@ -463,14 +463,14 @@ path rules.
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
 a list of strings) on an idle machine. Recorded
-<!-- bench:run -->2026-10-17, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.0, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run -->;
+<!-- bench:run -->2026-10-20, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.4, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run -->;
 ratios are versus marshmallow:
 
 <!-- bench:ops -->
 | Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
 |------|---------------|----------------------|----------------------|---------------|-----------------|
-| load | 8,732 ops/s   | 32,413 ops/s (~3.7×) | 32,701 ops/s (~3.7×) | 151,905 ops/s | 354,951 ops/s   |
-| dump | 24,887 ops/s  | 50,139 ops/s (~2.0×) | 55,743 ops/s (~2.2×) | 175,409 ops/s | 404,854 ops/s   |
+| load | 8,830 ops/s   | 34,976 ops/s (~4.0×) | 35,392 ops/s (~4.0×) | 150,013 ops/s | 338,343 ops/s   |
+| dump | 25,236 ops/s  | 56,092 ops/s (~2.2×) | 55,807 ops/s (~2.2×) | 173,354 ops/s | 406,967 ops/s   |
 <!-- /bench:ops -->
 
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
@@ -494,8 +494,8 @@ seared is pure Python and zero-dependency, and stays that way. When the
 optional compiled core [`rusted`](https://github.com/bwiswell/rusted) is
 installed, `@s.seared` swaps its generated `load` / `dump` for compiled
 equivalents — same classes, same API, same error messages,
-<!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> on `load` and
-<!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> on `dump`.
+<!-- bench:rusted-load -->~10×<!-- /bench:rusted-load --> on `load` and
+<!-- bench:rusted-dump -->~7×<!-- /bench:rusted-dump --> on `dump`.
 
 ```sh
 uv add git+https://github.com/bwiswell/rusted --tag v0.4.0   # nothing in your code changes
