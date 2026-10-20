@@ -37,9 +37,13 @@ OPTIONS: tuple[str, ...] = ('ge', 'gt', 'le', 'lt')
 #: for the message, and the bound itself.
 type Bound = tuple[Callable[[Any, Any], bool], str, int | float]
 
+#: Each bound option's comparison, as its messages and ``seared.doc``'s notes
+#: write it.
+SYMBOLS: dict[str, str] = {'ge': '>=', 'gt': '>', 'le': '<=', 'lt': '<'}
+
 #: Each side's two options, by name, with their symbols and comparisons.
-_LOWER = (('ge', '>=', operator.ge), ('gt', '>', operator.gt))
-_UPPER = (('le', '<=', operator.le), ('lt', '<', operator.lt))
+_LOWER = (('ge', SYMBOLS['ge'], operator.ge), ('gt', SYMBOLS['gt'], operator.gt))
+_UPPER = (('le', SYMBOLS['le'], operator.le), ('lt', SYMBOLS['lt'], operator.lt))
 
 
 def declared_constraints(field: object) -> dict[str, Any]:
@@ -155,4 +159,4 @@ def check_default(field: Any, check: Callable[[Any], None]) -> None:
             raise TypeError(msg) from None
 
 
-__all__ = ['OPTIONS', 'Bound', 'check_bounds', 'check_default', 'declared_constraints', 'number_bounds']
+__all__ = ['OPTIONS', 'SYMBOLS', 'Bound', 'check_bounds', 'check_default', 'declared_constraints', 'number_bounds']

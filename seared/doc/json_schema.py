@@ -20,6 +20,11 @@ definition is open, and a closed schema closes each object where it's used:
 way one definition serves a flat variant, a nested target, an open schema and
 a closed one.
 
+**Constraints** a field declares become their keywords, the same in both
+modes: an ``Int``'s or a ``Float``'s ``ge=`` is ``minimum``, ``gt=``
+``exclusiveMinimum``, ``le=`` ``maximum`` and ``lt=`` ``exclusiveMaximum``
+(0.4.4). ``load`` and a strict ``dump`` both check them.
+
 **Closed** means refusing a key the class doesn't declare, exactly where
 ``load`` would: ``unknown='raise'`` closes every object in the document, as a
 refusing load walks the whole input. What ``load`` never checks stays open: a
@@ -40,6 +45,7 @@ from typing import Any, Literal, get_args, get_origin
 
 from seared._core.errors import ValidationError
 from seared._core.unknown import check_unknown
+from seared.fields.constraints import declared_constraints
 from seared.fields.kind import FieldKind, field_kind
 
 from .introspect import introspect, is_seared_class
@@ -265,10 +271,24 @@ def _kind_schema(field: Any, emission: _Emission, annotation: Any) -> dict[str, 
 
 
 def _scalar(json_type: str, **extra: Any) -> Any:
-    def build(_field: Any, _emission: _Emission, _annotation: Any) -> dict[str, Any]:
-        return {'type': json_type, **extra}
+    def build(field: Any, _emission: _Emission, _annotation: Any) -> dict[str, Any]:
+        return {'type': json_type, **extra, **_constraints(field)}
 
     return build
+
+
+#: Each constraint option's keyword (0.4.4): the bounds on an ``Int`` or a
+#: ``Float`` (``seared.fields.constraints``).
+_KEYWORDS: dict[str, str] = {'ge': 'minimum', 'gt': 'exclusiveMinimum', 'le': 'maximum', 'lt': 'exclusiveMaximum'}
+
+
+def _constraints(field: Any) -> dict[str, Any]:
+    """The keywords for the constraints ``field`` declares, the same in both modes.
+
+    ``load`` checks them, and so does a strict ``dump``, so a valid input
+    satisfies them and so does what ``dump`` writes.
+    """
+    return {_KEYWORDS[option]: value for option, value in declared_constraints(field).items()}
 
 
 def _temporal(json_format: str, *, load_only: bool) -> Any:
