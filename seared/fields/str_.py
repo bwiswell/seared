@@ -16,10 +16,12 @@ from .kind import FieldKind
 class Str(Field):
     KIND = FieldKind.STR
 
-    # Lengths (0.4.4), in code points, checked on a strict load and dump
-    # (``seared.fields.constraints``).
+    # Lengths (0.4.4), in code points, and a pattern, JSON Schema's: an
+    # ECMA-262 regex within the subset Python reads the same way, searched for.
+    # Checked on a strict load and dump (``seared.fields.constraints``).
     min_length: int | None = None
     max_length: int | None = None
+    pattern: str | None = None
     # The checks, reduced once at declaration, or ``None``.
     _checks: StrChecks | None = field(default=None, init=False, repr=False, compare=False)
 

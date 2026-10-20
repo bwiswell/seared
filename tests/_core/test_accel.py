@@ -264,6 +264,7 @@ class TestClassDecisions:
             (s.Int(ge=0, lt=10), 99, 'Bounded.n: Int with ge= is not accelerated yet'),
             (s.Float(le=1.0), 99, 'Bounded.n: Float with le= is not accelerated yet'),
             (s.Str(max_length=4, min_length=1), 'abcde', 'Bounded.n: Str with min_length= is not accelerated yet'),
+            (s.Str(pattern='^[a-z]+$'), 'ABC', 'Bounded.n: Str with pattern= is not accelerated yet'),
         ],
     )
     def test_a_constrained_field_declines_and_names_its_first_option(self, use_backend, field, outside, reason):
@@ -276,7 +277,7 @@ class TestClassDecisions:
 
         assert Bounded.__seared_accel__ == s.AccelInfo(accelerated=False, reason=reason)
         # The Python path checks them.
-        with pytest.raises(s.ValidationError, match='must be'):
+        with pytest.raises(s.ValidationError, match=r'^Bounded\.n: must '):
             Bounded.load({'n': outside})
 
     def test_a_bounded_nested_class_declines_its_parent(self, use_backend):

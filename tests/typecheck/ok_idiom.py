@@ -101,6 +101,7 @@ class Bounded(s.Seared):
     ratio: float = s.Float(gt=0, le=1.0, required=True)
     scores: list[int] = s.Int(le=100, many=True, default_factory=list)
     code: str = s.Str(min_length=2, max_length=4, default='ab')
+    slug: str = s.Str(pattern='^[a-z0-9-]+$', default='a')
 
 
 bounded = Bounded(ratio=0.5)

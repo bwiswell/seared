@@ -155,6 +155,18 @@ class TestConstraints:
         for note in ('length: 2 to 4', 'length: at most 64', 'length: at least 1', 'length: 4 |'):
             assert note in page, note
 
+    def test_a_strs_pattern_reaches_the_notes_as_code(self):
+        @s.seared
+        class Patterns(s.Seared):
+            plain: str = s.Str(pattern='^[a-z]+$', default='a')
+            either: str = s.Str(pattern='^(a|b)$', default='a')
+            ticked: str = s.Str(pattern='^`a`$', default='`a`')
+
+        page = document(Patterns)
+        assert '| pattern: `^[a-z]+$` |' in page
+        assert r'| pattern: `^(a\|b)$` |' in page
+        assert '| pattern: `` ^`a`$ `` |' in page
+
 
 class TestTypeStrings:
     def test_annotations_resolve_rather_than_falling_back_to_their_text(self):

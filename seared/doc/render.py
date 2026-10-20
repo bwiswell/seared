@@ -8,6 +8,7 @@ assembles the core (Message-agnostic) page.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -55,7 +56,7 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
     `` `null` ``), or ``—`` when there is none. ``notes`` carries the field's
     ``doc``, then an ``NDArray``'s declared dtype, an ``Int``'s or a ``Float``'s
     bounds (``bounds: `>= 0`, `< 10` ``), a ``Str``'s lengths (``length: 1 to
-    64``), whether it is nullable and whether ``dump`` skips it.
+    64``) and pattern, whether it is nullable and whether ``dump`` skips it.
     """
     if not schema.fields:
         return ''
@@ -74,12 +75,7 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
             notes.append(_cell(f.doc))
         if f.dtype is not None:
             notes.append(f'dtype: `{f.dtype}`')
-        bounds = [f'`{SYMBOLS[option]} {value!r}`' for option, value in f.constraints if option in SYMBOLS]
-        if bounds:
-            notes.append(f'bounds: {", ".join(bounds)}')
-        length = _length_note(dict(f.constraints))
-        if length is not None:
-            notes.append(f'length: {length}')
+        notes.extend(_constraint_notes(f.constraints))
         if f.nullable:
             notes.append('nullable: `null` loads as `None`')
         if not f.dump:
@@ -93,6 +89,29 @@ def render_fields_table(schema: SchemaDoc, link_for: LinkFor = _default_link) ->
             f'| {" · ".join(notes)} |'
         )
     return '\n'.join(rows)
+
+
+def _constraint_notes(constraints: tuple[tuple[str, Any], ...]) -> list[str]:
+    """A field's constraints as its notes say them: its bounds, then its lengths, then its pattern."""
+    notes = []
+    bounds = [f'`{SYMBOLS[option]} {value!r}`' for option, value in constraints if option in SYMBOLS]
+    if bounds:
+        notes.append(f'bounds: {", ".join(bounds)}')
+    declared = dict(constraints)
+    length = _length_note(declared)
+    if length is not None:
+        notes.append(f'length: {length}')
+    if 'pattern' in declared:
+        notes.append(f'pattern: {_code(declared["pattern"])}')
+    return notes
+
+
+def _code(text: str) -> str:
+    """``text`` as a code span, its ``|`` escaped, fenced past any backticks it holds."""
+    longest = max((len(run) for run in re.findall('`+', text)), default=0)
+    fence = '`' * (longest + 1)
+    pad = ' ' if longest else ''
+    return f'{fence}{pad}{_pipe(text)}{pad}{fence}'
 
 
 def _length_note(declared: dict[str, Any]) -> str | None:

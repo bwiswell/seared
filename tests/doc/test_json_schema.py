@@ -376,6 +376,16 @@ class TestLengths:
         assert _one(s.Path()) == {'type': 'string'}
 
 
+class TestPattern:
+    """Pin: a pattern is written as declared, in both modes (0.4.4); ``load`` checks a translation of it."""
+
+    def test_it_is_written_as_declared_in_both_modes(self):
+        field = s.Str(pattern=r'^[a-z]+\.$', max_length=8)
+        schema = {'type': 'string', 'maxLength': 8, 'pattern': r'^[a-z]+\.$'}
+        assert _one(field, 'load') == schema
+        assert _one(field, 'dump') == schema
+
+
 # --- The corpus: the promises, checked with a validator -------------------------------------
 
 
@@ -402,6 +412,9 @@ class Everything(s.Seared):
     count: int = s.Int(ge=0, lt=10, default=0)
     share: float = s.Float(gt=0, le=1, default=1.0)
     code: str = s.Str(min_length=2, max_length=4, default='ab')
+    # ``jsonschema`` reads ``pattern`` with Python's ``re``, so the corpus keeps to inputs both
+    # engines agree on; tests/fields/test_constraints.py checks the rest against ECMA-262.
+    slug: str = s.Str(pattern=r'^[a-z0-9-]+$', default='a')
     note: str | None = s.Str(default=None, nullable=True)
     secret: str | None = s.Str(default=None, dump=False)
 
@@ -428,6 +441,7 @@ _VALID = [
         'count': 9,
         'share': 0.25,
         'code': 'abcd',
+        'slug': 'r-2',
         'note': None,
         'secret': 'shh',
     },
@@ -455,6 +469,7 @@ _INVALID = [
     {'id': 1, 'name': 'r', 'code': 'a'},
     {'id': 1, 'name': 'r', 'code': 'abcde'},
     {'id': 1, 'name': 'r', 'code': '😀😀😀😀😀'},
+    {'id': 1, 'name': 'r', 'slug': 'Bad Slug'},
 ]
 
 

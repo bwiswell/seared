@@ -149,3 +149,60 @@ class TestLengths:
         assert s.Str(min_length=1) == s.Str(min_length=1)
         assert s.Str(min_length=1) != s.Str(min_length=2)
         assert '_checks' not in repr(s.Str(min_length=1))
+
+
+#: A secret's name, ``namespace/key``: what a pattern most often guards.
+NAME = r'^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$'
+
+
+@s.seared
+class Ref(s.Seared):
+    name: str = s.Str(pattern=NAME, required=True)
+    aliases: list[str] = s.Str(pattern=NAME, many=True, default_factory=list)
+
+
+@s.seared(validate=False)
+class LaxRef(s.Seared):
+    name: str = s.Str(pattern=NAME, default='a/b')
+
+
+class TestPattern:
+    """Pin: a pattern is searched for, as JSON Schema's is, and its message never shows the value (0.4.4)."""
+
+    def test_a_value_that_matches_loads_and_dumps(self):
+        ref = Ref.load({'name': 'relay/rtls-bridge-bearer'})
+        assert Ref.dump(ref) == {'name': 'relay/rtls-bridge-bearer', 'aliases': []}
+
+    @pytest.mark.parametrize('value', ['Relay/x', 'relay/', 'sk-live-0123456789'])
+    def test_a_value_that_doesnt_is_refused_without_showing_it(self, value):
+        with pytest.raises(s.ValidationError) as info:
+            Ref.load({'name': value})
+        assert str(info.value) == f'Ref.name: must match the pattern {NAME!r}'
+        assert value not in str(info.value)
+
+    def test_a_final_newline_doesnt_pass_a_dollar(self):
+        # Python's ``$`` matches before a final newline; ECMA-262's, which JSON Schema reads, doesn't.
+        with pytest.raises(s.ValidationError, match='must match the pattern'):
+            Ref.load({'name': 'relay/x\n'})
+
+    def test_an_unanchored_pattern_is_searched_for(self):
+        field = s.Str(pattern='[0-9]')
+        assert field.deserialize('room 101') == 'room 101'
+        with pytest.raises(s.ValidationError):
+            field.deserialize('no digits')
+
+    def test_a_many_element_is_named_by_its_index(self):
+        with pytest.raises(s.ValidationError, match=r'^Ref\.aliases\[1\]: must match the pattern '):
+            Ref.load({'name': 'a/b', 'aliases': ['c/d', 'E/F']})
+
+    def test_a_dump_refuses_a_constructed_value_that_doesnt_match(self):
+        with pytest.raises(s.ValidationError, match=r'^Ref\.name: must match the pattern '):
+            Ref.dump(Ref(name='nope'))
+
+    def test_lengths_are_checked_before_the_pattern(self):
+        field = s.Str(min_length=3, pattern='^[a-z]+$')
+        with pytest.raises(s.ValidationError, match=r'^must be at least 3 characters long, got 2$'):
+            field.deserialize('AB')
+
+    def test_lax_mode_skips_it(self):
+        assert LaxRef.load({'name': 'nope'}).name == 'nope'
