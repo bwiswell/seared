@@ -11,7 +11,24 @@ lines as it lands, and the entry is dated when that version is released.
 
 ## 0.4.4 — unreleased
 
-**A `Union` tag must be a string.**
+**Bounds on `Int` and `Float`, and a `Union` tag must be a string.** `ge=`, `gt=`, `le=` and `lt=` bound a number:
+`load` and `dump` check them, and `json_schema` writes them.
+
+### Added
+
+- **Bounds on `Int` and `Float`: `ge=`, `gt=`, `le=` and `lt=`,** at most one lower and one upper; an `Int`'s are
+  `int`s, a `Float`'s finite numbers. A strict `load` checks them after coercing a value, and a strict `dump` checks
+  them too, element by element under `many` and `keyed` with the index or key in the path
+  (`Sampling.gains[1]: must be > 0, got 0.0`). A lax class skips them, and a bounded `Float` refuses `NaN`. A
+  declaration that can't hold raises `TypeError` where it's written: a bound of the wrong type, two on one side, a
+  range with no value in it, or a static `default` outside it. A class with a bounded field keeps the pure-Python
+  path: a `SPEC_ABI` 2 backend would skip the check, so a bounded field isn't emitted, and an unbounded one's spec
+  is unchanged.
+- **Bounds in `json_schema` and `seared.doc`.** Each becomes its keyword on the element's schema, in both modes:
+  `minimum`, `exclusiveMinimum`, `maximum` and `exclusiveMaximum`. `FieldDoc` gains `constraints`, and a page's
+  notes read ``bounds: `>= 0`, `< 10` ``.
+- **`seared.fields.constraints.declared_constraints(field)`,** the bounds a field declares, for tooling, with
+  `OPTIONS` and `SYMBOLS`.
 
 ### Changed
 
@@ -19,6 +36,10 @@ lines as it lands, and the entry is dated when that version is released.
   with or without a `fallback=`, in lax mode too. Under a fallback, a numeric tag such as `5` loaded as the fallback
   variant; without one, it raised `unknown tag 5`. Every declared tag is a string, so such a tag is malformed rather
   than a newer variant, and a fallback would only hide it.
+- **`Int` and `Float` are faster on the pure-Python path.** An exact `int` or `float`, or an `int` on a `Float`, on
+  an unbounded field returns before the type checks, with the same answer as before. On a class of numbers, `load`
+  is about 10% faster and `dump` about 20%; a numeric string on an `Int`, such as a topic capture, is about 9%
+  slower. Accelerated classes are unchanged.
 
 ### Fixed
 
