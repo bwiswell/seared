@@ -61,7 +61,7 @@ All four are frozen, slotted dataclasses.
 | `nullable` | whether a wire `null` is a value (`nullable=True`), which the annotation can't show |
 | `dtype` | an `NDArray`'s declared element type as numpy names it (`'float32'`), or `None` (0.4.1) |
 | `kind` | the field's [`FieldKind`](../fields/kind.md), a subclass's being its base's, or `None` (0.4.2) |
-| `constraints` | the field's [bounds](../fields/constraints.md) as `(option, value)` pairs in a fixed order, `(('ge', 0), ('lt', 10))`, or `()` (0.4.4) |
+| `constraints` | the field's [constraints](../fields/constraints.md) (bounds, lengths, a pattern) as `(option, value)` pairs in a fixed order, `(('ge', 0), ('lt', 10))`, or `()` (0.4.4) |
 | `enum` | an `EnumDoc`, for an `Enum` field |
 | `nested` | the target class, for a `T` field |
 | `variants`, `envelope`, `fallback` | for a `Union`: its `VariantDoc`s, `'flat'` or `` 'nested under `args`' ``, and its fallback class |

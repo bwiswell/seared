@@ -11,8 +11,8 @@ lines as it lands, and the entry is dated when that version is released.
 
 ## 0.4.4 — unreleased
 
-**Bounds on `Int` and `Float`, and a `Union` tag must be a string.** `ge=`, `gt=`, `le=` and `lt=` bound a number:
-`load` and `dump` check them, and `json_schema` writes them.
+**Constraints on fields, and a `Union` tag must be a string.** `Int` and `Float` take bounds, and `Str` lengths
+and a pattern: `load` and `dump` check them, and `json_schema` writes them.
 
 ### Added
 
@@ -24,11 +24,20 @@ lines as it lands, and the entry is dated when that version is released.
   range with no value in it, or a static `default` outside it. A class with a bounded field keeps the pure-Python
   path: a `SPEC_ABI` 2 backend would skip the check, so a bounded field isn't emitted, and an unbounded one's spec
   is unchanged.
-- **Bounds in `json_schema` and `seared.doc`.** Each becomes its keyword on the element's schema, in both modes:
-  `minimum`, `exclusiveMinimum`, `maximum` and `exclusiveMaximum`. `FieldDoc` gains `constraints`, and a page's
-  notes read ``bounds: `>= 0`, `< 10` ``.
-- **`seared.fields.constraints.declared_constraints(field)`,** the bounds a field declares, for tooling, with
-  `OPTIONS` and `SYMBOLS`.
+- **Lengths and a pattern on `Str`: `min_length=`, `max_length=` and `pattern=`.** A length counts code points, as
+  JSON Schema counts characters. A pattern is JSON Schema's, an ECMA-262 regex searched for rather than anchored,
+  and must stay within the subset Python's `re` reads the same way; anything else raises `TypeError` where it's
+  declared, naming the construct, where it is and its portable spelling (`\d at 1 isn't portable; write [0-9]`).
+  `load` checks a translation of it, so `$` doesn't match before a final newline and `.` doesn't match a line
+  terminator, as in ECMA-262, and a JavaScript validator and `load` agree on every value. A pattern's message never
+  shows the value, which may be a secret pasted where a name belongs. They're checked where bounds are, the lengths
+  first, and a class with one keeps the pure-Python path too.
+- **Constraints in `json_schema` and `seared.doc`.** Each becomes its keyword on the element's schema, in both
+  modes: `minimum`, `exclusiveMinimum`, `maximum`, `exclusiveMaximum`, `minLength`, `maxLength`, and `pattern` as
+  declared. `FieldDoc` gains `constraints`, and a page's notes read ``bounds: `>= 0`, `< 10` ``, `length: 3 to 32`
+  and ``pattern: `^[a-z]+$` ``.
+- **`seared.fields.constraints`, for tooling:** `declared_constraints(field)`, the constraints a field declares, and
+  `portable_regex(pattern)`, a pattern compiled as a `Str` checks it, with `OPTIONS` and `SYMBOLS`.
 
 ### Changed
 
@@ -36,10 +45,10 @@ lines as it lands, and the entry is dated when that version is released.
   with or without a `fallback=`, in lax mode too. Under a fallback, a numeric tag such as `5` loaded as the fallback
   variant; without one, it raised `unknown tag 5`. Every declared tag is a string, so such a tag is malformed rather
   than a newer variant, and a fallback would only hide it.
-- **`Int` and `Float` are faster on the pure-Python path.** An exact `int` or `float`, or an `int` on a `Float`, on
-  an unbounded field returns before the type checks, with the same answer as before. On a class of numbers, `load`
-  is about 10% faster and `dump` about 20%; a numeric string on an `Int`, such as a topic capture, is about 9%
-  slower. Accelerated classes are unchanged.
+- **`Int`, `Float` and `Str` are faster on the pure-Python path.** An exact `int`, `float` or `str`, or an `int` on
+  a `Float`, on an unconstrained field returns before the type checks, with the same answer as before. On a class of
+  numbers, `load` is about 10% faster and `dump` about 20%, and a `Str`'s `dump` skips a `str()` call; a numeric
+  string on an `Int`, such as a topic capture, is about 9% slower. Accelerated classes are unchanged.
 
 ### Fixed
 

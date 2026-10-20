@@ -31,6 +31,10 @@ class SecretRef(s.Str):
 s.field_kind(SecretRef())         # FieldKind.STR
 ```
 
+From 0.4.4 a check like this one can be declared on the field instead,
+`s.Str(pattern=…)`, which `json_schema` describes and an override can't be
+(see [`constraints.md`](constraints.md)).
+
 ## The kinds
 
 | `FieldKind` | Value | Field |
