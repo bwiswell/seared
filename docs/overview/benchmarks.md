@@ -73,7 +73,7 @@ being accelerated.
 
 ## Results
 
-Recorded <!-- bench:run -->2026-10-17, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.0, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run --> —
+Recorded <!-- bench:run -->2026-10-20, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.4, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run --> —
 Linux x86_64 (WSL2), laptop-class CPU, otherwise idle. Raw numbers:
 [`bench/results.json`](../../bench/results.json). The tables, and every
 number quoted in the prose below, are rendered from that file
@@ -82,8 +82,8 @@ number quoted in the prose below, are rendered from that file
 <!-- bench:ops -->
 | Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
 |------|---------------|----------------------|----------------------|---------------|-----------------|
-| load | 8,732 ops/s   | 32,413 ops/s (~3.7×) | 32,701 ops/s (~3.7×) | 151,905 ops/s | 354,951 ops/s   |
-| dump | 24,887 ops/s  | 50,139 ops/s (~2.0×) | 55,743 ops/s (~2.2×) | 175,409 ops/s | 404,854 ops/s   |
+| load | 8,830 ops/s   | 34,976 ops/s (~4.0×) | 35,392 ops/s (~4.0×) | 150,013 ops/s | 338,343 ops/s   |
+| dump | 25,236 ops/s  | 56,092 ops/s (~2.2×) | 55,807 ops/s (~2.2×) | 173,354 ops/s | 406,967 ops/s   |
 <!-- /bench:ops -->
 
 Per-op timing:
@@ -91,8 +91,8 @@ Per-op timing:
 <!-- bench:us -->
 | Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
 |------|---------------|-------------------|----------------|------------|-----------------|
-| load | 114.5 µs      | 30.9 µs           | 30.6 µs        | 6.6 µs     | 2.8 µs          |
-| dump | 40.2 µs       | 19.9 µs           | 17.9 µs        | 5.7 µs     | 2.5 µs          |
+| load | 113.3 µs      | 28.6 µs           | 28.3 µs        | 6.7 µs     | 3.0 µs          |
+| dump | 39.6 µs       | 17.8 µs           | 17.9 µs        | 5.8 µs     | 2.5 µs          |
 <!-- /bench:us -->
 
 Ratios in the first table are versus `marshmallow`. Earlier recorded
@@ -108,49 +108,49 @@ How far each column's rate moved between the runs, as `max / min - 1`:
 <!-- bench:spread -->
 | Op   | `marshmallow` | `seared` (strict) | `seared` (lax) | `pydantic` | `seared+rusted` |
 |------|---------------|-------------------|----------------|------------|-----------------|
-| load | 0.8%          | 11.9%             | 12.0%          | 10.3%      | 10.7%           |
-| dump | 2.9%          | 10.6%             | 11.0%          | 11.8%      | 11.6%           |
+| load | 4.8%          | 1.3%              | 0.4%           | 3.4%       | 2.0%            |
+| dump | 2.6%          | 4.0%              | 0.4%           | 1.6%       | 2.4%            |
 <!-- /bench:spread -->
 
-The widest is <!-- bench:spread-max -->~12%<!-- /bench:spread-max -->.
+The widest is <!-- bench:spread-max -->~5%<!-- /bench:spread-max -->.
 Background load widens the spread, and the *ratios* move with it, so bench
 on a quiet box and read the ratios as approximate: seared is
-<!-- bench:load-vs-marshmallow -->~3.7×<!-- /bench:load-vs-marshmallow -->
+<!-- bench:load-vs-marshmallow -->~4.0×<!-- /bench:load-vs-marshmallow -->
 marshmallow on load and
-<!-- bench:dump-vs-marshmallow -->~2.0×<!-- /bench:dump-vs-marshmallow -->
+<!-- bench:dump-vs-marshmallow -->~2.2×<!-- /bench:dump-vs-marshmallow -->
 on dump, and `rusted` is
-<!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> /
-<!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> over pure Python.
+<!-- bench:rusted-load -->~10×<!-- /bench:rusted-load --> /
+<!-- bench:rusted-dump -->~7×<!-- /bench:rusted-dump --> over pure Python.
 
 ## Reading the results
 
 - **Versus marshmallow** (the like-for-like pure-Python comparison),
-  seared loads <!-- bench:load-vs-marshmallow -->~3.7×<!-- /bench:load-vs-marshmallow -->
-  and dumps <!-- bench:dump-vs-marshmallow -->~2.0×<!-- /bench:dump-vs-marshmallow -->
+  seared loads <!-- bench:load-vs-marshmallow -->~4.0×<!-- /bench:load-vs-marshmallow -->
+  and dumps <!-- bench:dump-vs-marshmallow -->~2.2×<!-- /bench:dump-vs-marshmallow -->
   faster.
 - **Versus pydantic**, pure-Python seared loads
-  <!-- bench:pydantic-vs-seared -->~4.7×<!-- /bench:pydantic-vs-seared -->
+  <!-- bench:pydantic-vs-seared -->~4.3×<!-- /bench:pydantic-vs-seared -->
   slower. That is the expected cost of pure Python versus a compiled Rust
   core, and it is the trade seared makes by default: zero runtime
   dependencies, no binary wheels.
 - **With `rusted` installed that trade is optional rather than permanent.**
   The same classes run
-  <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`
-  and <!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> on `dump`
+  <!-- bench:rusted-load -->~10×<!-- /bench:rusted-load --> faster on `load`
+  and <!-- bench:rusted-dump -->~7×<!-- /bench:rusted-dump --> on `dump`
   than the Python path, and load
   <!-- bench:rusted-vs-pydantic -->~2.3×<!-- /bench:rusted-vs-pydantic -->
   as fast as pydantic on this schema, for an install and no code change.
   The default stays pure Python; every platform without a wheel keeps
   working.
-- **Strict versus lax is within noise on `load`**, where the guards are
-  cheap `isinstance` checks against builtin types: the two columns sit
-  closer together than either moves between runs (see the spread table).
-  On `dump`, where those guards are most of what the pass actually does,
-  lax is <!-- bench:lax-dump-gain -->~11%<!-- /bench:lax-dump-gain --> faster.
-  `rusted` closes the load gap and leaves the dump gap at
-  <!-- bench:rusted-lax-dump-gain -->~17%<!-- /bench:rusted-lax-dump-gain -->:
-  cheaper guards, not absent ones. Most of seared's advantage over
-  marshmallow comes from per-call overhead, not validation.
+- **Strict versus lax is within noise, on `load` and on `dump`**: the two
+  columns sit closer together than either moves between runs (see the
+  spread table). The guards are cheap `isinstance` checks against builtin
+  types, and since 0.4.4 an exact `int`, `float` or `str` on a field with no
+  constraints skips them, which was most of what a strict `dump` checked.
+  `rusted` matches the two on `load` and keeps a dump gap of
+  <!-- bench:rusted-lax-dump-gain -->~16%<!-- /bench:rusted-lax-dump-gain -->,
+  lax over strict: cheaper guards, not absent ones. Most of seared's
+  advantage over marshmallow comes from per-call overhead, not validation.
 
 ## Why seared is fast (for pure Python)
 
@@ -209,7 +209,7 @@ uv run --no-sync python -m bench --runs 3
 
 Each recorded `Measurement` carries the version of what produced it and the
 run it came from (`seared+rusted` rows read
-<!-- bench:version-example -->`0.4.0/rusted 0.4.0`<!-- /bench:version-example -->),
+<!-- bench:version-example -->`0.4.4/rusted 0.4.0`<!-- /bench:version-example -->),
 so a results file always says which code the numbers came from.
 
 ## Caveats

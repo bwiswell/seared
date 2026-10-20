@@ -13,8 +13,8 @@ for free.
 ## Why seared
 
 - **Zero runtime dependencies.** Pure stdlib core. Numpy / pandas / polars / PyYAML / tomli-w live behind opt-in extras.
-- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~3.7×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~2.0×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
-- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
+- **Fast for pure Python.** <!-- bench:load-vs-marshmallow -->~4.0×<!-- /bench:load-vs-marshmallow --> faster `load` and <!-- bench:dump-vs-marshmallow -->~2.2×<!-- /bench:dump-vs-marshmallow --> faster `dump` than `marshmallow` on a representative nested schema (see [Benchmarks](#benchmarks)).
+- **Optionally compiled.** Install [`rusted`](https://github.com/bwiswell/rusted) and the same classes run <!-- bench:rusted-load -->~10×<!-- /bench:rusted-load --> faster on `load`, <!-- bench:rusted-dump -->~7×<!-- /bench:rusted-dump --> on `dump` — no code change, and seared itself stays pure Python and zero-dependency (see [Accelerator](#accelerator)).
 - **Compact.** `@s.seared` classes are `__slots__` dataclasses by default — lower memory per instance, faster attribute access.
 - **One decorator, one base class.** No schema-class boilerplate; field types live as defaults on the dataclass.
 - **Typed-callable fields.** `Bool`, `Bytes`, `Date`, `DateTime`, `Decimal`, `Dict`, `Enum`, `Float`, `Int`, `Path`, `Str`, `T`, `Time`, `TimeDelta`, `Tuple`, `Union`, `UUID`, plus optional `NDArray`, `PandasFrame`, `PolarsFrame`.
@@ -31,22 +31,22 @@ for free.
 
 ## Setup
 
-Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.3`).
+Each release is tagged `v<version>` on GitHub (the first is `v0.3.4`; the latest is `v0.4.4`).
 Install one by its tag:
 
 ```sh
 # uv
-uv add git+https://github.com/bwiswell/seared --tag v0.4.3
+uv add git+https://github.com/bwiswell/seared --tag v0.4.4
 
 # pip
-pip install git+https://github.com/bwiswell/seared.git@v0.4.3
+pip install git+https://github.com/bwiswell/seared.git@v0.4.4
 ```
 
 `uv add` records the tag as the dependency's source:
 
 ```toml
 [tool.uv.sources]
-seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.3" }
+seared = { git = "https://github.com/bwiswell/seared", tag = "v0.4.4" }
 ```
 
 **The tag is the pin.** uv doesn't check a version specifier such as
@@ -119,9 +119,9 @@ cell raises. `to_csv` heads each column with its wire key and gives a
 **10. msgpack writes a `Tuple`'s `Bytes` slot as raw bytes**, as it writes a
 top-level `Bytes`, where it wrote base64. Payloads written before still load.
 
-**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.3` is the latest), and
-`rusted` to its `v0.4.0` with it: 0.4.1 to 0.4.3 change nothing `rusted`
-sees. zeared pins seared by tag itself (zeared 0.4.2 pins `v0.4.2`), and uv
+**11. Pins.** Move seared's source to a 0.4 tag (`v0.4.4` is the latest), and
+`rusted` to its `v0.4.0` with it: 0.4.1 to 0.4.4 change nothing `rusted`
+sees. zeared pins seared by tag itself (zeared 0.4.3 pins `v0.4.3`), and uv
 refuses two tags for one package, so a project on both uses the seared tag
 its zeared pins.
 
@@ -463,14 +463,14 @@ path rules.
 
 Nested schema (one outer object with a 20-item list of 3-field records plus
 a list of strings) on an idle machine. Recorded
-<!-- bench:run -->2026-10-17, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.0, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run -->;
+<!-- bench:run -->2026-10-20, Python 3.14.3, 20,000 iterations, median of 3 runs; seared 0.4.4, rusted 0.4.0, marshmallow 4.3.1, pydantic 2.14.1<!-- /bench:run -->;
 ratios are versus marshmallow:
 
 <!-- bench:ops -->
 | Op   | `marshmallow` | `seared` (strict)    | `seared` (lax)       | `pydantic`    | `seared+rusted` |
 |------|---------------|----------------------|----------------------|---------------|-----------------|
-| load | 8,732 ops/s   | 32,413 ops/s (~3.7×) | 32,701 ops/s (~3.7×) | 151,905 ops/s | 354,951 ops/s   |
-| dump | 24,887 ops/s  | 50,139 ops/s (~2.0×) | 55,743 ops/s (~2.2×) | 175,409 ops/s | 404,854 ops/s   |
+| load | 8,830 ops/s   | 34,976 ops/s (~4.0×) | 35,392 ops/s (~4.0×) | 150,013 ops/s | 338,343 ops/s   |
+| dump | 25,236 ops/s  | 56,092 ops/s (~2.2×) | 55,807 ops/s (~2.2×) | 173,354 ops/s | 406,967 ops/s   |
 <!-- /bench:ops -->
 
 `seared (strict)` runs the default `validate=True`; `seared (lax)` is the
@@ -494,8 +494,8 @@ seared is pure Python and zero-dependency, and stays that way. When the
 optional compiled core [`rusted`](https://github.com/bwiswell/rusted) is
 installed, `@s.seared` swaps its generated `load` / `dump` for compiled
 equivalents — same classes, same API, same error messages,
-<!-- bench:rusted-load -->~11×<!-- /bench:rusted-load --> on `load` and
-<!-- bench:rusted-dump -->~8×<!-- /bench:rusted-dump --> on `dump`.
+<!-- bench:rusted-load -->~10×<!-- /bench:rusted-load --> on `load` and
+<!-- bench:rusted-dump -->~7×<!-- /bench:rusted-dump --> on `dump`.
 
 ```sh
 uv add git+https://github.com/bwiswell/rusted --tag v0.4.0   # nothing in your code changes

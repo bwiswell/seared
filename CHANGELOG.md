@@ -9,7 +9,7 @@ pure-Python path, more slowly, and `Cls.__seared_accel__.reason` says why.
 The top entry, while it reads *unreleased*, collects what has merged for the next version; each change adds its own
 lines as it lands, and the entry is dated when that version is released.
 
-## 0.4.4 — unreleased
+## 0.4.4 — 2026-10-19
 
 **Constraints on fields, and a `Union` tag must be a string.** `Int` and `Float` take bounds, and `Str` lengths
 and a pattern: `load` and `dump` check them, and `json_schema` writes them.
@@ -49,6 +49,10 @@ and a pattern: `load` and `dump` check them, and `json_schema` writes them.
   a `Float`, on an unconstrained field returns before the type checks, with the same answer as before. On a class of
   numbers, `load` is about 10% faster and `dump` about 20%, and a `Str`'s `dump` skips a `str()` call; a numeric
   string on an `Int`, such as a topic capture, is about 9% slower. Accelerated classes are unchanged.
+- **The benchmarks are re-recorded** with seared 0.4.4 and rusted 0.4.0. Against marshmallow, seared loads ~4.0× and
+  dumps ~2.2× faster, up from ~3.7× and ~2.0×, and a strict `dump` now runs as fast as a lax one. rusted reads ~10×
+  on `load` and ~7× on `dump`, down from ~11× and ~8×, because the pure-Python path it's measured against got
+  faster.
 
 ### Fixed
 
